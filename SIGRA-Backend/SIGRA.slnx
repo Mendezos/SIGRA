@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SIGRA.Abstracciones/SIGRA.Abstracciones.csproj" />
+  <Project Path="SIGRA.API/SIGRA.API.csproj" />
+  <Project Path="SIGRA.DA/SIGRA.DA.csproj" />
+  <Project Path="SIGRA.Flujo/SIGRA.Flujo.csproj" />
+</Solution>
