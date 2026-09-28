@@ -5,6 +5,11 @@ public class CrearRolDto
     public string Nombre { get; set; } = string.Empty;
 }
 
+public class EditarRolDto
+{
+    public string Nombre { get; set; } = string.Empty;
+}
+
 public class RolDto
 {
     public int IdRol { get; set; }

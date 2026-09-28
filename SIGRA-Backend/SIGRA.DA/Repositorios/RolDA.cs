@@ -34,4 +34,26 @@ public class RolDA : IRolDA
             "sp_Rol_Listar", commandType: CommandType.StoredProcedure);
         return resultado.ToList();
     }
+
+    public async Task<RolModel?> ObtenerPorIdAsync(int idRol)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        return await conexion.QuerySingleOrDefaultAsync<RolModel>(
+            "sp_Rol_ObtenerPorId", new { IdRol = idRol }, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<bool> ExisteConNombreExcluyendoAsync(string nombre, int idRolExcluir)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        return await conexion.ExecuteScalarAsync<bool>(
+            "sp_Rol_ExisteConNombreExcluyendo", new { Nombre = nombre, IdRolExcluir = idRolExcluir },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<RolModel> EditarAsync(int idRol, string nombre)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        return await conexion.QuerySingleAsync<RolModel>(
+            "sp_Rol_Editar", new { IdRol = idRol, Nombre = nombre }, commandType: CommandType.StoredProcedure);
+    }
 }

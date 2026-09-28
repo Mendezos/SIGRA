@@ -33,4 +33,15 @@ public class RolController : ControllerBase
 
         return Ok(new RolDto { IdRol = nuevo.IdRol, Nombre = nuevo.Nombre, Activo = nuevo.Activo });
     }
+
+    [HttpPut("{idRol:int}")]
+    public async Task<ActionResult<RolDto>> Editar(int idRol, [FromBody] EditarRolDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+            throw new ValidacionException("Debe completar todos los parámetros obligatorios.", new List<string> { "Nombre del rol" });
+
+        var actualizado = await _flujo.EditarAsync(idRol, dto.Nombre, User.ObtenerIdUsuario());
+
+        return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Activo = actualizado.Activo });
+    }
 }

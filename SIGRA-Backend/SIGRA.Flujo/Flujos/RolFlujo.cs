@@ -18,17 +18,7 @@ public class RolFlujo : IRolFlujo
 
     public async Task<RolModel> CrearAsync(string nombre, int idUsuarioAdministrador)
     {
-        var errores = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(nombre))
-            errores.Add("El nombre del rol es obligatorio.");
-        else if (nombre.Trim().Length > 100)
-            errores.Add("El nombre del rol no puede superar los 100 caracteres.");
-
-        if (errores.Count > 0)
-            throw new ValidacionException("Uno o más valores están fuera del rango permitido.", errores);
-
-        var nombreNormalizado = nombre.Trim();
+        var nombreNormalizado = ValidarNombre(nombre);
 
         if (await _rolDA.ExisteConNombreAsync(nombreNormalizado))
             throw new ReglaNegocioException($"Ya existe un rol con el nombre \"{nombreNormalizado}\".");
@@ -43,5 +33,38 @@ public class RolFlujo : IRolFlujo
     public async Task<List<RolModel>> ListarAsync()
     {
         return await _rolDA.ListarAsync();
+    }
+
+    public async Task<RolModel> EditarAsync(int idRol, string nombre, int idUsuarioAdministrador)
+    {
+        var existente = await _rolDA.ObtenerPorIdAsync(idRol)
+            ?? throw new ReglaNegocioException("El rol indicado no existe.");
+
+        var nombreNormalizado = ValidarNombre(nombre);
+
+        if (await _rolDA.ExisteConNombreExcluyendoAsync(nombreNormalizado, idRol))
+            throw new ReglaNegocioException($"Ya existe un rol con el nombre \"{nombreNormalizado}\".");
+
+        var nombreAnterior = existente.Nombre;
+        var actualizado = await _rolDA.EditarAsync(idRol, nombreNormalizado);
+
+        await _auditoriaDA.RegistrarAsync(idUsuarioAdministrador, "Seguridad", "Rol", idRol, "ROL_EDITADO", $"De \"{nombreAnterior}\" a \"{nombreNormalizado}\"");
+
+        return actualizado;
+    }
+
+    private static string ValidarNombre(string nombre)
+    {
+        var errores = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(nombre))
+            errores.Add("El nombre del rol es obligatorio.");
+        else if (nombre.Trim().Length > 100)
+            errores.Add("El nombre del rol no puede superar los 100 caracteres.");
+
+        if (errores.Count > 0)
+            throw new ValidacionException("Uno o más valores están fuera del rango permitido.", errores);
+
+        return nombre.Trim();
     }
 }
