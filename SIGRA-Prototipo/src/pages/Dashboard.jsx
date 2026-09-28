@@ -16,6 +16,8 @@ import {
     FilePlus2,
     BarChart3,
     ArrowRight,
+    ShieldCheck,
+    Unlock,
 } from "lucide-react";
 import { MODULES } from "../data/modules";
 import {
@@ -31,6 +33,9 @@ import BrandLogo from "../components/BrandLogo";
 import GenerateTicketModal from "../components/GenerateTicketModal";
 import GenerateReportModal from "../components/GenerateReportModal";
 import StatusBadge from "../components/StatusBadge";
+import PoliticaSeguridadModal from "../components/PoliticaSeguridadModal";
+import DesbloquearCuentaModal from "../components/DesbloquearCuentaModal";
+import ConfirmModal from "../components/ConfirmModal";
 
 const COLORS = {
     green: "#5EB453",
@@ -94,11 +99,16 @@ function Sidebar({
     active,
     onSelect,
     user,
-    onLogout,
+    onRequestLogout,
+    onOpenPolitica,
+    onOpenDesbloqueo,
 }) {
     const visibleModules = MODULES.filter((module) =>
-        canAccessModule(user.role, module.id)
+        canAccessModule(user.permisos, module.id)
     );
+
+    const esAdministrador =
+        user.role === "Administrador del sistema";
 
     return (
         <aside
@@ -222,10 +232,45 @@ function Sidebar({
                 })}
             </nav>
 
+            {esAdministrador && (
+                <div
+                    className="pt-3 mt-3"
+                    style={{
+                        borderTop: `1px solid ${COLORS.border}`,
+                    }}
+                >
+                    <button
+                        type="button"
+                        onClick={onOpenPolitica}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm"
+                        style={{ color: COLORS.charcoal }}
+                    >
+                        <ShieldCheck
+                            size={17}
+                            color={COLORS.muted}
+                        />
+                        Política de seguridad
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onOpenDesbloqueo}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm"
+                        style={{ color: COLORS.charcoal }}
+                    >
+                        <Unlock
+                            size={17}
+                            color={COLORS.muted}
+                        />
+                        Desbloquear cuenta
+                    </button>
+                </div>
+            )}
+
             <button
                 type="button"
-                onClick={onLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm mt-4"
+                onClick={onRequestLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm mt-2"
                 style={{ color: COLORS.muted }}
             >
                 <LogOut
@@ -636,6 +681,12 @@ export default function Dashboard({
     const [moduleData, setModuleData] = useState(
         createInitialModuleData
     );
+    const [politicaModalOpen, setPoliticaModalOpen] =
+        useState(false);
+    const [desbloqueoModalOpen, setDesbloqueoModalOpen] =
+        useState(false);
+    const [logoutModalOpen, setLogoutModalOpen] =
+        useState(false);
 
     const currentModule =
         MODULES.find(
@@ -711,7 +762,9 @@ export default function Dashboard({
                     setNotice("");
                 }}
                 user={user}
-                onLogout={onLogout}
+                onRequestLogout={() => setLogoutModalOpen(true)}
+                onOpenPolitica={() => setPoliticaModalOpen(true)}
+                onOpenDesbloqueo={() => setDesbloqueoModalOpen(true)}
             />
 
             {currentModule ? (
@@ -752,6 +805,29 @@ export default function Dashboard({
 
             <NotificationsBell role={user.role} />
             <IAChatPanel />
+
+            <PoliticaSeguridadModal
+                open={politicaModalOpen}
+                onClose={() => setPoliticaModalOpen(false)}
+            />
+
+            <DesbloquearCuentaModal
+                open={desbloqueoModalOpen}
+                onClose={() => setDesbloqueoModalOpen(false)}
+            />
+
+            <ConfirmModal
+                open={logoutModalOpen}
+                title="Cerrar sesión"
+                message="¿Seguro que deseas cerrar sesión? Vas a tener que volver a iniciar sesión para continuar usando la plataforma."
+                confirmLabel="Cerrar sesión"
+                cancelLabel="Cancelar"
+                onCancel={() => setLogoutModalOpen(false)}
+                onConfirm={() => {
+                    setLogoutModalOpen(false);
+                    onLogout();
+                }}
+            />
         </div>
     );
 }

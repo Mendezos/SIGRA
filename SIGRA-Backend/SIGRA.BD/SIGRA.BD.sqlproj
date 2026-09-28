@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>SIGRA.BD</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{decb6d75-779e-4f9a-8171-01866feba7a6}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql170DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath>
+    </RootPath>
+    <RootNamespace>SIGRA.BD</RootNamespace>
+    <AssemblyName>SIGRA.BD</AssemblyName>
+    <ModelCollation>1033, CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="dbo\Stored Procedures\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\Tables\Usuario.sql" />
+    <Build Include="dbo\Tables\TokenRecuperacion.sql" />
+    <Build Include="dbo\Tables\TicketEstadoHistorial.sql" />
+    <Build Include="dbo\Tables\TicketEquipo.sql" />
+    <Build Include="dbo\Tables\Ticket.sql" />
+    <Build Include="dbo\Tables\StockMinimoCategoria.sql" />
+    <Build Include="dbo\Tables\SolicitudFrecuencia.sql" />
+    <Build Include="dbo\Tables\SesionUsuario.sql" />
+    <Build Include="dbo\Tables\RolPermiso.sql" />
+    <Build Include="dbo\Tables\Rol.sql" />
+    <Build Include="dbo\Tables\RepetidoraDetalle.sql" />
+    <Build Include="dbo\Tables\Reparacion.sql" />
+    <Build Include="dbo\Tables\RenovacionContrato.sql" />
+    <Build Include="dbo\Tables\Proveedor.sql" />
+    <Build Include="dbo\Tables\Prospecto.sql" />
+    <Build Include="dbo\Tables\PoliticaSeguridad.sql" />
+    <Build Include="dbo\Tables\Permiso.sql" />
+    <Build Include="dbo\Tables\MovimientoInventario.sql" />
+    <Build Include="dbo\Tables\ModeloEquipo.sql" />
+    <Build Include="dbo\Tables\InteraccionCRM.sql" />
+    <Build Include="dbo\Tables\GiraTicket.sql" />
+    <Build Include="dbo\Tables\GiraTecnico.sql" />
+    <Build Include="dbo\Tables\GiraCliente.sql" />
+    <Build Include="dbo\Tables\Gira.sql" />
+    <Build Include="dbo\Tables\Equipo.sql" />
+    <Build Include="dbo\Tables\DocumentoTecnico.sql" />
+    <Build Include="dbo\Tables\DocumentoFrecuencia.sql" />
+    <Build Include="dbo\Tables\Cotizacion.sql" />
+    <Build Include="dbo\Tables\ContratoEquipo.sql" />
+    <Build Include="dbo\Tables\Contrato.sql" />
+    <Build Include="dbo\Tables\Cliente.sql" />
+    <Build Include="dbo\Tables\ChecklistInstalacion.sql" />
+    <Build Include="dbo\Tables\CategoriaEquipo.sql" />
+    <Build Include="dbo\Tables\CambioBateria.sql" />
+    <Build Include="dbo\Tables\BoletaMantenimiento.sql" />
+    <Build Include="dbo\Tables\BitacoraEquipo.sql" />
+    <Build Include="dbo\Tables\Auditoria.sql" />
+    <Build Include="dbo\Tables\AccesorioModelo.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_RegistrarLoginFallido.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_RegistrarLoginExitoso.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_ObtenerPorId.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_ObtenerPorCorreo.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_DesbloquearCuenta.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_ActualizarPasswordHash.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TokenRecuperacion_ObtenerValido.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TokenRecuperacion_MarcarUsado.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TokenRecuperacion_Crear.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Sesion_ObtenerActiva.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Sesion_Crear.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Sesion_CerrarTodasDelUsuario.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Sesion_Cerrar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Sesion_ActualizarActividad.sql" />
+    <Build Include="dbo\Stored Procedures\sp_RolPermiso_ObtenerPorRol.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PoliticaSeguridad_ObtenerActiva.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PoliticaSeguridad_CrearVersion.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Auditoria_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Auditoria_ObtenerRecientesPorUsuario.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_ObtenerBloqueados.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <PostDeploy Include="Script.PostDeployment.sql" />
+  </ItemGroup>
+</Project>

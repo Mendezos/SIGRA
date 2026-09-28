@@ -187,6 +187,21 @@ export const ROLE_CAPABILITIES = {
     },
 };
 
+// IdModulo debe coincidir con el seed de BD (SIGRA.BD/Script.PostDeployment.sql)
+export const MODULE_KEY_TO_ID = {
+    usuarios: 1,
+    tickets: 2,
+    alquiler: 3,
+    inventario: 4,
+    dashboard: 5,
+    ia: 6,
+    contratos: 7,
+    giras: 8,
+    crm: 9,
+    clientes: 10,
+    frecuencias: 11,
+};
+
 export function getRoleCapabilities(role) {
     return (
         ROLE_CAPABILITIES[role] ?? {
@@ -201,8 +216,12 @@ export function getRoleCapabilities(role) {
     );
 }
 
-export function canAccessModule(role, moduleId) {
-    return getRoleCapabilities(role).moduleIds.includes(moduleId);
+// GUA-013: los módulos visibles ahora vienen del login/perfil real (Permisos por IdModulo),
+// no de una tabla de roles quemada en el frontend.
+export function canAccessModule(permisos, moduleId) {
+    const idModulo = MODULE_KEY_TO_ID[moduleId];
+    if (!idModulo || !Array.isArray(permisos)) return false;
+    return permisos.some((p) => p.idModulo === idModulo && p.lectura);
 }
 
 export function getModulePermissions(role, moduleId) {

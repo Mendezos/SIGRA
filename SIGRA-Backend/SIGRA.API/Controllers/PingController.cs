@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGRA.Abstracciones.Conexion;
 
@@ -6,6 +7,7 @@ namespace SIGRA.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[AllowAnonymous]
 public class PingController : ControllerBase
 {
     private readonly IConexionFactory _conexionFactory;

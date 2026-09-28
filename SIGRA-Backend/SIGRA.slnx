@@ -1,6 +1,10 @@
 <Solution>
   <Project Path="SIGRA.Abstracciones/SIGRA.Abstracciones.csproj" />
   <Project Path="SIGRA.API/SIGRA.API.csproj" />
+  <Project Path="SIGRA.BD/SIGRA.BD.sqlproj" Id="decb6d75-779e-4f9a-8171-01866feba7a6">
+    <Build />
+    <Deploy />
+  </Project>
   <Project Path="SIGRA.DA/SIGRA.DA.csproj" />
   <Project Path="SIGRA.Flujo/SIGRA.Flujo.csproj" />
 </Solution>

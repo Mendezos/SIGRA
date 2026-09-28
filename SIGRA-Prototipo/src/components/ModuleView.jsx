@@ -382,7 +382,7 @@ export default function ModuleView({
         });
     }
 
-    if (!canAccessModule(user.role, module.id)) {
+    if (!canAccessModule(user.permisos, module.id)) {
         return (
             <main className="flex-1 px-10 py-10">
                 <div className="flex items-center gap-3">

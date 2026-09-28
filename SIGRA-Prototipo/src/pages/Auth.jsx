@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BrandLogo from "../components/BrandLogo";
+import { login, solicitarRecuperacion } from "../services/authService";
 
 const COLORS = {
     green: "#5EB453",
@@ -16,49 +17,10 @@ const COLORS = {
 const FONT =
     "'Source Serif 4', Georgia, 'Times New Roman', serif";
 
-const VALID_USERS = [
-    {
-        email: "ricardo.infante@radifaxcr.com",
-        password: "RadifaxCR2026",
-        name: "Ricardo Infante",
-        role: "Técnico",
-        initials: "RI",
-    },
-    {
-        email: "maria.ceciliano@radifaxcr.com",
-        password: "Coord#2026",
-        name: "María Fernanda Ceciliano",
-        role: "Coordinador técnico",
-        initials: "MC",
-    },
-    {
-        email: "kimberly.sanchez@radifaxcr.com",
-        password: "Ventas#2026",
-        name: "Kimberly Sánchez",
-        role: "Vendedor / Ejecutivo de cuenta",
-        initials: "KS",
-    },
-    {
-        email: "adriana.mora@radifaxcr.com",
-        password: "Gerencia#2026",
-        name: "Adriana Mora Quirós",
-        role: "Gerente",
-        initials: "AM",
-    },
-    {
-        email: "admin@radifaxcr.com",
-        password: "Admin#2026",
-        name: "Administrador Radifax",
-        role: "Administrador del sistema",
-        initials: "AR",
-    },
-];
-
 function Field({
     label,
     type = "text",
     name,
-    defaultValue,
     children,
 }) {
     return (
@@ -77,7 +39,7 @@ function Field({
                 <input
                     type={type}
                     name={name}
-                    defaultValue={defaultValue}
+                    required
                     className="rf-input w-full px-4 py-3 rounded-lg text-sm bg-white"
                     style={{
                         border: `1px solid ${COLORS.border}`,
@@ -94,42 +56,26 @@ function LoginForm({
     onForgotPassword,
 }) {
     const [error, setError] = useState("");
+    const [cargando, setCargando] = useState(false);
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
 
         const data = new FormData(event.target);
-
-        const email = String(
-            data.get("email") ?? ""
-        )
-            .trim()
-            .toLowerCase();
-
-        const password = String(
-            data.get("password") ?? ""
-        );
-
-        const match = VALID_USERS.find(
-            (user) =>
-                user.email === email &&
-                user.password === password
-        );
-
-        if (!match) {
-            setError(
-                "Credenciales incorrectas. Usá alguna de las cuentas de prueba."
-            );
-            return;
-        }
+        const email = String(data.get("email") ?? "").trim();
+        const password = String(data.get("password") ?? "");
 
         setError("");
+        setCargando(true);
 
-        onAuthSuccess({
-            name: match.name,
-            role: match.role,
-            initials: match.initials,
-        });
+        try {
+            const resultado = await login(email, password);
+            onAuthSuccess(resultado);
+        } catch (err) {
+            setError(err.message ?? "No se pudo iniciar sesión.");
+        } finally {
+            setCargando(false);
+        }
     }
 
     return (
@@ -138,14 +84,12 @@ function LoginForm({
                 label="Correo corporativo"
                 type="email"
                 name="email"
-                defaultValue="ricardo.infante@radifaxcr.com"
             />
 
             <Field
                 label="Contraseña"
                 type="password"
                 name="password"
-                defaultValue="RadifaxCR2026"
             />
 
             {error && (
@@ -194,46 +138,15 @@ function LoginForm({
 
             <button
                 type="submit"
+                disabled={cargando}
                 className="rf-btn w-full py-3 rounded-lg text-sm font-medium"
                 style={{
                     backgroundColor: COLORS.green,
                     color: COLORS.white,
                 }}
             >
-                Iniciar sesión
+                {cargando ? "Ingresando..." : "Iniciar sesión"}
             </button>
-
-            <details className="mt-6">
-                <summary
-                    className="text-xs cursor-pointer"
-                    style={{ color: COLORS.muted }}
-                >
-                    Cuentas de prueba por rol
-                </summary>
-
-                <ul className="mt-3 space-y-2">
-                    {VALID_USERS.map((user) => (
-                        <li
-                            key={user.email}
-                            className="text-xs"
-                            style={{
-                                color: COLORS.muted,
-                            }}
-                        >
-                            <span
-                                style={{
-                                    color:
-                                        COLORS.charcoal,
-                                    fontWeight: 600,
-                                }}
-                            >
-                                {user.role}:
-                            </span>{" "}
-                            {user.email} / {user.password}
-                        </li>
-                    ))}
-                </ul>
-            </details>
         </form>
     );
 }
@@ -241,166 +154,135 @@ function LoginForm({
 function ForgotPasswordForm({
     onBackToLogin,
 }) {
-    const [step, setStep] = useState("email");
-    const [email, setEmail] = useState(
-        "ricardo.infante@radifaxcr.com"
-    );
+    const [email, setEmail] = useState("");
+    const [enviado, setEnviado] = useState(false);
+    const [error, setError] = useState("");
+    const [cargando, setCargando] = useState(false);
 
-    if (step === "email") {
+    async function handleSubmit(event) {
+        event.preventDefault();
+        setError("");
+        setCargando(true);
+
+        try {
+            await solicitarRecuperacion(email.trim());
+            setEnviado(true);
+        } catch (err) {
+            setError(err.message ?? "No se pudo procesar la solicitud.");
+        } finally {
+            setCargando(false);
+        }
+    }
+
+    if (enviado) {
         return (
-            <form
-                onSubmit={(event) => {
-                    event.preventDefault();
-                    setStep("reset");
-                }}
-            >
-                <p
-                    className="text-sm mb-6"
-                    style={{ color: COLORS.muted }}
-                >
-                    Ingresá tu correo corporativo y te
-                    enviaremos un código para restablecer
-                    tu contraseña.
-                </p>
-
-                <Field label="Correo corporativo">
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(event) =>
-                            setEmail(
-                                event.target.value
-                            )
-                        }
-                        className="rf-input w-full px-4 py-3 rounded-lg text-sm bg-white"
-                        style={{
-                            border: `1px solid ${COLORS.border}`,
-                            color: COLORS.charcoal,
-                        }}
-                    />
-                </Field>
-
-                <button
-                    type="submit"
-                    className="rf-btn w-full py-3 rounded-lg text-sm font-medium"
+            <div className="text-center py-4">
+                <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
                     style={{
-                        backgroundColor: COLORS.green,
-                        color: COLORS.white,
+                        backgroundColor: COLORS.greenTint,
+                        color: COLORS.green,
+                        fontSize: "1.25rem",
                     }}
                 >
-                    Enviar código
-                </button>
+                    ✓
+                </div>
+
+                <p
+                    className="text-sm mb-8"
+                    style={{ color: COLORS.charcoal }}
+                >
+                    Si la cuenta existe y está activa,
+                    enviamos un enlace de un solo uso a{" "}
+                    <strong>{email}</strong>. Revisá tu
+                    bandeja de entrada.
+                </p>
 
                 <button
                     type="button"
                     onClick={onBackToLogin}
-                    className="rf-link block text-center text-xs mt-5 w-full"
-                    style={{
-                        color: COLORS.muted,
-                        background: "none",
-                        border: "none",
-                    }}
-                >
-                    ← Volver a iniciar sesión
-                </button>
-            </form>
-        );
-    }
-
-    if (step === "reset") {
-        return (
-            <form
-                onSubmit={(event) => {
-                    event.preventDefault();
-                    setStep("done");
-                }}
-            >
-                <p
-                    className="text-sm mb-6"
-                    style={{ color: COLORS.muted }}
-                >
-                    Te enviamos un código a{" "}
-                    <strong
-                        style={{
-                            color: COLORS.charcoal,
-                        }}
-                    >
-                        {email}
-                    </strong>
-                    .
-                </p>
-
-                <Field
-                    label="Código de verificación"
-                    name="code"
-                    defaultValue="482913"
-                />
-
-                <Field
-                    label="Nueva contraseña"
-                    type="password"
-                    name="password"
-                    defaultValue="RadifaxCR2026*"
-                />
-
-                <Field
-                    label="Confirmar nueva contraseña"
-                    type="password"
-                    name="confirmPassword"
-                    defaultValue="RadifaxCR2026*"
-                />
-
-                <button
-                    type="submit"
                     className="rf-btn w-full py-3 rounded-lg text-sm font-medium"
                     style={{
                         backgroundColor: COLORS.green,
                         color: COLORS.white,
                     }}
                 >
-                    Restablecer contraseña
+                    Volver a iniciar sesión
                 </button>
-            </form>
+            </div>
         );
     }
 
     return (
-        <div className="text-center py-4">
-            <div
-                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{
-                    backgroundColor: COLORS.greenTint,
-                    color: COLORS.green,
-                    fontSize: "1.25rem",
-                }}
-            >
-                ✓
-            </div>
-
+        <form onSubmit={handleSubmit}>
             <p
-                className="text-sm mb-8"
-                style={{ color: COLORS.charcoal }}
+                className="text-sm mb-6"
+                style={{ color: COLORS.muted }}
             >
-                Tu contraseña se actualizó
-                correctamente.
+                Ingresá tu correo corporativo. Si la
+                cuenta existe y está activa, te
+                enviaremos un enlace de un solo uso
+                para restablecer tu contraseña.
             </p>
 
+            <Field label="Correo corporativo">
+                <input
+                    type="email"
+                    value={email}
+                    onChange={(event) =>
+                        setEmail(event.target.value)
+                    }
+                    required
+                    className="rf-input w-full px-4 py-3 rounded-lg text-sm bg-white"
+                    style={{
+                        border: `1px solid ${COLORS.border}`,
+                        color: COLORS.charcoal,
+                    }}
+                />
+            </Field>
+
+            {error && (
+                <div
+                    className="mb-5 px-3 py-2 rounded-lg text-xs"
+                    style={{
+                        backgroundColor:
+                            COLORS.redTint,
+                        color: COLORS.red,
+                    }}
+                >
+                    {error}
+                </div>
+            )}
+
             <button
-                type="button"
-                onClick={onBackToLogin}
+                type="submit"
+                disabled={cargando}
                 className="rf-btn w-full py-3 rounded-lg text-sm font-medium"
                 style={{
                     backgroundColor: COLORS.green,
                     color: COLORS.white,
                 }}
             >
-                Ir a iniciar sesión
+                {cargando ? "Enviando..." : "Enviar enlace"}
             </button>
-        </div>
+
+            <button
+                type="button"
+                onClick={onBackToLogin}
+                className="rf-link block text-center text-xs mt-5 w-full"
+                style={{
+                    color: COLORS.muted,
+                    background: "none",
+                    border: "none",
+                }}
+            >
+                ← Volver a iniciar sesión
+            </button>
+        </form>
     );
 }
 
-export default function Auth({ onAuthSuccess }) {
+export default function Auth({ onAuthSuccess, avisoSesionExpirada }) {
     const [mode, setMode] = useState("login");
 
     return (
@@ -485,6 +367,19 @@ export default function Auth({ onAuthSuccess }) {
                     </div>
                 </div>
 
+                {avisoSesionExpirada && mode === "login" && (
+                    <div
+                        className="mb-5 px-4 py-3 rounded-xl text-xs"
+                        style={{
+                            backgroundColor: COLORS.redTint,
+                            color: COLORS.red,
+                            border: `1px solid ${COLORS.red}`,
+                        }}
+                    >
+                        Tu sesión expiró o fue cerrada. Iniciá sesión nuevamente.
+                    </div>
+                )}
+
                 <div
                     className="bg-white rounded-2xl p-10"
                     style={{
@@ -501,7 +396,7 @@ export default function Auth({ onAuthSuccess }) {
                         }}
                     >
                         {mode === "forgot"
-                            ? "Restablecer contraseña"
+                            ? "Recuperar contraseña"
                             : "Iniciar sesión"}
                     </h1>
 
