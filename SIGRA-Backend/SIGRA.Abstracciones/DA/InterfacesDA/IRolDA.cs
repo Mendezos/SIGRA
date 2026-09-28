@@ -6,4 +6,5 @@ public interface IRolDA
 {
     Task<bool> ExisteConNombreAsync(string nombre);
     Task<RolModel> CrearAsync(string nombre);
+    Task<List<RolModel>> ListarAsync();
 }

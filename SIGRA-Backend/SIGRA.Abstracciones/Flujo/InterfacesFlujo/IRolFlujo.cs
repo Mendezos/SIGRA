@@ -5,4 +5,5 @@ namespace SIGRA.Abstracciones.Flujo;
 public interface IRolFlujo
 {
     Task<RolModel> CrearAsync(string nombre, int idUsuarioAdministrador);
+    Task<List<RolModel>> ListarAsync();
 }

@@ -26,4 +26,12 @@ public class RolDA : IRolDA
             "sp_Rol_Insertar", new { Nombre = nombre }, commandType: CommandType.StoredProcedure);
         return resultado;
     }
+
+    public async Task<List<RolModel>> ListarAsync()
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        var resultado = await conexion.QueryAsync<RolModel>(
+            "sp_Rol_Listar", commandType: CommandType.StoredProcedure);
+        return resultado.ToList();
+    }
 }

@@ -16,6 +16,13 @@ public class RolController : ControllerBase
 
     public RolController(IRolFlujo flujo) => _flujo = flujo;
 
+    [HttpGet]
+    public async Task<ActionResult<List<RolDto>>> Listar()
+    {
+        var roles = await _flujo.ListarAsync();
+        return Ok(roles.Select(r => new RolDto { IdRol = r.IdRol, Nombre = r.Nombre, Activo = r.Activo }).ToList());
+    }
+
     [HttpPost]
     public async Task<ActionResult<RolDto>> Crear([FromBody] CrearRolDto dto)
     {

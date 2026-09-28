@@ -39,4 +39,9 @@ public class RolFlujo : IRolFlujo
 
         return nuevo;
     }
+
+    public async Task<List<RolModel>> ListarAsync()
+    {
+        return await _rolDA.ListarAsync();
+    }
 }
