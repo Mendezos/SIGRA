@@ -15,9 +15,22 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().ConfigureApiBehaviorOptions(opciones =>
+{
+    opciones.InvalidModelStateResponseFactory = contexto =>
+        new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(new
+        {
+            mensaje = "Revise los datos enviados.",
+            errores = contexto.ModelState
+                .Where(x => x.Value?.Errors.Count > 0)
+                .Select(x => $"El campo {x.Key} tiene un valor inválido.")
+                .ToArray()
+        });
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IGestionCuentasDA, GestionCuentasDA>();
+builder.Services.AddScoped<IGestionCuentasFlujo, GestionCuentasFlujo>();
 
 const string PoliticaCorsReact = "PoliticaCorsReact";
 builder.Services.AddCors(opciones =>

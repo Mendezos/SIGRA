@@ -9,7 +9,11 @@ public class SesionActivaMiddleware
 
     public SesionActivaMiddleware(RequestDelegate next) => _next = next;
 
-    public async Task InvokeAsync(HttpContext context, ISesionDA sesionDA, IPoliticaSeguridadDA politicaDA)
+    public async Task InvokeAsync(
+        HttpContext context,
+        ISesionDA sesionDA,
+        IPoliticaSeguridadDA politicaDA,
+        IUsuarioDA usuarioDA)
     {
         if (context.User?.Identity?.IsAuthenticated == true)
         {
@@ -23,19 +27,38 @@ public class SesionActivaMiddleware
             }
 
             var sesion = await sesionDA.ObtenerActivaAsync(jti);
+
             if (sesion is null)
             {
-                await EscribirNoAutorizado(context, "Su sesión ha expirado o fue cerrada. Inicie sesión nuevamente.");
+                await EscribirNoAutorizado(
+                    context,
+                    "Su sesión ha expirado o fue cerrada. Inicie sesión nuevamente.");
+                return;
+            }
+
+            var usuario = await usuarioDA.ObtenerPorIdAsync(sesion.IdUsuario);
+
+            if (usuario is null || !usuario.Activo)
+            {
+                await sesionDA.CerrarTodasDelUsuarioAsync(sesion.IdUsuario);
+
+                await EscribirNoAutorizado(
+                    context,
+                    "Su cuenta está desactivada. Contacte al administrador.");
                 return;
             }
 
             var politica = await politicaDA.ObtenerActivaAsync();
             var minutosInactividad = politica?.MinutosInactividad ?? 30;
 
-            if (sesion.UltimaActividad.AddMinutes(minutosInactividad) < DateTime.UtcNow)
+            if (sesion.UltimaActividad.AddMinutes(minutosInactividad)
+                < DateTime.UtcNow)
             {
                 await sesionDA.CerrarAsync(jti);
-                await EscribirNoAutorizado(context, "Su sesión ha expirado por inactividad. Inicie sesión nuevamente.");
+
+                await EscribirNoAutorizado(
+                    context,
+                    "Su sesión ha expirado por inactividad. Inicie sesión nuevamente.");
                 return;
             }
 
@@ -45,10 +68,13 @@ public class SesionActivaMiddleware
         await _next(context);
     }
 
-    private static async Task EscribirNoAutorizado(HttpContext context, string mensaje)
+    private static async Task EscribirNoAutorizado(
+        HttpContext context,
+        string mensaje)
     {
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         context.Response.ContentType = "application/json";
+
         await context.Response.WriteAsJsonAsync(new { mensaje });
     }
 }
