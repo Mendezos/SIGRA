@@ -120,7 +120,16 @@
     <Build Include="dbo\Stored Procedures\sp_Auditoria_ObtenerRecientesPorUsuario.sql" />
     <Build Include="dbo\Stored Procedures\sp_Usuario_ObtenerBloqueados.sql" />
   </ItemGroup>
+
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Build Include="dbo\Views\vw_CuentaDetalle.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Cuenta_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Cuenta_Roles.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Cuenta_Guardar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Auditoria_Consultar.sql" />
   </ItemGroup>
 </Project>
