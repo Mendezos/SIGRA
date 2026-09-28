@@ -44,4 +44,12 @@ public class RolController : ControllerBase
 
         return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Activo = actualizado.Activo });
     }
+
+    [HttpPatch("{idRol:int}/estado")]
+    public async Task<ActionResult<RolDto>> CambiarEstado(int idRol, [FromBody] CambiarEstadoRolDto dto)
+    {
+        var actualizado = await _flujo.CambiarEstadoAsync(idRol, dto.Activo, User.ObtenerIdUsuario());
+
+        return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Activo = actualizado.Activo });
+    }
 }

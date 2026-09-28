@@ -53,6 +53,19 @@ public class RolFlujo : IRolFlujo
         return actualizado;
     }
 
+    public async Task<RolModel> CambiarEstadoAsync(int idRol, bool activo, int idUsuarioAdministrador)
+    {
+        var existente = await _rolDA.ObtenerPorIdAsync(idRol)
+            ?? throw new ReglaNegocioException("El rol indicado no existe.");
+
+        var actualizado = await _rolDA.CambiarEstadoAsync(idRol, activo);
+
+        var accion = activo ? "ROL_ACTIVADO" : "ROL_DESACTIVADO";
+        await _auditoriaDA.RegistrarAsync(idUsuarioAdministrador, "Seguridad", "Rol", idRol, accion, existente.Nombre);
+
+        return actualizado;
+    }
+
     private static string ValidarNombre(string nombre)
     {
         var errores = new List<string>();

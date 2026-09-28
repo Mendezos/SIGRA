@@ -10,4 +10,5 @@ public interface IRolDA
     Task<RolModel?> ObtenerPorIdAsync(int idRol);
     Task<bool> ExisteConNombreExcluyendoAsync(string nombre, int idRolExcluir);
     Task<RolModel> EditarAsync(int idRol, string nombre);
+    Task<RolModel> CambiarEstadoAsync(int idRol, bool activo);
 }

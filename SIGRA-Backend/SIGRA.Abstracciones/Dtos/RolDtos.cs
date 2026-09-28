@@ -10,6 +10,11 @@ public class EditarRolDto
     public string Nombre { get; set; } = string.Empty;
 }
 
+public class CambiarEstadoRolDto
+{
+    public bool Activo { get; set; }
+}
+
 public class RolDto
 {
     public int IdRol { get; set; }

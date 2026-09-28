@@ -56,4 +56,11 @@ public class RolDA : IRolDA
         return await conexion.QuerySingleAsync<RolModel>(
             "sp_Rol_Editar", new { IdRol = idRol, Nombre = nombre }, commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<RolModel> CambiarEstadoAsync(int idRol, bool activo)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        return await conexion.QuerySingleAsync<RolModel>(
+            "sp_Rol_CambiarEstado", new { IdRol = idRol, Activo = activo }, commandType: CommandType.StoredProcedure);
+    }
 }
