@@ -22,6 +22,20 @@ export async function obtenerPerfil() {
     return apiRequest("/auth/me");
 }
 
+export async function actualizarPerfil(nombre, telefono, foto) {
+    return apiRequest("/auth/me", {
+        method: "PUT",
+        body: { nombre, telefono, foto },
+    });
+}
+
+export async function cambiarPassword(passwordActual, passwordNueva) {
+    return apiRequest("/auth/cambiar-password", {
+        method: "POST",
+        body: { passwordActual, passwordNueva },
+    });
+}
+
 export async function solicitarRecuperacion(correo) {
     return apiRequest("/recuperacion-password/solicitar", {
         method: "POST",

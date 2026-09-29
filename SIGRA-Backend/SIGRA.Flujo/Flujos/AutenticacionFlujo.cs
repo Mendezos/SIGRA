@@ -130,6 +130,8 @@ public class AutenticacionFlujo : IAutenticacionFlujo
             IdUsuario = usuario.IdUsuario,
             Nombre = usuario.Nombre,
             Correo = usuario.Correo,
+            Telefono = usuario.Telefono,
+            Foto = usuario.Foto,
             Rol = usuario.NombreRol,
             Permisos = permisos
         };
