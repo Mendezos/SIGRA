@@ -1,3 +1,4 @@
+using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
@@ -7,12 +8,16 @@ namespace SIGRA.Flujo.Flujos;
 
 public class RolFlujo : IRolFlujo
 {
+    private const int TotalModulos = 11;
+
     private readonly IRolDA _rolDA;
+    private readonly IRolPermisoDA _rolPermisoDA;
     private readonly IAuditoriaDA _auditoriaDA;
 
-    public RolFlujo(IRolDA rolDA, IAuditoriaDA auditoriaDA)
+    public RolFlujo(IRolDA rolDA, IRolPermisoDA rolPermisoDA, IAuditoriaDA auditoriaDA)
     {
         _rolDA = rolDA;
+        _rolPermisoDA = rolPermisoDA;
         _auditoriaDA = auditoriaDA;
     }
 
@@ -64,6 +69,35 @@ public class RolFlujo : IRolFlujo
         await _auditoriaDA.RegistrarAsync(idUsuarioAdministrador, "Seguridad", "Rol", idRol, accion, existente.Nombre);
 
         return actualizado;
+    }
+
+    public async Task<List<PermisoModuloDto>> DefinirPermisosAsync(int idRol, List<PermisoModuloDto> permisos, int idUsuarioAdministrador)
+    {
+        var existente = await _rolDA.ObtenerPorIdAsync(idRol)
+            ?? throw new ReglaNegocioException("El rol indicado no existe.");
+
+        if (permisos is null || permisos.Count == 0)
+            throw new ValidacionException("Uno o más valores están fuera del rango permitido.", new List<string> { "Debe indicar al menos un módulo con sus permisos." });
+
+        var errores = new List<string>();
+        foreach (var permiso in permisos)
+        {
+            if (permiso.IdModulo < 1 || permiso.IdModulo > TotalModulos)
+                errores.Add($"El módulo {permiso.IdModulo} no es válido.");
+        }
+
+        if (errores.Count > 0)
+            throw new ValidacionException("Uno o más valores están fuera del rango permitido.", errores);
+
+        foreach (var permiso in permisos)
+        {
+            await _rolPermisoDA.DefinirAsync(idRol, permiso.IdModulo, permiso.Lectura, permiso.Escritura, permiso.Edicion, permiso.Eliminacion);
+        }
+
+        var modulosAfectados = string.Join(", ", permisos.Select(p => p.IdModulo));
+        await _auditoriaDA.RegistrarAsync(idUsuarioAdministrador, "Seguridad", "Rol", idRol, "PERMISOS_DEFINIDOS", $"Rol \"{existente.Nombre}\" - módulos: {modulosAfectados}");
+
+        return await _rolPermisoDA.ObtenerPorRolAsync(idRol);
     }
 
     private static string ValidarNombre(string nombre)

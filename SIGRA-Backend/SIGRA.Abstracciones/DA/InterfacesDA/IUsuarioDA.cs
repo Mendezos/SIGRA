@@ -45,4 +45,5 @@ public interface ISesionDA
 public interface IRolPermisoDA
 {
     Task<List<PermisoModuloDto>> ObtenerPorRolAsync(int idRol);
+    Task DefinirAsync(int idRol, int idModulo, bool lectura, bool escritura, bool edicion, bool eliminacion);
 }

@@ -121,6 +121,7 @@
     <Build Include="dbo\Stored Procedures\sp_Rol_ExisteConNombreExcluyendo.sql" />
     <Build Include="dbo\Stored Procedures\sp_Rol_Editar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Rol_CambiarEstado.sql" />
+    <Build Include="dbo\Stored Procedures\sp_RolPermiso_Definir.sql" />
     <Build Include="dbo\Stored Procedures\sp_PoliticaSeguridad_ObtenerActiva.sql" />
     <Build Include="dbo\Stored Procedures\sp_PoliticaSeguridad_CrearVersion.sql" />
     <Build Include="dbo\Stored Procedures\sp_Auditoria_Insertar.sql" />

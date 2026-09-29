@@ -52,4 +52,11 @@ public class RolController : ControllerBase
 
         return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Activo = actualizado.Activo });
     }
+
+    [HttpPut("{idRol:int}/permisos")]
+    public async Task<ActionResult<List<PermisoModuloDto>>> DefinirPermisos(int idRol, [FromBody] List<PermisoModuloDto> permisos)
+    {
+        var actualizado = await _flujo.DefinirPermisosAsync(idRol, permisos, User.ObtenerIdUsuario());
+        return Ok(actualizado);
+    }
 }
