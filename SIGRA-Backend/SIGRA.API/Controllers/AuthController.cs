@@ -37,4 +37,20 @@ public class AuthController : ControllerBase
         var perfil = await _flujo.ObtenerPerfilAsync(User.ObtenerIdUsuario());
         return Ok(perfil);
     }
+
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<ActionResult<PerfilUsuarioDto>> ActualizarMe([FromBody] ActualizarPerfilDto dto)
+    {
+        var perfil = await _flujo.ActualizarPerfilAsync(User.ObtenerIdUsuario(), dto.Nombre, dto.Telefono, dto.Foto);
+        return Ok(perfil);
+    }
+
+    [Authorize]
+    [HttpPost("cambiar-password")]
+    public async Task<IActionResult> CambiarPassword([FromBody] CambiarPasswordPropioDto dto)
+    {
+        await _flujo.CambiarPasswordAsync(User.ObtenerIdUsuario(), dto.PasswordActual, dto.PasswordNueva);
+        return Ok(new RespuestaMensajeDto { Mensaje = "Contraseña actualizada correctamente. Debe iniciar sesión de nuevo." });
+    }
 }

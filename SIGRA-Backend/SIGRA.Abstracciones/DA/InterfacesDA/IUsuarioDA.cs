@@ -12,6 +12,7 @@ public interface IUsuarioDA
     Task DesbloquearCuentaAsync(int idUsuario);
     Task ActualizarPasswordHashAsync(int idUsuario, string passwordHash);
     Task<List<UsuarioModel>> ObtenerBloqueadosAsync();
+    Task ActualizarPerfilAsync(int idUsuario, string nombre, string? telefono, string? foto);
 }
 
 public interface IAuditoriaDA

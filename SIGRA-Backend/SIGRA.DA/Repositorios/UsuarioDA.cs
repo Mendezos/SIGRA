@@ -67,4 +67,13 @@ public class UsuarioDA : IUsuarioDA
             "sp_Usuario_ObtenerBloqueados", commandType: CommandType.StoredProcedure);
         return resultado.ToList();
     }
+
+    public async Task ActualizarPerfilAsync(int idUsuario, string nombre, string? telefono, string? foto)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        await conexion.ExecuteAsync(
+            "sp_Usuario_ActualizarPerfil",
+            new { IdUsuario = idUsuario, Nombre = nombre, Telefono = telefono, Foto = foto },
+            commandType: CommandType.StoredProcedure);
+    }
 }

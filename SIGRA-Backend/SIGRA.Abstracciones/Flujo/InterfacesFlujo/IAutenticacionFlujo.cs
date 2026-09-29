@@ -8,6 +8,8 @@ public interface IAutenticacionFlujo
     Task<LoginResponseDto> LoginAsync(string correo, string password);
     Task LogoutAsync(string tokenId);
     Task<PerfilUsuarioDto> ObtenerPerfilAsync(int idUsuario);
+    Task<PerfilUsuarioDto> ActualizarPerfilAsync(int idUsuario, string nombre, string? telefono, string? foto);
+    Task CambiarPasswordAsync(int idUsuario, string passwordActual, string passwordNueva);
 }
 
 public interface IPoliticaSeguridadFlujo
