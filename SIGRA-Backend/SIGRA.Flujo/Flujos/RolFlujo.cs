@@ -100,6 +100,14 @@ public class RolFlujo : IRolFlujo
         return await _rolPermisoDA.ObtenerPorRolAsync(idRol);
     }
 
+    public async Task<List<PermisoModuloDto>> ObtenerPermisosAsync(int idRol)
+    {
+        _ = await _rolDA.ObtenerPorIdAsync(idRol)
+            ?? throw new ReglaNegocioException("El rol indicado no existe.");
+
+        return await _rolPermisoDA.ObtenerPorRolAsync(idRol);
+    }
+
     private static string ValidarNombre(string nombre)
     {
         var errores = new List<string>();

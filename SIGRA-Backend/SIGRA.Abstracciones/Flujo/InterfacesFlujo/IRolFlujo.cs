@@ -10,4 +10,5 @@ public interface IRolFlujo
     Task<RolModel> EditarAsync(int idRol, string nombre, int idUsuarioAdministrador);
     Task<RolModel> CambiarEstadoAsync(int idRol, bool activo, int idUsuarioAdministrador);
     Task<List<PermisoModuloDto>> DefinirPermisosAsync(int idRol, List<PermisoModuloDto> permisos, int idUsuarioAdministrador);
+    Task<List<PermisoModuloDto>> ObtenerPermisosAsync(int idRol);
 }
