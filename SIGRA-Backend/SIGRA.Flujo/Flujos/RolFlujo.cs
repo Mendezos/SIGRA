@@ -8,27 +8,28 @@ namespace SIGRA.Flujo.Flujos;
 
 public class RolFlujo : IRolFlujo
 {
-    private const int TotalModulos = 11;
-
     private readonly IRolDA _rolDA;
     private readonly IRolPermisoDA _rolPermisoDA;
+    private readonly IModuloDA _moduloDA;
     private readonly IAuditoriaDA _auditoriaDA;
 
-    public RolFlujo(IRolDA rolDA, IRolPermisoDA rolPermisoDA, IAuditoriaDA auditoriaDA)
+    public RolFlujo(IRolDA rolDA, IRolPermisoDA rolPermisoDA, IModuloDA moduloDA, IAuditoriaDA auditoriaDA)
     {
         _rolDA = rolDA;
         _rolPermisoDA = rolPermisoDA;
+        _moduloDA = moduloDA;
         _auditoriaDA = auditoriaDA;
     }
 
-    public async Task<RolModel> CrearAsync(string nombre, int idUsuarioAdministrador)
+    public async Task<RolModel> CrearAsync(string nombre, string? descripcion, int idUsuarioAdministrador)
     {
         var nombreNormalizado = ValidarNombre(nombre);
+        var descripcionNormalizada = ValidarDescripcion(descripcion);
 
         if (await _rolDA.ExisteConNombreAsync(nombreNormalizado))
             throw new ReglaNegocioException($"Ya existe un rol con el nombre \"{nombreNormalizado}\".");
 
-        var nuevo = await _rolDA.CrearAsync(nombreNormalizado);
+        var nuevo = await _rolDA.CrearAsync(nombreNormalizado, descripcionNormalizada);
 
         await _auditoriaDA.RegistrarAsync(idUsuarioAdministrador, "Seguridad", "Rol", nuevo.IdRol, "ROL_CREADO", nombreNormalizado);
 
@@ -40,18 +41,19 @@ public class RolFlujo : IRolFlujo
         return await _rolDA.ListarAsync();
     }
 
-    public async Task<RolModel> EditarAsync(int idRol, string nombre, int idUsuarioAdministrador)
+    public async Task<RolModel> EditarAsync(int idRol, string nombre, string? descripcion, int idUsuarioAdministrador)
     {
         var existente = await _rolDA.ObtenerPorIdAsync(idRol)
             ?? throw new ReglaNegocioException("El rol indicado no existe.");
 
         var nombreNormalizado = ValidarNombre(nombre);
+        var descripcionNormalizada = ValidarDescripcion(descripcion);
 
         if (await _rolDA.ExisteConNombreExcluyendoAsync(nombreNormalizado, idRol))
             throw new ReglaNegocioException($"Ya existe un rol con el nombre \"{nombreNormalizado}\".");
 
         var nombreAnterior = existente.Nombre;
-        var actualizado = await _rolDA.EditarAsync(idRol, nombreNormalizado);
+        var actualizado = await _rolDA.EditarAsync(idRol, nombreNormalizado, descripcionNormalizada);
 
         await _auditoriaDA.RegistrarAsync(idUsuarioAdministrador, "Seguridad", "Rol", idRol, "ROL_EDITADO", $"De \"{nombreAnterior}\" a \"{nombreNormalizado}\"");
 
@@ -79,10 +81,12 @@ public class RolFlujo : IRolFlujo
         if (permisos is null || permisos.Count == 0)
             throw new ValidacionException("Uno o más valores están fuera del rango permitido.", new List<string> { "Debe indicar al menos un módulo con sus permisos." });
 
+        var modulosValidos = (await _moduloDA.ListarAsync()).Select(m => m.IdModulo).ToHashSet();
+
         var errores = new List<string>();
         foreach (var permiso in permisos)
         {
-            if (permiso.IdModulo < 1 || permiso.IdModulo > TotalModulos)
+            if (!modulosValidos.Contains(permiso.IdModulo))
                 errores.Add($"El módulo {permiso.IdModulo} no es válido.");
         }
 
@@ -121,5 +125,17 @@ public class RolFlujo : IRolFlujo
             throw new ValidacionException("Uno o más valores están fuera del rango permitido.", errores);
 
         return nombre.Trim();
+    }
+
+    private static string? ValidarDescripcion(string? descripcion)
+    {
+        if (string.IsNullOrWhiteSpace(descripcion))
+            return null;
+
+        var descripcionNormalizada = descripcion.Trim();
+        if (descripcionNormalizada.Length > 250)
+            throw new ValidacionException("Uno o más valores están fuera del rango permitido.", new List<string> { "La descripción del rol no puede superar los 250 caracteres." });
+
+        return descripcionNormalizada;
     }
 }

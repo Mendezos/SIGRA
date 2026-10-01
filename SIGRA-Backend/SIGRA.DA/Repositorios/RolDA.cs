@@ -19,11 +19,11 @@ public class RolDA : IRolDA
             "sp_Rol_ExisteConNombre", new { Nombre = nombre }, commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<RolModel> CrearAsync(string nombre)
+    public async Task<RolModel> CrearAsync(string nombre, string? descripcion)
     {
         using var conexion = _conexionFactory.CrearConexion();
         var resultado = await conexion.QuerySingleAsync<RolModel>(
-            "sp_Rol_Insertar", new { Nombre = nombre }, commandType: CommandType.StoredProcedure);
+            "sp_Rol_Insertar", new { Nombre = nombre, Descripcion = descripcion }, commandType: CommandType.StoredProcedure);
         return resultado;
     }
 
@@ -50,11 +50,11 @@ public class RolDA : IRolDA
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<RolModel> EditarAsync(int idRol, string nombre)
+    public async Task<RolModel> EditarAsync(int idRol, string nombre, string? descripcion)
     {
         using var conexion = _conexionFactory.CrearConexion();
         return await conexion.QuerySingleAsync<RolModel>(
-            "sp_Rol_Editar", new { IdRol = idRol, Nombre = nombre }, commandType: CommandType.StoredProcedure);
+            "sp_Rol_Editar", new { IdRol = idRol, Nombre = nombre, Descripcion = descripcion }, commandType: CommandType.StoredProcedure);
     }
 
     public async Task<RolModel> CambiarEstadoAsync(int idRol, bool activo)

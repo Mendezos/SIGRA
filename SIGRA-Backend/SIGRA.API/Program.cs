@@ -71,6 +71,7 @@ builder.Services.AddScoped<IPoliticaSeguridadDA, PoliticaSeguridadDA>();
 builder.Services.AddScoped<ISesionDA, SesionDA>();
 builder.Services.AddScoped<IRolPermisoDA, RolPermisoDA>();
 builder.Services.AddScoped<IRolDA, RolDA>();
+builder.Services.AddScoped<IModuloDA, ModuloDA>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -81,6 +82,7 @@ builder.Services.AddScoped<IPoliticaSeguridadFlujo, PoliticaSeguridadFlujo>();
 builder.Services.AddScoped<ICuentaFlujo, CuentaFlujo>();
 builder.Services.AddScoped<IRecuperacionPasswordFlujo, RecuperacionPasswordFlujo>();
 builder.Services.AddScoped<IRolFlujo, RolFlujo>();
+builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
 
 var app = builder.Build();
 

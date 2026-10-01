@@ -4,17 +4,17 @@ export async function listarRoles() {
     return apiRequest("/roles");
 }
 
-export async function crearRol(nombre) {
+export async function crearRol(nombre, descripcion) {
     return apiRequest("/roles", {
         method: "POST",
-        body: { nombre },
+        body: { nombre, descripcion: descripcion || null },
     });
 }
 
-export async function editarRol(idRol, nombre) {
+export async function editarRol(idRol, nombre, descripcion) {
     return apiRequest(`/roles/${idRol}`, {
         method: "PUT",
-        body: { nombre },
+        body: { nombre, descripcion: descripcion || null },
     });
 }
 
@@ -34,4 +34,8 @@ export async function definirPermisosRol(idRol, permisos) {
         method: "PUT",
         body: permisos,
     });
+}
+
+export async function listarModulos() {
+    return apiRequest("/modulos");
 }

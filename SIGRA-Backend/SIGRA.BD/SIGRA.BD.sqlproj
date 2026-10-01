@@ -78,6 +78,7 @@
     <Build Include="dbo\Tables\Prospecto.sql" />
     <Build Include="dbo\Tables\PoliticaSeguridad.sql" />
     <Build Include="dbo\Tables\Permiso.sql" />
+    <Build Include="dbo\Tables\Modulo.sql" />
     <Build Include="dbo\Tables\MovimientoInventario.sql" />
     <Build Include="dbo\Tables\ModeloEquipo.sql" />
     <Build Include="dbo\Tables\InteraccionCRM.sql" />
@@ -116,6 +117,7 @@
     <Build Include="dbo\Stored Procedures\sp_RolPermiso_ObtenerPorRol.sql" />
     <Build Include="dbo\Stored Procedures\sp_Rol_ExisteConNombre.sql" />
     <Build Include="dbo\Stored Procedures\sp_Rol_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Modulo_Listar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Rol_Listar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Rol_ObtenerPorId.sql" />
     <Build Include="dbo\Stored Procedures\sp_Rol_ExisteConNombreExcluyendo.sql" />

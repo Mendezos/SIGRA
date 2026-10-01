@@ -4,7 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT IdRol, Nombre, Activo
+    SELECT IdRol, Nombre, Descripcion, Activo
     FROM Rol
     ORDER BY Nombre;
 END

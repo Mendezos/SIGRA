@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import DataTable from "./DataTable";
 import Modal from "./Modal";
-import { MODULES } from "../data/modules";
-import { MODULE_KEY_TO_ID } from "../data/roleCapabilities";
 import * as api from "../services/rolesService";
 import { ApiError } from "../services/apiClient";
 
@@ -21,6 +19,7 @@ const button = "px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50";
 const columnas = [
     { key: "idRol", label: "ID" },
     { key: "nombre", label: "Nombre" },
+    { key: "descripcion", label: "Descripción" },
     { key: "estado", label: "Estado" },
 ];
 
@@ -31,13 +30,8 @@ const ACCIONES = [
     { key: "eliminacion", label: "Eliminación" },
 ];
 
-const MODULOS_PERMISOS = MODULES.map((m) => ({
-    idModulo: MODULE_KEY_TO_ID[m.id],
-    label: m.label,
-})).filter((m) => m.idModulo);
-
-function permisosVacios() {
-    return MODULOS_PERMISOS.map((m) => ({
+function permisosVacios(modulos) {
+    return modulos.map((m) => ({
         idModulo: m.idModulo,
         lectura: false,
         escritura: false,
@@ -48,16 +42,19 @@ function permisosVacios() {
 
 export default function RolesPanel({ user }) {
     const [roles, setRoles] = useState([]);
+    const [modulos, setModulos] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState("");
     const [aviso, setAviso] = useState("");
 
     const [modoCreacion, setModoCreacion] = useState(false);
     const [nombreNuevo, setNombreNuevo] = useState("");
+    const [descripcionNueva, setDescripcionNueva] = useState("");
 
     const [seleccionado, setSeleccionado] = useState(null);
     const [nombreEdicion, setNombreEdicion] = useState("");
-    const [permisos, setPermisos] = useState(permisosVacios());
+    const [descripcionEdicion, setDescripcionEdicion] = useState("");
+    const [permisos, setPermisos] = useState([]);
     const [cargandoPermisos, setCargandoPermisos] = useState(false);
     const [guardando, setGuardando] = useState(false);
 
@@ -67,13 +64,14 @@ export default function RolesPanel({ user }) {
         setCargando(true);
         setError("");
         try {
-            const data = await api.listarRoles();
+            const [data, modulosData] = await Promise.all([api.listarRoles(), api.listarModulos()]);
             setRoles(
                 data.map((r) => ({
                     ...r,
                     estado: r.activo ? "Activo" : "Inactivo",
                 }))
             );
+            setModulos(modulosData);
         } catch (e) {
             setError(e instanceof ApiError ? e.message : "No se pudieron cargar los roles.");
         } finally {
@@ -97,12 +95,13 @@ export default function RolesPanel({ user }) {
     async function abrirDetalle(rol) {
         setSeleccionado(rol);
         setNombreEdicion(rol.nombre);
+        setDescripcionEdicion(rol.descripcion || "");
         setAviso("");
         setError("");
         setCargandoPermisos(true);
         try {
             const actuales = await api.obtenerPermisosRol(rol.idRol);
-            const base = permisosVacios();
+            const base = permisosVacios(modulos);
             const combinado = base.map((m) => {
                 const existente = actuales.find((p) => p.idModulo === m.idModulo);
                 return existente ? { ...m, ...existente } : m;
@@ -117,7 +116,7 @@ export default function RolesPanel({ user }) {
 
     function cerrarDetalle() {
         setSeleccionado(null);
-        setPermisos(permisosVacios());
+        setPermisos([]);
     }
 
     async function crearRol(e) {
@@ -125,8 +124,9 @@ export default function RolesPanel({ user }) {
         setGuardando(true);
         setError("");
         try {
-            await api.crearRol(nombreNuevo);
+            await api.crearRol(nombreNuevo, descripcionNueva);
             setNombreNuevo("");
+            setDescripcionNueva("");
             setModoCreacion(false);
             setAviso("Rol creado correctamente.");
             await cargarRoles();
@@ -141,8 +141,8 @@ export default function RolesPanel({ user }) {
         setGuardando(true);
         setError("");
         try {
-            await api.editarRol(seleccionado.idRol, nombreEdicion);
-            setAviso("Nombre actualizado correctamente.");
+            await api.editarRol(seleccionado.idRol, nombreEdicion, descripcionEdicion);
+            setAviso("Rol actualizado correctamente.");
             await cargarRoles();
         } catch (e) {
             setError(e instanceof ApiError ? e.message : "No se pudo editar el rol.");
@@ -224,6 +224,14 @@ export default function RolesPanel({ user }) {
                         required
                         maxLength={100}
                     />
+                    <label className="text-xs mt-3 block" style={{ color: COLORS.muted }}>Descripción (opcional)</label>
+                    <textarea
+                        className={control}
+                        value={descripcionNueva}
+                        onChange={(e) => setDescripcionNueva(e.target.value)}
+                        maxLength={250}
+                        rows={2}
+                    />
                     {error && <p className="text-sm mt-2" style={{ color: "#C0392B" }}>{error}</p>}
                     <div className="flex justify-end gap-3 mt-5">
                         <button type="button" className={button} onClick={() => setModoCreacion(false)}>Cancelar</button>
@@ -246,28 +254,40 @@ export default function RolesPanel({ user }) {
                         {error && <p className="text-sm mb-3" style={{ color: "#C0392B" }}>{error}</p>}
                         {aviso && <p className="text-sm mb-3" style={{ color: COLORS.greenDark }}>{aviso}</p>}
 
-                        <div className="flex items-end gap-3 mb-6">
-                            <div className="flex-1">
-                                <label className="text-xs" style={{ color: COLORS.muted }}>Nombre</label>
-                                <input
-                                    className={control}
-                                    value={nombreEdicion}
-                                    onChange={(e) => setNombreEdicion(e.target.value)}
-                                    maxLength={100}
-                                />
+                        <div className="mb-6">
+                            <div className="flex items-end gap-3 mb-3">
+                                <div className="flex-1">
+                                    <label className="text-xs" style={{ color: COLORS.muted }}>Nombre</label>
+                                    <input
+                                        className={control}
+                                        value={nombreEdicion}
+                                        onChange={(e) => setNombreEdicion(e.target.value)}
+                                        maxLength={100}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    className={button}
+                                    style={{ backgroundColor: seleccionado.activo ? "#FCEBEB" : COLORS.greenTint, color: seleccionado.activo ? "#C0392B" : COLORS.greenDark }}
+                                    onClick={alternarEstado}
+                                    disabled={guardando}
+                                >
+                                    {seleccionado.activo ? "Desactivar" : "Activar"}
+                                </button>
                             </div>
-                            <button type="button" className={button} onClick={guardarNombre} disabled={guardando}>
-                                Guardar nombre
-                            </button>
-                            <button
-                                type="button"
-                                className={button}
-                                style={{ backgroundColor: seleccionado.activo ? "#FCEBEB" : COLORS.greenTint, color: seleccionado.activo ? "#C0392B" : COLORS.greenDark }}
-                                onClick={alternarEstado}
-                                disabled={guardando}
-                            >
-                                {seleccionado.activo ? "Desactivar" : "Activar"}
-                            </button>
+                            <label className="text-xs" style={{ color: COLORS.muted }}>Descripción</label>
+                            <textarea
+                                className={control}
+                                value={descripcionEdicion}
+                                onChange={(e) => setDescripcionEdicion(e.target.value)}
+                                maxLength={250}
+                                rows={2}
+                            />
+                            <div className="flex justify-end mt-3">
+                                <button type="button" className={button} onClick={guardarNombre} disabled={guardando}>
+                                    Guardar cambios
+                                </button>
+                            </div>
                         </div>
 
                         <p className="font-medium mb-2" style={{ color: COLORS.charcoal }}>Permisos por módulo</p>
@@ -286,11 +306,11 @@ export default function RolesPanel({ user }) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {MODULOS_PERMISOS.map((modulo) => {
+                                        {modulos.map((modulo) => {
                                             const fila = permisos.find((p) => p.idModulo === modulo.idModulo);
                                             return (
                                                 <tr key={modulo.idModulo} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                                                    <td className="py-2">{modulo.label}</td>
+                                                    <td className="py-2">{modulo.nombre}</td>
                                                     {ACCIONES.map((a) => (
                                                         <td key={a.key} className="text-center py-2">
                                                             <input

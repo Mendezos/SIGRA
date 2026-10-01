@@ -20,7 +20,7 @@ public class RolController : ControllerBase
     public async Task<ActionResult<List<RolDto>>> Listar()
     {
         var roles = await _flujo.ListarAsync();
-        return Ok(roles.Select(r => new RolDto { IdRol = r.IdRol, Nombre = r.Nombre, Activo = r.Activo }).ToList());
+        return Ok(roles.Select(r => new RolDto { IdRol = r.IdRol, Nombre = r.Nombre, Descripcion = r.Descripcion, Activo = r.Activo }).ToList());
     }
 
     [HttpPost]
@@ -29,9 +29,9 @@ public class RolController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             throw new ValidacionException("Debe completar todos los parámetros obligatorios.", new List<string> { "Nombre del rol" });
 
-        var nuevo = await _flujo.CrearAsync(dto.Nombre, User.ObtenerIdUsuario());
+        var nuevo = await _flujo.CrearAsync(dto.Nombre, dto.Descripcion, User.ObtenerIdUsuario());
 
-        return Ok(new RolDto { IdRol = nuevo.IdRol, Nombre = nuevo.Nombre, Activo = nuevo.Activo });
+        return Ok(new RolDto { IdRol = nuevo.IdRol, Nombre = nuevo.Nombre, Descripcion = nuevo.Descripcion, Activo = nuevo.Activo });
     }
 
     [HttpPut("{idRol:int}")]
@@ -40,9 +40,9 @@ public class RolController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             throw new ValidacionException("Debe completar todos los parámetros obligatorios.", new List<string> { "Nombre del rol" });
 
-        var actualizado = await _flujo.EditarAsync(idRol, dto.Nombre, User.ObtenerIdUsuario());
+        var actualizado = await _flujo.EditarAsync(idRol, dto.Nombre, dto.Descripcion, User.ObtenerIdUsuario());
 
-        return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Activo = actualizado.Activo });
+        return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Descripcion = actualizado.Descripcion, Activo = actualizado.Activo });
     }
 
     [HttpPatch("{idRol:int}/estado")]
@@ -50,7 +50,7 @@ public class RolController : ControllerBase
     {
         var actualizado = await _flujo.CambiarEstadoAsync(idRol, dto.Activo, User.ObtenerIdUsuario());
 
-        return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Activo = actualizado.Activo });
+        return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Descripcion = actualizado.Descripcion, Activo = actualizado.Activo });
     }
 
     [HttpGet("{idRol:int}/permisos")]

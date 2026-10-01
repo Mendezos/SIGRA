@@ -6,23 +6,39 @@ Idempotente: se puede volver a publicar el proyecto sin duplicar filas.
 SET NOCOUNT ON;
 
 -- 1) Roles (deben coincidir exactamente con los nombres usados en el frontend y en [Authorize(Roles = "...")])
-DECLARE @Roles TABLE (Nombre VARCHAR(100));
-INSERT INTO @Roles (Nombre) VALUES
-    (N'Administrador del sistema'),
-    (N'Gerente'),
-    (N'Coordinador técnico'),
-    (N'Técnico'),
-    (N'Vendedor / Ejecutivo de cuenta');
+DECLARE @Roles TABLE (Nombre VARCHAR(100), Descripcion VARCHAR(250));
+INSERT INTO @Roles (Nombre, Descripcion) VALUES
+    (N'Administrador del sistema', N'Acceso total a todos los módulos: configuración, seguridad, roles y permisos.'),
+    (N'Gerente', N'Acceso de solo lectura a los módulos operativos y reportes de la empresa.'),
+    (N'Coordinador técnico', N'Coordina tickets, giras y asignación de técnicos e inventario de equipos.'),
+    (N'Técnico', N'Ejecuta tickets de servicio técnico y reporta el estado de los equipos en campo.'),
+    (N'Vendedor / Ejecutivo de cuenta', N'Gestiona contratos, clientes, prospectos (CRM) y frecuencias de radio.');
 
-INSERT INTO Rol (Nombre, Activo)
-SELECT n.Nombre, 1
+INSERT INTO Rol (Nombre, Descripcion, Activo)
+SELECT n.Nombre, n.Descripcion, 1
 FROM @Roles n
 WHERE NOT EXISTS (SELECT 1 FROM Rol r WHERE r.Nombre = n.Nombre);
 
--- 2) Módulos (IdModulo debe coincidir con MODULE_KEY_TO_ID del frontend: src/data/roleCapabilities.js)
--- 1=usuarios 2=tickets 3=alquiler 4=inventario 5=dashboard 6=ia 7=contratos 8=giras 9=crm 10=clientes 11=frecuencias
-DECLARE @Modulos TABLE (IdModulo INT);
-INSERT INTO @Modulos (IdModulo) VALUES (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11);
+-- 2) Módulos: catálogo real (antes solo existían como números documentados en comentarios del frontend).
+-- IdModulo debe coincidir con MODULE_KEY_TO_ID del frontend: src/data/roleCapabilities.js
+DECLARE @Modulos TABLE (IdModulo INT, Nombre VARCHAR(100));
+INSERT INTO @Modulos (IdModulo, Nombre) VALUES
+    (1, N'Usuarios y accesos'),
+    (2, N'Tickets de servicio técnico'),
+    (3, N'Alquiler de radios y repetidoras'),
+    (4, N'Inventario de equipos'),
+    (5, N'Dashboard y reportes'),
+    (6, N'Agente de inteligencia artificial'),
+    (7, N'Contratos y facturación'),
+    (8, N'Giras y planificación de rutas'),
+    (9, N'CRM y prospectos'),
+    (10, N'Clientes'),
+    (11, N'Frecuencias de radio');
+
+INSERT INTO Modulo (IdModulo, Nombre, Activo)
+SELECT m.IdModulo, m.Nombre, 1
+FROM @Modulos m
+WHERE NOT EXISTS (SELECT 1 FROM Modulo mo WHERE mo.IdModulo = m.IdModulo);
 
 INSERT INTO Permiso (IdModulo)
 SELECT m.IdModulo
