@@ -8,6 +8,7 @@ import Modal from "./Modal";
 import RecordForm from "./RecordForm";
 import GirasCalendar from "./GirasCalendar";
 import RolesPanel from "./RolesPanel";
+import UsuariosPanel from "./UsuariosPanel";
 import StatusBadge from "./StatusBadge";
 import {
     canAccessModule,
@@ -760,6 +761,9 @@ export default function ModuleView({
                     {module.id === "usuarios" &&
                     currentTab.key === "roles" ? (
                         <RolesPanel user={user} />
+                    ) : module.id === "usuarios" &&
+                      currentTab.key === "cuentas" ? (
+                        <UsuariosPanel user={user} />
                     ) : (
                     <EntityPanel
                         key={currentTab.key}

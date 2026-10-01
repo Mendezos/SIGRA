@@ -76,4 +76,21 @@ public class UsuarioDA : IUsuarioDA
             new { IdUsuario = idUsuario, Nombre = nombre, Telefono = telefono, Foto = foto },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<List<UsuarioModel>> ListarAsync()
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        var resultado = await conexion.QueryAsync<UsuarioModel>(
+            "sp_Usuario_Listar", commandType: CommandType.StoredProcedure);
+        return resultado.ToList();
+    }
+
+    public async Task<UsuarioModel> CrearAsync(int idRol, string nombre, string correo, string? telefono, string passwordHash)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        return await conexion.QuerySingleAsync<UsuarioModel>(
+            "sp_Usuario_Insertar",
+            new { IdRol = idRol, Nombre = nombre, Correo = correo, Telefono = telefono, PasswordHash = passwordHash },
+            commandType: CommandType.StoredProcedure);
+    }
 }

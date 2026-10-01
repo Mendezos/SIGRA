@@ -13,6 +13,8 @@ public interface IUsuarioDA
     Task ActualizarPasswordHashAsync(int idUsuario, string passwordHash);
     Task<List<UsuarioModel>> ObtenerBloqueadosAsync();
     Task ActualizarPerfilAsync(int idUsuario, string nombre, string? telefono, string? foto);
+    Task<List<UsuarioModel>> ListarAsync();
+    Task<UsuarioModel> CrearAsync(int idRol, string nombre, string correo, string? telefono, string passwordHash);
 }
 
 public interface IAuditoriaDA
