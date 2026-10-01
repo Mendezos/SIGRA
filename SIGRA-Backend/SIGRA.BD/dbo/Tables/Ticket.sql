@@ -9,6 +9,7 @@
     [DescripcionProblema] VARCHAR (MAX) NOT NULL,
     [Activo]              BIT           CONSTRAINT [DF_Ticket_Activo] DEFAULT ((1)) NOT NULL,
     CONSTRAINT [PK_Ticket] PRIMARY KEY CLUSTERED ([IdTicket] ASC),
+    CONSTRAINT [CK_Ticket_Estado] CHECK ([Estado] IN ('Pendiente', 'En progreso', 'Resuelto', 'Cerrado', 'Cancelado')),
     CONSTRAINT [FK_Ticket_Cliente] FOREIGN KEY ([IdCliente]) REFERENCES [dbo].[Cliente] ([IdCliente]),
     CONSTRAINT [FK_Ticket_TecnicoReceptor] FOREIGN KEY ([TecnicoReceptor]) REFERENCES [dbo].[Usuario] ([IdUsuario]),
     CONSTRAINT [UQ_Ticket_CodigoSeguimiento] UNIQUE NONCLUSTERED ([CodigoSeguimiento] ASC)

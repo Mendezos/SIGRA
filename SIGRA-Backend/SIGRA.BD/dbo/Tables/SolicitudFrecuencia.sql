@@ -8,6 +8,7 @@
     [FechaVencimiento] DATE         NULL,
     CONSTRAINT [PK_SolicitudFrecuencia] PRIMARY KEY CLUSTERED ([IdSolicitud] ASC),
     CONSTRAINT [CK_SolicitudFrecuencia_Fechas] CHECK ([FechaVencimiento] IS NULL OR [FechaVencimiento]>[FechaSolicitud]),
+    CONSTRAINT [CK_SolicitudFrecuencia_Estado] CHECK ([Estado] IN ('Pendiente', 'Aprobada', 'Rechazada', 'Vencida')),
     CONSTRAINT [FK_SolicitudFrecuencia_Cliente] FOREIGN KEY ([IdCliente]) REFERENCES [dbo].[Cliente] ([IdCliente]),
     CONSTRAINT [FK_SolicitudFrecuencia_Equipo] FOREIGN KEY ([IdEquipo]) REFERENCES [dbo].[Equipo] ([IdEquipo]),
     CONSTRAINT [FK_SolicitudFrecuencia_Usuario] FOREIGN KEY ([IdUsuario]) REFERENCES [dbo].[Usuario] ([IdUsuario])
