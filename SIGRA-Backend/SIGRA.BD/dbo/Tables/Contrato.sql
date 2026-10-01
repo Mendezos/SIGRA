@@ -9,7 +9,6 @@
     CONSTRAINT [PK_Contrato] PRIMARY KEY CLUSTERED ([IdContrato] ASC),
     CONSTRAINT [CK_Contrato_Fechas] CHECK ([FechaVencimiento]>[FechaInicio]),
     CONSTRAINT [CK_Contrato_Monto] CHECK ([MontoMensual]>=(0)),
-    CONSTRAINT [CK_Contrato_Estado] CHECK ([Estado] IN ('Activo', 'Vencido', 'Renovado', 'Cancelado')),
     CONSTRAINT [FK_Contrato_Cliente] FOREIGN KEY ([IdCliente]) REFERENCES [dbo].[Cliente] ([IdCliente])
 );
 

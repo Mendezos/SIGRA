@@ -12,7 +12,6 @@
     CONSTRAINT [PK_Equipo] PRIMARY KEY CLUSTERED ([IdEquipo] ASC),
     CONSTRAINT [CK_Equipo_CostoCompra] CHECK ([CostoCompra]>=(0)),
     CONSTRAINT [CK_Equipo_FechaBaja] CHECK ([FechaBaja] IS NULL OR [FechaBaja]>=[FechaAdquisicion]),
-    CONSTRAINT [CK_Equipo_Estado] CHECK ([Estado] IN ('Disponible', 'Asignado', 'En reparacion', 'Dado de baja')),
     CONSTRAINT [FK_Equipo_Modelo] FOREIGN KEY ([IdModelo]) REFERENCES [dbo].[ModeloEquipo] ([IdModelo]),
     CONSTRAINT [FK_Equipo_Proveedor] FOREIGN KEY ([IdProveedor]) REFERENCES [dbo].[Proveedor] ([IdProveedor]),
     CONSTRAINT [UQ_Equipo_NumeroSerie] UNIQUE NONCLUSTERED ([NumeroSerie] ASC)
