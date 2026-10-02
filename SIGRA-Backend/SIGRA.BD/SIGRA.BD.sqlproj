@@ -60,7 +60,10 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\Views\" />
+<<<<<<< HEAD
     <Folder Include="dbo\Triggers\" />
+=======
+>>>>>>> Confirmacion
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Usuario.sql" />
