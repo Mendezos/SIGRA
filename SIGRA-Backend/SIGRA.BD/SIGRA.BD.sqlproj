@@ -130,8 +130,6 @@
     <Build Include="dbo\Stored Procedures\sp_Auditoria_Insertar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Auditoria_ObtenerRecientesPorUsuario.sql" />
     <Build Include="dbo\Stored Procedures\sp_Usuario_ObtenerBloqueados.sql" />
-    <Build Include="dbo\Stored Procedures\sp_Usuario_Listar.sql" />
-    <Build Include="dbo\Stored Procedures\sp_Usuario_Insertar.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

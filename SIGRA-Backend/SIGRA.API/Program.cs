@@ -83,7 +83,6 @@ builder.Services.AddScoped<ICuentaFlujo, CuentaFlujo>();
 builder.Services.AddScoped<IRecuperacionPasswordFlujo, RecuperacionPasswordFlujo>();
 builder.Services.AddScoped<IRolFlujo, RolFlujo>();
 builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
-builder.Services.AddScoped<IUsuarioFlujo, UsuarioFlujo>();
 
 var app = builder.Build();
 
