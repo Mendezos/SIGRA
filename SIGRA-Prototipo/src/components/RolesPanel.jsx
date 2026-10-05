@@ -1,23 +1,16 @@
 import { useEffect, useState } from "react";
 import DataTable from "./DataTable";
 import Modal from "./Modal";
+import {
+    Button,
+    FieldLabel,
+    Notice,
+} from "./ui";
+import { COLORS, inputClass, inputStyle } from "./uiTheme";
 import * as api from "../services/rolesService";
 import { ApiError } from "../services/apiClient";
 
-const COLORS = {
-    green: "#5EB453",
-    greenDark: "#4CA23D",
-    greenTint: "#EAF6E8",
-    charcoal: "#323232",
-    muted: "#6E6E6E",
-    border: "#E3E3E3",
-};
-
-const control = "border rounded-lg px-3 py-2 text-sm w-full";
-const button = "px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50";
-
 const columnas = [
-    { key: "idRol", label: "ID" },
     { key: "nombre", label: "Nombre" },
     { key: "descripcion", label: "Descripción" },
     { key: "estado", label: "Estado" },
@@ -81,7 +74,15 @@ export default function RolesPanel({ user }) {
 
     useEffect(() => {
         if (!esAdministrador) return;
-        cargarRoles();
+
+        let activo = true;
+        Promise.resolve().then(() => {
+            if (activo) cargarRoles();
+        });
+
+        return () => {
+            activo = false;
+        };
     }, [esAdministrador]);
 
     if (!esAdministrador) {
@@ -117,6 +118,7 @@ export default function RolesPanel({ user }) {
     function cerrarDetalle() {
         setSeleccionado(null);
         setPermisos([]);
+        setError("");
     }
 
     async function crearRol(e) {
@@ -130,22 +132,25 @@ export default function RolesPanel({ user }) {
             setModoCreacion(false);
             setAviso("Rol creado correctamente.");
             await cargarRoles();
-        } catch (e) {
-            setError(e instanceof ApiError ? e.message : "No se pudo crear el rol.");
+        } catch (err) {
+            setError(err instanceof ApiError ? err.message : "No se pudo crear el rol.");
         } finally {
             setGuardando(false);
         }
     }
 
-    async function guardarNombre() {
+    async function guardarTodo() {
         setGuardando(true);
         setError("");
         try {
             await api.editarRol(seleccionado.idRol, nombreEdicion, descripcionEdicion);
-            setAviso("Rol actualizado correctamente.");
+            await api.definirPermisosRol(seleccionado.idRol, permisos);
+            setSeleccionado(null);
+            setPermisos([]);
+            setAviso("Rol y permisos guardados correctamente.");
             await cargarRoles();
-        } catch (e) {
-            setError(e instanceof ApiError ? e.message : "No se pudo editar el rol.");
+        } catch (err) {
+            setError(err instanceof ApiError ? err.message : "No se pudo guardar el rol.");
         } finally {
             setGuardando(false);
         }
@@ -159,8 +164,8 @@ export default function RolesPanel({ user }) {
             setSeleccionado((prev) => ({ ...prev, activo: actualizado.activo }));
             setAviso(actualizado.activo ? "Rol activado." : "Rol desactivado.");
             await cargarRoles();
-        } catch (e) {
-            setError(e instanceof ApiError ? e.message : "No se pudo cambiar el estado del rol.");
+        } catch (err) {
+            setError(err instanceof ApiError ? err.message : "No se pudo cambiar el estado del rol.");
         } finally {
             setGuardando(false);
         }
@@ -172,153 +177,188 @@ export default function RolesPanel({ user }) {
         );
     }
 
-    async function guardarPermisos() {
-        setGuardando(true);
-        setError("");
-        try {
-            await api.definirPermisosRol(seleccionado.idRol, permisos);
-            setAviso("Permisos guardados correctamente.");
-        } catch (e) {
-            setError(e instanceof ApiError ? e.message : "No se pudieron guardar los permisos.");
-        } finally {
-            setGuardando(false);
-        }
+    function marcarColumna(accion, valor) {
+        setPermisos((prev) => prev.map((p) => ({ ...p, [accion]: valor })));
     }
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between gap-4 mb-5">
                 <p className="text-sm" style={{ color: COLORS.muted }}>
                     Roles internos y permisos por módulo.
                 </p>
-                <button
-                    type="button"
-                    className={button}
-                    style={{ backgroundColor: COLORS.green, color: "#FFFFFF" }}
-                    onClick={() => setModoCreacion(true)}
-                >
+                <Button variant="primary" onClick={() => setModoCreacion(true)}>
                     + Nuevo rol
-                </button>
+                </Button>
             </div>
 
-            {error && !seleccionado && (
-                <p className="text-sm mb-3" style={{ color: "#C0392B" }}>{error}</p>
-            )}
-            {aviso && !seleccionado && (
-                <p className="text-sm mb-3" style={{ color: COLORS.greenDark }}>{aviso}</p>
-            )}
+            {error && !seleccionado && !modoCreacion && <Notice tone="error">{error}</Notice>}
+            {aviso && !seleccionado && <Notice>{aviso}</Notice>}
 
             {cargando ? (
                 <p className="text-sm" style={{ color: COLORS.muted }}>Cargando roles...</p>
             ) : (
-                <DataTable columns={columnas} rows={roles} onRowClick={abrirDetalle} searchPlaceholder="Buscar rol..." />
+                <DataTable
+                    columns={columnas}
+                    rows={roles}
+                    onRowClick={abrirDetalle}
+                    searchPlaceholder="Buscar rol..."
+                    initialShowInactive
+                    hideInactiveToggle
+                />
             )}
 
-            <Modal open={modoCreacion} title="Nuevo rol" onClose={() => setModoCreacion(false)}>
-                <form onSubmit={crearRol}>
-                    <label className="text-xs" style={{ color: COLORS.muted }}>Nombre del rol</label>
-                    <input
-                        className={control}
-                        value={nombreNuevo}
-                        onChange={(e) => setNombreNuevo(e.target.value)}
-                        required
-                        maxLength={100}
-                    />
-                    <label className="text-xs mt-3 block" style={{ color: COLORS.muted }}>Descripción (opcional)</label>
-                    <textarea
-                        className={control}
-                        value={descripcionNueva}
-                        onChange={(e) => setDescripcionNueva(e.target.value)}
-                        maxLength={250}
-                        rows={2}
-                    />
-                    {error && <p className="text-sm mt-2" style={{ color: "#C0392B" }}>{error}</p>}
-                    <div className="flex justify-end gap-3 mt-5">
-                        <button type="button" className={button} onClick={() => setModoCreacion(false)}>Cancelar</button>
-                        <button type="submit" className={button} style={{ backgroundColor: COLORS.green, color: "#FFFFFF" }} disabled={guardando}>
+            <Modal
+                open={modoCreacion}
+                title="Nuevo rol"
+                subtitle="Definí el nombre y una descripción breve. Los permisos se asignan después."
+                onClose={() => setModoCreacion(false)}
+            >
+                <form onSubmit={crearRol} className="flex flex-col gap-4">
+                    {error && <Notice tone="error">{error}</Notice>}
+
+                    <FieldLabel label="Nombre del rol">
+                        <input
+                            className={inputClass}
+                            style={inputStyle}
+                            value={nombreNuevo}
+                            onChange={(e) => setNombreNuevo(e.target.value)}
+                            required
+                            maxLength={100}
+                        />
+                    </FieldLabel>
+
+                    <FieldLabel label="Descripción (opcional)">
+                        <textarea
+                            className={inputClass}
+                            style={inputStyle}
+                            value={descripcionNueva}
+                            onChange={(e) => setDescripcionNueva(e.target.value)}
+                            maxLength={250}
+                            rows={3}
+                        />
+                    </FieldLabel>
+
+                    <div className="flex justify-end gap-3 mt-2">
+                        <Button variant="ghost" onClick={() => setModoCreacion(false)}>
+                            Cancelar
+                        </Button>
+                        <Button variant="primary" type="submit" disabled={guardando}>
                             Crear rol
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </Modal>
 
             <Modal
                 open={!!seleccionado}
-                title={seleccionado ? `Rol: ${seleccionado.nombre}` : ""}
+                title={seleccionado ? seleccionado.nombre : ""}
                 subtitle={seleccionado ? `Estado actual: ${seleccionado.activo ? "Activo" : "Inactivo"}` : ""}
                 onClose={cerrarDetalle}
-                width="max-w-2xl"
+                width="max-w-3xl"
+                footer={seleccionado && (
+                    <>
+                        <Button
+                            variant={seleccionado.activo ? "danger" : "secondary"}
+                            onClick={alternarEstado}
+                            disabled={guardando}
+                            className="mr-auto"
+                        >
+                            {seleccionado.activo ? "Desactivar rol" : "Activar rol"}
+                        </Button>
+                        <Button variant="ghost" onClick={cerrarDetalle}>Cancelar</Button>
+                        <Button
+                            variant="primary"
+                            onClick={guardarTodo}
+                            disabled={guardando || cargandoPermisos}
+                        >
+                            {guardando ? "Guardando..." : "Guardar"}
+                        </Button>
+                    </>
+                )}
             >
                 {seleccionado && (
                     <div>
-                        {error && <p className="text-sm mb-3" style={{ color: "#C0392B" }}>{error}</p>}
-                        {aviso && <p className="text-sm mb-3" style={{ color: COLORS.greenDark }}>{aviso}</p>}
+                        {error && <Notice tone="error">{error}</Notice>}
+                        {aviso && <Notice>{aviso}</Notice>}
 
-                        <div className="mb-6">
-                            <div className="flex items-end gap-3 mb-3">
-                                <div className="flex-1">
-                                    <label className="text-xs" style={{ color: COLORS.muted }}>Nombre</label>
-                                    <input
-                                        className={control}
-                                        value={nombreEdicion}
-                                        onChange={(e) => setNombreEdicion(e.target.value)}
-                                        maxLength={100}
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    className={button}
-                                    style={{ backgroundColor: seleccionado.activo ? "#FCEBEB" : COLORS.greenTint, color: seleccionado.activo ? "#C0392B" : COLORS.greenDark }}
-                                    onClick={alternarEstado}
-                                    disabled={guardando}
-                                >
-                                    {seleccionado.activo ? "Desactivar" : "Activar"}
-                                </button>
-                            </div>
-                            <label className="text-xs" style={{ color: COLORS.muted }}>Descripción</label>
-                            <textarea
-                                className={control}
-                                value={descripcionEdicion}
-                                onChange={(e) => setDescripcionEdicion(e.target.value)}
-                                maxLength={250}
-                                rows={2}
-                            />
-                            <div className="flex justify-end mt-3">
-                                <button type="button" className={button} onClick={guardarNombre} disabled={guardando}>
-                                    Guardar cambios
-                                </button>
-                            </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                            <FieldLabel label="Nombre">
+                                <input
+                                    className={inputClass}
+                                    style={inputStyle}
+                                    value={nombreEdicion}
+                                    onChange={(e) => setNombreEdicion(e.target.value)}
+                                    maxLength={100}
+                                />
+                            </FieldLabel>
+                            <FieldLabel label="Descripción">
+                                <textarea
+                                    className={inputClass}
+                                    style={inputStyle}
+                                    value={descripcionEdicion}
+                                    onChange={(e) => setDescripcionEdicion(e.target.value)}
+                                    maxLength={250}
+                                    rows={2}
+                                />
+                            </FieldLabel>
                         </div>
 
-                        <p className="font-medium mb-2" style={{ color: COLORS.charcoal }}>Permisos por módulo</p>
+                        <h3
+                            className="text-xs uppercase tracking-wide mb-3"
+                            style={{ color: COLORS.muted, fontWeight: 600 }}
+                        >
+                            Permisos por módulo
+                        </h3>
 
                         {cargandoPermisos ? (
                             <p className="text-sm" style={{ color: COLORS.muted }}>Cargando permisos...</p>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <div
+                                className="rounded-xl overflow-hidden"
+                                style={{ border: `1px solid ${COLORS.border}` }}
+                            >
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                                            <th className="text-left py-2">Módulo</th>
-                                            {ACCIONES.map((a) => (
-                                                <th key={a.key} className="text-center py-2">{a.label}</th>
-                                            ))}
+                                        <tr style={{ backgroundColor: COLORS.greenTint }}>
+                                            <th className="text-left px-4 py-3 text-xs uppercase tracking-wide" style={{ color: COLORS.muted }}>
+                                                Módulo
+                                            </th>
+                                            {ACCIONES.map((a) => {
+                                                const todos = permisos.length > 0 && permisos.every((p) => p[a.key]);
+
+                                                return (
+                                                    <th key={a.key} className="text-center px-2 py-3 text-xs uppercase tracking-wide" style={{ color: COLORS.muted }}>
+                                                        <label className="flex flex-col items-center gap-1 cursor-pointer">
+                                                            {a.label}
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={todos}
+                                                                onChange={(e) => marcarColumna(a.key, e.target.checked)}
+                                                                aria-label={`Marcar todos: ${a.label}`}
+                                                                style={{ accentColor: COLORS.green }}
+                                                            />
+                                                        </label>
+                                                    </th>
+                                                );
+                                            })}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {modulos.map((modulo) => {
                                             const fila = permisos.find((p) => p.idModulo === modulo.idModulo);
                                             return (
-                                                <tr key={modulo.idModulo} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                                                    <td className="py-2">{modulo.nombre}</td>
+                                                <tr key={modulo.idModulo} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                                                    <td className="px-4 py-2.5">{modulo.nombre}</td>
                                                     {ACCIONES.map((a) => (
-                                                        <td key={a.key} className="text-center py-2">
+                                                        <td key={a.key} className="text-center py-2.5">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={!!fila?.[a.key]}
                                                                 onChange={(e) =>
                                                                     actualizarCasilla(modulo.idModulo, a.key, e.target.checked)
                                                                 }
+                                                                style={{ accentColor: COLORS.green }}
                                                             />
                                                         </td>
                                                     ))}
@@ -329,18 +369,6 @@ export default function RolesPanel({ user }) {
                                 </table>
                             </div>
                         )}
-
-                        <div className="flex justify-end mt-5">
-                            <button
-                                type="button"
-                                className={button}
-                                style={{ backgroundColor: COLORS.green, color: "#FFFFFF" }}
-                                onClick={guardarPermisos}
-                                disabled={guardando || cargandoPermisos}
-                            >
-                                Guardar permisos
-                            </button>
-                        </div>
                     </div>
                 )}
             </Modal>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 const COLORS = {
@@ -20,11 +20,15 @@ export default function DataTable({
     onRowClick,
     searchPlaceholder = "Buscar...",
     initialShowInactive = false,
+    hideInactiveToggle = false,
+    initialPageSize = 10,
 }) {
     const [query, setQuery] = useState("");
     const [estadoFilter, setEstadoFilter] = useState("");
     const [venceHasta, setVenceHasta] = useState("");
     const [showInactive, setShowInactive] = useState(initialShowInactive);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(initialPageSize);
 
     const hasEstadoColumn = columns.some((c) => c.key === "estado");
     const hasVenceColumn = columns.some((c) => c.key === "vence");
@@ -70,6 +74,18 @@ export default function DataTable({
 
         return result;
     }, [rows, query, estadoFilter, venceHasta, showInactive]);
+
+    const filterKey = `${query}|${estadoFilter}|${venceHasta}|${showInactive}|${pageSize}`;
+    const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+    if (prevFilterKey !== filterKey) {
+        setPrevFilterKey(filterKey);
+        setPage(1);
+    }
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const currentPage = Math.min(page, totalPages);
+    const startIndex = (currentPage - 1) * pageSize;
+    const pageRows = filtered.slice(startIndex, startIndex + pageSize);
 
     return (
         <div>
@@ -141,7 +157,7 @@ export default function DataTable({
                     </label>
                 )}
 
-                {hasInactiveRows && (
+                {hasInactiveRows && !hideInactiveToggle && (
                     <label
                         className="flex items-center gap-2 text-xs ml-auto"
                         style={{ color: COLORS.muted }}
@@ -196,7 +212,7 @@ export default function DataTable({
                             </tr>
                         )}
 
-                        {filtered.map((row, i) => (
+                        {pageRows.map((row, i) => (
                             <tr
                                 key={row.id ?? i}
                                 onClick={() => onRowClick?.(row)}
@@ -241,9 +257,66 @@ export default function DataTable({
                 </table>
             </div>
 
-            <p className="text-xs mt-2" style={{ color: COLORS.muted }}>
-                {filtered.length} de {rows.length} registros
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
+                <p className="text-xs" style={{ color: COLORS.muted }}>
+                    {filtered.length === 0
+                        ? "0 registros"
+                        : `Mostrando ${startIndex + 1}–${Math.min(
+                              startIndex + pageSize,
+                              filtered.length
+                          )} de ${filtered.length} registros`}
+                </p>
+
+                <div className="flex items-center gap-3">
+                    <label
+                        className="flex items-center gap-2 text-xs"
+                        style={{ color: COLORS.muted }}
+                    >
+                        Filas por página
+                        <select
+                            value={pageSize}
+                            onChange={(e) => setPageSize(Number(e.target.value))}
+                            className="px-2 py-1 rounded-lg text-xs bg-white"
+                            style={{ border: `1px solid ${COLORS.border}` }}
+                        >
+                            {[5, 10, 25, 50].map((n) => (
+                                <option key={n} value={n}>
+                                    {n}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <div className="flex items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => setPage(currentPage - 1)}
+                            disabled={currentPage <= 1}
+                            aria-label="Página anterior"
+                            className="p-1.5 rounded-lg disabled:opacity-40"
+                            style={{ border: `1px solid ${COLORS.border}` }}
+                        >
+                            <ChevronLeft size={14} />
+                        </button>
+                        <span
+                            className="text-xs px-2"
+                            style={{ color: COLORS.charcoal }}
+                        >
+                            Página {currentPage} de {totalPages}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setPage(currentPage + 1)}
+                            disabled={currentPage >= totalPages}
+                            aria-label="Página siguiente"
+                            className="p-1.5 rounded-lg disabled:opacity-40"
+                            style={{ border: `1px solid ${COLORS.border}` }}
+                        >
+                            <ChevronRight size={14} />
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

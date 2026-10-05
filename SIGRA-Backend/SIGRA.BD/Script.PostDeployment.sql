@@ -150,3 +150,30 @@ SELECT r.IdRol, u.Nombre, u.Correo, u.PasswordHash, 1, 0
 FROM @Usuarios u
 INNER JOIN Rol r ON r.Nombre = u.RolNombre
 WHERE NOT EXISTS (SELECT 1 FROM Usuario ex WHERE ex.Correo = u.Correo);
+
+
+-- 6) Datos personales de ejemplo para las cuentas de prueba (solo se completan los que estan vacios)
+DECLARE @DatosCuentas TABLE (
+    Correo VARCHAR(150), Cedula VARCHAR(20), FechaNacimiento DATE, Direccion VARCHAR(300),
+    EstadoCivil VARCHAR(50), GradoAcademico VARCHAR(100), Salario DECIMAL(18,2)
+);
+
+INSERT INTO @DatosCuentas VALUES
+    ('admin@radifaxcr.com',            '101110111', '1985-03-12', N'San José, Escazú',          N'Soltero/a',   N'Licenciatura',              1500000),
+    ('adriana.mora@radifaxcr.com',     '112220222', '1980-07-21', N'Heredia, Barva',            N'Casado/a',    N'Maestría',                  2100000),
+    ('maria.ceciliano@radifaxcr.com',  '303330333', '1992-11-05', N'Cartago, Paraíso',          N'Soltero/a',   N'Bachillerato universitario',1300000),
+    ('ricardo.infante@radifaxcr.com',  '204440444', '1990-02-17', N'Alajuela, Grecia',          N'Casado/a',    N'Técnico',                    950000),
+    ('tomas.diaz@radifaxcr.com',       '405550555', '1995-09-30', N'San José, Desamparados',    N'Soltero/a',   N'Diplomado',                  900000),
+    ('kimberly.sanchez@radifaxcr.com', '506660666', '1993-06-14', N'Heredia, Santo Domingo',    N'Unión libre', N'Licenciatura',              1100000),
+    ('henry.ortiz@radifaxcr.com',      '607770777', '1988-12-01', N'Puntarenas, Esparza',       N'Divorciado/a',N'Bachillerato universitario',1050000);
+
+UPDATE u
+SET Cedula          = COALESCE(u.Cedula, d.Cedula),
+    FechaNacimiento = COALESCE(u.FechaNacimiento, d.FechaNacimiento),
+    Direccion       = COALESCE(u.Direccion, d.Direccion),
+    EstadoCivil     = COALESCE(u.EstadoCivil, d.EstadoCivil),
+    GradoAcademico  = COALESCE(u.GradoAcademico, d.GradoAcademico),
+    Salario         = COALESCE(u.Salario, d.Salario),
+    FechaCreacion   = COALESCE(u.FechaCreacion, SYSUTCDATETIME())
+FROM Usuario u
+INNER JOIN @DatosCuentas d ON d.Correo = u.Correo;

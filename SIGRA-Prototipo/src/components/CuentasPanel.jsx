@@ -3,12 +3,31 @@ import DataTable from "./DataTable";
 import RecordForm from "./RecordForm";
 import Modal from "./Modal";
 import ConfirmModal from "./ConfirmModal";
+import {
+    Button,
+    DetailGrid,
+    FieldLabel,
+    Notice,
+    SubTabs,
+} from "./ui";
+import { COLORS, inputClass, inputStyle } from "./uiTheme";
 import { MODULES } from "../data/modules";
 import { MODULE_KEY_TO_ID } from "../data/roleCapabilities";
 import * as api from "../services/cuentasService";
+import { desbloquearCuenta } from "../services/adminService";
 
-const control = "border rounded-lg px-3 py-2 text-sm";
-const button = `${control} disabled:opacity-50`;
+const ESTADOS_CIVILES = ["Soltero/a", "Casado/a", "Unión libre", "Divorciado/a", "Viudo/a"];
+
+const GRADOS_ACADEMICOS = [
+    "Primaria",
+    "Secundaria",
+    "Técnico",
+    "Diplomado",
+    "Bachillerato universitario",
+    "Licenciatura",
+    "Maestría",
+    "Doctorado",
+];
 
 const fecha = (value) => value
     ? new Date(value).toLocaleString("es-CR", {
@@ -16,19 +35,26 @@ const fecha = (value) => value
     })
     : "Sin registro";
 
+const fechaCorta = (value) => value
+    ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString("es-CR")
+    : "";
+
+const colones = (value) => value != null
+    ? new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC" }).format(value)
+    : "";
+
 const campos = [
     { key: "nombre", label: "Nombre completo", required: true, maxLength: 150 },
     { key: "correo", label: "Correo corporativo", type: "email", required: true, maxLength: 150 },
     { key: "fechaNacimiento", label: "Fecha de nacimiento", type: "date", required: true },
     { key: "telefono", label: "Teléfono", type: "tel", required: true, maxLength: 20 },
     { key: "direccion", label: "Dirección", type: "textarea", required: true, maxLength: 300 },
-    { key: "estadoCivil", label: "Estado civil", required: true, maxLength: 50 },
-    { key: "gradoAcademico", label: "Grado académico", required: true, maxLength: 100 },
+    { key: "estadoCivil", label: "Estado civil", type: "select", options: ESTADOS_CIVILES, required: true },
+    { key: "gradoAcademico", label: "Grado académico", type: "select", options: GRADOS_ACADEMICOS, required: true },
     { key: "salario", label: "Salario", type: "number", min: 0, step: "0.01", required: true },
 ];
 
 const columnas = [
-    { key: "idUsuario", label: "ID" },
     { key: "nombre", label: "Nombre" },
     { key: "cedula", label: "Cédula" },
     { key: "correo", label: "Correo" },
@@ -40,7 +66,6 @@ const columnas = [
 ];
 
 const columnasAuditoria = [
-    { key: "idAuditoria", label: "ID" },
     { key: "fechaTexto", label: "Fecha" },
     { key: "autor", label: "Responsable" },
     { key: "entidad", label: "Entidad" },
@@ -62,16 +87,29 @@ function resumir(valor) {
     return valor ? JSON.stringify(valor).slice(0, 100) : "Sin registro";
 }
 
+function conOpcionActual(campo, valorActual) {
+    if (!campo.options || !valorActual || campo.options.includes(valorActual)) {
+        return campo;
+    }
+
+    return { ...campo, options: [valorActual, ...campo.options] };
+}
+
 function PermisosRol({ rol }) {
     if (!rol) return null;
 
     const acciones = ["lectura", "escritura", "edicion", "eliminacion"];
 
     return (
-        <div className="my-4">
-            <p className="font-medium mb-2">Permisos del rol seleccionado</p>
+        <div
+            className="my-5 rounded-xl p-4"
+            style={{ backgroundColor: COLORS.greenTint }}
+        >
+            <p className="text-sm font-semibold mb-2" style={{ color: COLORS.charcoal }}>
+                Permisos del rol seleccionado
+            </p>
             {(rol.permisos ?? []).length === 0 && (
-                <p>Este rol no tiene permisos asignados.</p>
+                <p className="text-sm">Este rol no tiene permisos asignados.</p>
             )}
             {(rol.permisos ?? []).map((permiso) => {
                 const modulo = MODULES.find(
@@ -80,8 +118,10 @@ function PermisosRol({ rol }) {
                 const concedidos = acciones.filter((a) => permiso[a]);
 
                 return (
-                    <p key={permiso.idModulo} className="text-sm">
-                        {modulo?.label ?? `Módulo ${permiso.idModulo}`}:
+                    <p key={permiso.idModulo} className="text-sm py-0.5">
+                        <span style={{ fontWeight: 600 }}>
+                            {modulo?.label ?? `Módulo ${permiso.idModulo}`}:
+                        </span>
                         {" "}{concedidos.join(", ") || "Sin acceso"}
                     </p>
                 );
@@ -94,7 +134,7 @@ function DetalleAuditoria({ detalle }) {
     const datos = leerDetalle(detalle);
 
     if (!datos || (!datos.antes && !datos.despues)) {
-        return <p>{detalle || "Este registro histórico no contiene valores anteriores y nuevos."}</p>;
+        return <p className="text-sm">{detalle || "Este registro histórico no contiene valores anteriores y nuevos."}</p>;
     }
 
     const antes = datos.antes ?? {};
@@ -103,10 +143,10 @@ function DetalleAuditoria({ detalle }) {
 
     return (
         <div className="overflow-x-auto">
-            {datos.motivo && <p className="mb-3">Motivo: {datos.motivo}</p>}
+            {datos.motivo && <p className="mb-3 text-sm">Motivo: {datos.motivo}</p>}
             <table className="w-full text-sm">
                 <thead>
-                    <tr>
+                    <tr style={{ backgroundColor: COLORS.greenTint }}>
                         <th className="text-left p-2">Campo</th>
                         <th className="text-left p-2">Anterior</th>
                         <th className="text-left p-2">Nuevo</th>
@@ -114,7 +154,7 @@ function DetalleAuditoria({ detalle }) {
                 </thead>
                 <tbody>
                     {claves.map((key) => (
-                        <tr key={key} className="border-t">
+                        <tr key={key} style={{ borderTop: `1px solid ${COLORS.border}` }}>
                             <td className="p-2">{key}</td>
                             <td className="p-2">{String(antes[key] ?? "Sin registro")}</td>
                             <td className="p-2">{String(despues[key] ?? "Sin registro")}</td>
@@ -182,7 +222,7 @@ export default function CuentasPanel({ user }) {
     }, [administrador]);
 
     if (!administrador) {
-        return <p>La administración de cuentas está disponible para el administrador.</p>;
+        return <p className="text-sm">La administración de cuentas está disponible para el administrador.</p>;
     }
 
     const rolSeleccionado = roles.find((r) => r.idRol === Number(idRol));
@@ -194,6 +234,10 @@ export default function CuentasPanel({ user }) {
         required: true,
         options: roles.map((r) => ({ value: r.idRol, label: r.nombre })),
     };
+
+    const camposEdicion = campos.map((campo) =>
+        conOpcionActual(campo, seleccionada?.[campo.key])
+    );
 
     const camposFormulario = modo === "crear" ? [
         { key: "cedula", label: "Cédula", required: true, maxLength: 20 },
@@ -212,7 +256,12 @@ export default function CuentasPanel({ user }) {
             key: "motivo", label: "Motivo de inactivación",
             type: "textarea", required: true, maxLength: 500,
         },
-    ] : campos;
+    ] : modo === "desbloquear" ? [
+        {
+            key: "motivo", label: "Motivo del desbloqueo",
+            type: "textarea", required: true, maxLength: 500,
+        },
+    ] : camposEdicion;
 
     const filas = cuentas.filter((cuenta) =>
         ["nombre", "cedula", "correo"].every((key) =>
@@ -307,6 +356,7 @@ export default function CuentasPanel({ user }) {
             if (tipo === "crear") await api.crearCuenta(datos);
             else if (tipo === "editar") await api.editarCuenta(id, datos);
             else if (tipo === "rol") await api.cambiarRol(id, datos);
+            else if (tipo === "desbloquear") await desbloquearCuenta(id, datos.motivo);
             else {
                 await api.cambiarEstado(id, {
                     ...datos,
@@ -350,131 +400,140 @@ export default function CuentasPanel({ user }) {
         }
     }
 
-    return (
-        <div className="space-y-4">
-            <div className="flex gap-3">
-                <button className={button} onClick={() => setTab("cuentas")}>
-                    Cuentas
-                </button>
-                <button className={button} onClick={() => {
-                    setTab("auditoria");
-                    consultarAuditoria();
-                }}>
-                    Bitácora
-                </button>
-            </div>
+    function filtroTexto(key, label, type = "text", state = filtros, setState = setFiltros) {
+        return (
+            <FieldLabel key={key} label={label}>
+                <input
+                    type={type}
+                    min={type === "number" ? 1 : undefined}
+                    className={inputClass}
+                    style={inputStyle}
+                    value={state[key]}
+                    onChange={(e) => setState({ ...state, [key]: e.target.value })}
+                />
+            </FieldLabel>
+        );
+    }
 
-            {aviso && <p role="status" className="text-green-700">{aviso}</p>}
-            {error && !modo && <p role="alert" className="text-red-700">{error}</p>}
-            {cargando && <p role="status">Cargando...</p>}
+    function filtroSelect(key, label, opciones) {
+        return (
+            <FieldLabel key={key} label={label}>
+                <select
+                    className={inputClass}
+                    style={inputStyle}
+                    value={filtros[key]}
+                    onChange={(e) => setFiltros({ ...filtros, [key]: e.target.value })}
+                >
+                    <option value="">Todos</option>
+                    {opciones.map(([value, text]) => (
+                        <option key={value} value={value}>{text}</option>
+                    ))}
+                </select>
+            </FieldLabel>
+        );
+    }
+
+    const tituloModo = {
+        crear: "Registrar cuenta",
+        editar: "Editar datos",
+        inactivar: "Inactivar cuenta",
+        reactivar: "Reactivar cuenta",
+        rol: "Cambiar rol",
+        desbloquear: "Desbloquear cuenta",
+    }[modo];
+
+    return (
+        <div>
+            <SubTabs
+                tabs={[
+                    { key: "cuentas", label: "Listado de cuentas" },
+                    { key: "auditoria", label: "Bitácora" },
+                ]}
+                active={tab}
+                onSelect={(key) => {
+                    setTab(key);
+                    if (key === "auditoria") consultarAuditoria();
+                }}
+            />
+
+            {aviso && <Notice>{aviso}</Notice>}
+            {error && !modo && <Notice tone="error">{error}</Notice>}
+            {cargando && (
+                <p role="status" className="text-sm mb-3" style={{ color: COLORS.muted }}>
+                    Cargando...
+                </p>
+            )}
 
             {tab === "cuentas" ? (
                 <>
-                    <div className="flex flex-wrap gap-2">
-                        {[
-                            ["nombre", "Nombre"],
-                            ["cedula", "Cédula"],
-                            ["correo", "Correo"],
-                        ].map(([key, label]) => (
-                            <label key={key} className="text-sm">
-                                {label}
-                                <input className={`${control} block`}
-                                    value={filtros[key]}
-                                    onChange={(e) => setFiltros({
-                                        ...filtros, [key]: e.target.value,
-                                    })}
-                                />
-                            </label>
-                        ))}
-
-                        <label className="text-sm">
-                            Rol
-                            <select className={`${control} block`}
-                                value={filtros.idRol}
-                                onChange={(e) => setFiltros({
-                                    ...filtros, idRol: e.target.value,
-                                })}
-                            >
-                                <option value="">Todos</option>
-                                {rolesFiltro.map((r) => (
-                                    <option key={r.idRol} value={r.idRol}>{r.nombre}</option>
-                                ))}
-                            </select>
-                        </label>
-
-                        {[
-                            ["activo", "Estado", "Activas", "Inactivas"],
-                            ["bloqueada", "Bloqueo", "Bloqueadas", "Sin bloqueo"],
-                        ].map(([key, label, yes, no]) => (
-                            <label key={key} className="text-sm">
-                                {label}
-                                <select className={`${control} block`}
-                                    value={filtros[key]}
-                                    onChange={(e) => setFiltros({
-                                        ...filtros, [key]: e.target.value,
-                                    })}
-                                >
-                                    <option value="">Todos</option>
-                                    <option value="true">{yes}</option>
-                                    <option value="false">{no}</option>
-                                </select>
-                            </label>
-                        ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        {filtroTexto("nombre", "Nombre")}
+                        {filtroTexto("cedula", "Cédula")}
+                        {filtroTexto("correo", "Correo")}
+                        {filtroSelect(
+                            "idRol", "Rol",
+                            rolesFiltro.map((r) => [r.idRol, r.nombre])
+                        )}
+                        {filtroSelect("activo", "Estado", [["true", "Activas"], ["false", "Inactivas"]])}
+                        {filtroSelect("bloqueada", "Bloqueo", [["true", "Bloqueadas"], ["false", "Sin bloqueo"]])}
                     </div>
 
-                    <div className="flex gap-2">
-                        <button className={`${button} bg-green-100`}
+                    <div className="flex gap-2 mb-5">
+                        <Button
+                            variant="primary"
                             disabled={cargando || roles.length === 0}
                             onClick={() => {
                                 setSeleccionada(null);
                                 abrir("crear");
                             }}
                         >
-                            Registrar cuenta
-                        </button>
-                        <button className={button} disabled={cargando}
-                            onClick={actualizarLista}
-                        >
+                            + Registrar cuenta
+                        </Button>
+                        <Button disabled={cargando} onClick={actualizarLista}>
                             Actualizar lista
-                        </button>
+                        </Button>
                     </div>
 
                     <div className="overflow-x-auto">
-                        <DataTable columns={columnas} rows={filas}
-                            onRowClick={setSeleccionada} initialShowInactive />
+                        <DataTable
+                            columns={columnas}
+                            rows={filas}
+                            onRowClick={setSeleccionada}
+                            initialShowInactive
+                            hideInactiveToggle
+                        />
                     </div>
                 </>
             ) : (
                 <>
-                    <form className="flex flex-wrap gap-3" onSubmit={(e) => {
-                        e.preventDefault();
-                        consultarAuditoria();
-                    }}>
+                    <form
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            consultarAuditoria();
+                        }}
+                    >
                         {[
                             ["entidad", "Entidad", "text"],
-                            ["idEntidad", "ID del registro", "number"],
-                            ["idUsuarioAfectado", "ID usuario afectado", "number"],
-                            ["idAutor", "ID responsable", "number"],
+                            ["idEntidad", "N.º de registro", "number"],
+                            ["idUsuarioAfectado", "N.º usuario afectado", "number"],
+                            ["idAutor", "N.º responsable", "number"],
                             ["accion", "Acción", "text"],
                             ["desde", "Desde", "date"],
                             ["hasta", "Hasta", "date"],
-                        ].map(([key, label, type]) => (
-                            <label key={key} className="text-sm">
-                                {label}
-                                <input className={`${control} block`} type={type}
-                                    min={type === "number" ? 1 : undefined}
-                                    value={filtrosAuditoria[key]}
-                                    onChange={(e) => setFiltrosAuditoria({
-                                        ...filtrosAuditoria, [key]: e.target.value,
-                                    })}
-                                />
-                            </label>
-                        ))}
-                        <button className={button} disabled={cargando}>Consultar</button>
+                        ].map(([key, label, type]) =>
+                            filtroTexto(key, label, type, filtrosAuditoria, setFiltrosAuditoria)
+                        )}
+                        <div className="flex items-end">
+                            <Button variant="primary" type="submit" disabled={cargando}>
+                                Consultar
+                            </Button>
+                        </div>
                     </form>
 
                     <div className="overflow-x-auto">
-                        <DataTable columns={columnasAuditoria}
+                        <DataTable
+                            columns={columnasAuditoria}
                             rows={auditoria.map((a) => {
                                 const detalle = leerDetalle(a.detalle);
                                 return {
@@ -491,59 +550,41 @@ export default function CuentasPanel({ user }) {
                 </>
             )}
 
-            <Modal open={!!seleccionada && !modo}
+            <Modal
+                open={!!seleccionada && !modo}
                 title={seleccionada?.nombre}
+                subtitle={seleccionada ? `${seleccionada.rol} · ${seleccionada.correo}` : ""}
                 onClose={() => setSeleccionada(null)}
                 width="max-w-3xl"
+                footer={seleccionada && (
+                    <>
+                        <Button onClick={() => abrir("editar")}>Editar datos</Button>
+                        <Button disabled={!seleccionada.activo} onClick={() => abrir("rol")}>
+                            Cambiar rol
+                        </Button>
+                        {seleccionada.bloqueada && (
+                            <Button onClick={() => abrir("desbloquear")}>Desbloquear</Button>
+                        )}
+                        <Button
+                            variant={seleccionada.activo ? "danger" : "primary"}
+                            onClick={() => abrir(seleccionada.activo ? "inactivar" : "reactivar")}
+                        >
+                            {seleccionada.activo ? "Inactivar" : "Reactivar"}
+                        </Button>
+                    </>
+                )}
             >
                 {seleccionada && (
                     <>
-                        <dl className="grid grid-cols-2 gap-3 text-sm">
-                            {[
-                                { key: "idUsuario", label: "ID" },
-                                { key: "cedula", label: "Cédula" },
-                                ...campos,
-                                { key: "rol", label: "Rol" },
-                                { key: "estado", label: "Estado" },
-                                { key: "bloqueo", label: "Bloqueo" },
-                                { key: "ultimoAccesoTexto", label: "Último acceso" },
-                            ].map((f) => (
-                                <div key={f.key}>
-                                    <dt className="font-medium">{f.label}</dt>
-                                    <dd>{String(seleccionada[f.key] ?? "Sin registro")}</dd>
-                                </div>
-                            ))}
-                        </dl>
-
-                        <div className="flex flex-wrap gap-2 mt-5">
-                            <button className={button} onClick={() => abrir("editar")}>
-                                Editar datos
-                            </button>
-                            <button className={button} disabled={!seleccionada.activo}
-                                onClick={() => abrir("rol")}
-                            >
-                                Cambiar rol
-                            </button>
-                            <button className={button}
-                                onClick={() => abrir(
-                                    seleccionada.activo ? "inactivar" : "reactivar"
-                                )}
-                            >
-                                {seleccionada.activo ? "Inactivar" : "Reactivar"}
-                            </button>
-                        </div>
+                        <DetalleGeneral cuenta={seleccionada} />
                     </>
                 )}
             </Modal>
 
-            <Modal open={!!modo}
-                title={{
-                    crear: "Registrar cuenta",
-                    editar: "Editar datos",
-                    inactivar: "Inactivar cuenta",
-                    reactivar: "Reactivar cuenta",
-                    rol: "Cambiar rol",
-                }[modo]}
+            <Modal
+                open={!!modo}
+                title={tituloModo}
+                subtitle={modo && modo !== "crear" ? seleccionada?.nombre : undefined}
                 onClose={() => {
                     if (!guardando) {
                         setModo(null);
@@ -552,21 +593,25 @@ export default function CuentasPanel({ user }) {
                 }}
                 width="max-w-3xl"
             >
-                {error && <p role="alert" className="text-red-700 mb-3">{error}</p>}
-                {guardando && <p role="status">Guardando...</p>}
+                {error && <Notice tone="error">{error}</Notice>}
+                {guardando && (
+                    <p role="status" className="text-sm mb-3" style={{ color: COLORS.muted }}>
+                        Guardando...
+                    </p>
+                )}
 
                 {(modo === "rol" || modo === "reactivar") ? (
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         preparar({});
                     }}>
-                        <p className="mb-3">
-                            Cuenta: {seleccionada?.nombre}.
-                            Rol anterior: {seleccionada?.rol}.
+                        <p className="text-sm mb-4" style={{ color: COLORS.muted }}>
+                            Rol anterior: <b style={{ color: COLORS.charcoal }}>{seleccionada?.rol}</b>
                         </p>
-                        <label>
-                            Nuevo rol
-                            <select className={`${control} block w-full`}
+                        <FieldLabel label="Nuevo rol">
+                            <select
+                                className={inputClass}
+                                style={inputStyle}
                                 required value={idRol} disabled={guardando}
                                 onChange={(e) => setIdRol(e.target.value)}
                             >
@@ -575,15 +620,16 @@ export default function CuentasPanel({ user }) {
                                     <option key={r.idRol} value={r.idRol}>{r.nombre}</option>
                                 ))}
                             </select>
-                        </label>
+                        </FieldLabel>
 
                         <PermisosRol rol={rolSeleccionado} />
 
-                        <button className={button}
-                            disabled={guardando || !rolSeleccionado}
-                        >
-                            Continuar
-                        </button>
+                        <div className="flex justify-end gap-3 mt-4">
+                            <Button variant="ghost" onClick={() => setModo(null)}>Cancelar</Button>
+                            <Button variant="primary" type="submit" disabled={guardando || !rolSeleccionado}>
+                                Continuar
+                            </Button>
+                        </div>
                     </form>
                 ) : modo && (
                     <RecordForm
@@ -604,7 +650,8 @@ export default function CuentasPanel({ user }) {
                 )}
             </Modal>
 
-            <ConfirmModal open={!!pendiente}
+            <ConfirmModal
+                open={!!pendiente}
                 title="Confirmar cambio"
                 confirmLabel={guardando ? "Guardando..." : "Confirmar"}
                 message={
@@ -612,7 +659,9 @@ export default function CuentasPanel({ user }) {
                         ? `Se asignará el rol ${rolSeleccionado?.nombre} a ${seleccionada?.nombre}. Se cerrarán sus sesiones anteriores.`
                         : pendiente?.tipo === "inactivar"
                             ? `Se inactivará la cuenta de ${seleccionada?.nombre} y se cerrarán sus sesiones.`
-                            : "¿Confirmás que los datos son correctos?"
+                            : pendiente?.tipo === "desbloquear"
+                                ? `Se desbloqueará la cuenta de ${seleccionada?.nombre}.`
+                                : "¿Confirmás que los datos son correctos?"
                 }
                 onConfirm={guardar}
                 onCancel={() => {
@@ -620,22 +669,50 @@ export default function CuentasPanel({ user }) {
                 }}
             />
 
-            <Modal open={!!registroAuditoria}
+            <Modal
+                open={!!registroAuditoria}
                 title="Detalle de auditoría"
+                subtitle={registroAuditoria
+                    ? `${registroAuditoria.autor} · ${fecha(registroAuditoria.fecha)} · ${registroAuditoria.accion}`
+                    : ""}
                 onClose={() => setRegistroAuditoria(null)}
                 width="max-w-3xl"
             >
                 {registroAuditoria && (
-                    <>
-                        <p className="mb-3">
-                            {registroAuditoria.autor} ·
-                            {" "}{fecha(registroAuditoria.fecha)} ·
-                            {" "}{registroAuditoria.accion}
-                        </p>
-                        <DetalleAuditoria detalle={registroAuditoria.detalle} />
-                    </>
+                    <DetalleAuditoria detalle={registroAuditoria.detalle} />
                 )}
             </Modal>
         </div>
+    );
+}
+
+function DetalleGeneral({ cuenta }) {
+    return (
+        <>
+            <DetailGrid
+                title="Datos personales"
+                items={[
+                    { label: "Nombre completo", value: cuenta.nombre },
+                    { label: "Cédula", value: cuenta.cedula },
+                    { label: "Fecha de nacimiento", value: fechaCorta(cuenta.fechaNacimiento) },
+                    { label: "Estado civil", value: cuenta.estadoCivil },
+                    { label: "Grado académico", value: cuenta.gradoAcademico },
+                    { label: "Teléfono", value: cuenta.telefono },
+                    { label: "Correo corporativo", value: cuenta.correo },
+                    { label: "Dirección", value: cuenta.direccion, wide: true },
+                ]}
+            />
+            <DetailGrid
+                title="Cuenta y acceso"
+                items={[
+                    { label: "Rol", value: cuenta.rol },
+                    { label: "Salario", value: colones(cuenta.salario) },
+                    { label: "Estado", value: cuenta.activo ? "Activo" : "Inactivo" },
+                    { label: "Bloqueo", value: cuenta.bloqueada ? "Bloqueada" : "Sin bloqueo" },
+                    { label: "Fecha de creación", value: cuenta.fechaCreacion ? fecha(cuenta.fechaCreacion) : "" },
+                    { label: "Último acceso", value: cuenta.ultimoAcceso ? fecha(cuenta.ultimoAcceso) : "" },
+                ]}
+            />
+        </>
     );
 }

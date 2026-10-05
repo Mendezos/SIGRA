@@ -75,7 +75,15 @@ public class AutenticacionFlujo : IAutenticacionFlujo
             {
                 await _auditoriaDA.RegistrarAsync(usuario.IdUsuario, "Autenticacion", "Usuario", usuario.IdUsuario, "CUENTA_BLOQUEADA");
                 await NotificarBloqueoAsync(usuario.Correo, usuario.Nombre, resultado.BloqueadoHasta);
+
+                throw new CuentaBloqueadaException(
+                    $"Superó el máximo de {politica.MaxIntentosFallidos} intentos fallidos. Su cuenta fue bloqueada por {politica.MinutosBloqueo} minuto(s).",
+                    politica.MinutosBloqueo);
             }
+
+            var intentosRestantes = politica.MaxIntentosFallidos - resultado.IntentosFallidos;
+            if (intentosRestantes <= 2)
+                throw new ReglaNegocioException($"{MensajeGenericoLogin} Le quedan {intentosRestantes} intento(s) antes de que su cuenta se bloquee.");
 
             throw new ReglaNegocioException(MensajeGenericoLogin);
         }
