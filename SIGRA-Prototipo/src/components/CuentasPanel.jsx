@@ -68,12 +68,79 @@ const columnas = [
 const columnasAuditoria = [
     { key: "fechaTexto", label: "Fecha" },
     { key: "autor", label: "Responsable" },
+    { key: "accionTexto", label: "Acción" },
     { key: "entidad", label: "Entidad" },
     { key: "idEntidad", label: "Registro" },
-    { key: "accion", label: "Acción" },
-    { key: "antesTexto", label: "Anterior" },
-    { key: "despuesTexto", label: "Nuevo" },
+    { key: "resumenTexto", label: "Detalle" },
 ];
+
+const ACCIONES_AUDITORIA = {
+    LOGIN_EXITOSO: "Inicio de sesión exitoso",
+    LOGIN_FALLIDO: "Intento de inicio de sesión fallido",
+    LOGIN_BLOQUEADO: "Intento con cuenta bloqueada",
+    LOGIN_CUENTA_INACTIVA: "Intento con cuenta inactiva",
+    CUENTA_BLOQUEADA: "Cuenta bloqueada",
+    CUENTA_DESBLOQUEADA: "Cuenta desbloqueada",
+    CUENTA_CREADA: "Cuenta creada",
+    CUENTA_EDITADA: "Cuenta editada",
+    CUENTA_DESACTIVADA: "Cuenta inactivada",
+    CUENTA_REACTIVADA: "Cuenta reactivada",
+    CUENTA_ROL_CAMBIADO: "Cambio de rol",
+    PASSWORD_CAMBIADA: "Contraseña cambiada",
+    PERFIL_ACTUALIZADO: "Perfil actualizado",
+    ROL_CREADO: "Rol creado",
+    ROL_EDITADO: "Rol editado",
+    ROL_ACTIVADO: "Rol activado",
+    ROL_DESACTIVADO: "Rol desactivado",
+    PERMISOS_DEFINIDOS: "Permisos actualizados",
+    CambioRol: "Cambio de rol",
+    Creacion: "Cuenta creada",
+};
+
+const ETIQUETAS_CAMPO = {
+    nombre: "Nombre",
+    correo: "Correo",
+    cedula: "Cédula",
+    fechaNacimiento: "Fecha de nacimiento",
+    telefono: "Teléfono",
+    direccion: "Dirección",
+    estadoCivil: "Estado civil",
+    gradoAcademico: "Grado académico",
+    salario: "Salario",
+    rol: "Rol",
+    activo: "Estado",
+    bloqueada: "Bloqueo",
+    fechaCreacion: "Fecha de creación",
+    ultimoAcceso: "Último acceso",
+};
+
+const CAMPOS_OCULTOS = ["idUsuario", "idRol"];
+
+function nombreAccion(accion) {
+    if (!accion) return "";
+    if (ACCIONES_AUDITORIA[accion]) return ACCIONES_AUDITORIA[accion];
+
+    const texto = accion.replace(/_/g, " ").toLowerCase();
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function etiquetaCampo(key) {
+    if (ETIQUETAS_CAMPO[key]) return ETIQUETAS_CAMPO[key];
+
+    const texto = key.replace(/([A-Z])/g, " $1").toLowerCase();
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function valorCampo(key, valor) {
+    if (valor === null || valor === undefined || valor === "") return "Sin registro";
+    if (key === "activo") return valor ? "Activo" : "Inactivo";
+    if (key === "bloqueada") return valor ? "Bloqueada" : "Sin bloqueo";
+    if (key === "salario") return colones(valor);
+    if (key === "fechaNacimiento") return fechaCorta(valor);
+    if (key === "fechaCreacion" || key === "ultimoAcceso") return fecha(valor);
+
+    return String(valor);
+}
 
 function leerDetalle(detalle) {
     try {
@@ -83,8 +150,47 @@ function leerDetalle(detalle) {
     }
 }
 
-function resumir(valor) {
-    return valor ? JSON.stringify(valor).slice(0, 100) : "Sin registro";
+function camelCase(objeto) {
+    return Object.fromEntries(
+        Object.entries(objeto ?? {}).map(([key, valor]) => [
+            key.charAt(0).toLowerCase() + key.slice(1),
+            valor,
+        ])
+    );
+}
+
+function cambiosDe(detalle) {
+    const datos = leerDetalle(detalle);
+
+    if (!datos || typeof datos !== "object" || (!datos.antes && !datos.despues)) return null;
+
+    const antes = camelCase(datos.antes);
+    const despues = camelCase(datos.despues);
+    const claves = [...new Set([...Object.keys(antes), ...Object.keys(despues)])]
+        .filter((key) => !CAMPOS_OCULTOS.includes(key));
+
+    const cambios = claves
+        .filter((key) => JSON.stringify(antes[key] ?? null) !== JSON.stringify(despues[key] ?? null))
+        .map((key) => ({ key, antes: antes[key], despues: despues[key] }));
+
+    return { cambios, motivo: datos.motivo, esCreacion: !datos.antes };
+}
+
+function resumirDetalle(detalle) {
+    const info = cambiosDe(detalle);
+
+    if (info) {
+        if (info.motivo) return `Motivo: ${info.motivo}`;
+        if (info.esCreacion) return "Cuenta nueva con todos sus datos";
+
+        return info.cambios.length === 0
+            ? "Sin cambios en los datos"
+            : `${info.cambios.length} campo(s) modificado(s)`;
+    }
+
+    if (!detalle) return "—";
+
+    return detalle.length > 60 ? `${detalle.slice(0, 60)}…` : detalle;
 }
 
 function conOpcionActual(campo, valorActual) {
@@ -130,39 +236,103 @@ function PermisosRol({ rol }) {
     );
 }
 
-function DetalleAuditoria({ detalle }) {
-    const datos = leerDetalle(detalle);
+const thClass = "text-left px-4 py-2.5 text-xs uppercase tracking-wide";
 
-    if (!datos || (!datos.antes && !datos.despues)) {
-        return <p className="text-sm">{detalle || "Este registro histórico no contiene valores anteriores y nuevos."}</p>;
-    }
-
-    const antes = datos.antes ?? {};
-    const despues = datos.despues ?? {};
-    const claves = [...new Set([...Object.keys(antes), ...Object.keys(despues)])];
+function Chip({ tone, children }) {
+    const palette = tone === "old"
+        ? { backgroundColor: COLORS.redTint, color: COLORS.red }
+        : { backgroundColor: COLORS.greenTint, color: COLORS.greenDark };
 
     return (
-        <div className="overflow-x-auto">
-            {datos.motivo && <p className="mb-3 text-sm">Motivo: {datos.motivo}</p>}
-            <table className="w-full text-sm">
-                <thead>
-                    <tr style={{ backgroundColor: COLORS.greenTint }}>
-                        <th className="text-left p-2">Campo</th>
-                        <th className="text-left p-2">Anterior</th>
-                        <th className="text-left p-2">Nuevo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {claves.map((key) => (
-                        <tr key={key} style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                            <td className="p-2">{key}</td>
-                            <td className="p-2">{String(antes[key] ?? "Sin registro")}</td>
-                            <td className="p-2">{String(despues[key] ?? "Sin registro")}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+        <span className="px-2 py-0.5 rounded-md text-xs" style={palette}>
+            {children}
+        </span>
+    );
+}
+
+function DetalleAuditoria({ registro }) {
+    const info = cambiosDe(registro.detalle);
+
+    return (
+        <>
+            <DetailGrid
+                items={[
+                    { label: "Acción", value: nombreAccion(registro.accion) },
+                    { label: "Fecha y hora", value: fecha(registro.fecha) },
+                    { label: "Responsable", value: registro.autor },
+                    { label: "Entidad", value: registro.entidad },
+                    { label: "N.º de registro", value: registro.idEntidad != null ? String(registro.idEntidad) : "" },
+                    { label: "Módulo", value: registro.modulo },
+                ]}
+            />
+
+            {info?.motivo && (
+                <div
+                    className="rounded-xl p-4 mb-5 text-sm"
+                    style={{ backgroundColor: "#FBF3DE", color: "#9C7A17" }}
+                >
+                    <b>Motivo:</b> {info.motivo}
+                </div>
+            )}
+
+            <section>
+                <h3
+                    className="text-xs uppercase tracking-wide mb-3"
+                    style={{ color: COLORS.muted, fontWeight: 600 }}
+                >
+                    {!info ? "Detalle" : info.esCreacion ? "Datos registrados" : "Cambios realizados"}
+                </h3>
+
+                {!info && (
+                    <p
+                        className="text-sm rounded-xl p-4"
+                        style={{ backgroundColor: "#F7F7F7", color: COLORS.charcoal }}
+                    >
+                        {registro.detalle || "Esta acción no tiene información adicional."}
+                    </p>
+                )}
+
+                {info && info.cambios.length === 0 && (
+                    <p className="text-sm" style={{ color: COLORS.muted }}>
+                        Esta acción no modificó ningún dato de la cuenta.
+                    </p>
+                )}
+
+                {info && info.cambios.length > 0 && (
+                    <div
+                        className="rounded-xl overflow-hidden"
+                        style={{ border: `1px solid ${COLORS.border}` }}
+                    >
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr style={{ backgroundColor: COLORS.greenTint, color: COLORS.muted }}>
+                                    <th className={thClass}>Campo</th>
+                                    {!info.esCreacion && <th className={thClass}>Antes</th>}
+                                    <th className={thClass}>{info.esCreacion ? "Valor" : "Después"}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {info.cambios.map((c) => (
+                                    <tr key={c.key} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                                        <td className="px-4 py-2.5" style={{ fontWeight: 600 }}>
+                                            {etiquetaCampo(c.key)}
+                                        </td>
+                                        {!info.esCreacion && (
+                                            <td className="px-4 py-2.5">
+                                                <Chip tone="old">{valorCampo(c.key, c.antes)}</Chip>
+                                            </td>
+                                        )}
+                                        <td className="px-4 py-2.5">
+                                            <Chip tone="new">{valorCampo(c.key, c.despues)}</Chip>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </section>
+        </>
     );
 }
 
@@ -534,16 +704,13 @@ export default function CuentasPanel({ user }) {
                     <div className="overflow-x-auto">
                         <DataTable
                             columns={columnasAuditoria}
-                            rows={auditoria.map((a) => {
-                                const detalle = leerDetalle(a.detalle);
-                                return {
-                                    ...a,
-                                    id: a.idAuditoria,
-                                    fechaTexto: fecha(a.fecha),
-                                    antesTexto: resumir(detalle?.antes),
-                                    despuesTexto: resumir(detalle?.despues),
-                                };
-                            })}
+                            rows={auditoria.map((a) => ({
+                                ...a,
+                                id: a.idAuditoria,
+                                fechaTexto: fecha(a.fecha),
+                                accionTexto: nombreAccion(a.accion),
+                                resumenTexto: resumirDetalle(a.detalle),
+                            }))}
                             onRowClick={setRegistroAuditoria}
                         />
                     </div>
@@ -672,14 +839,12 @@ export default function CuentasPanel({ user }) {
             <Modal
                 open={!!registroAuditoria}
                 title="Detalle de auditoría"
-                subtitle={registroAuditoria
-                    ? `${registroAuditoria.autor} · ${fecha(registroAuditoria.fecha)} · ${registroAuditoria.accion}`
-                    : ""}
+                subtitle={registroAuditoria ? nombreAccion(registroAuditoria.accion) : ""}
                 onClose={() => setRegistroAuditoria(null)}
                 width="max-w-3xl"
             >
                 {registroAuditoria && (
-                    <DetalleAuditoria detalle={registroAuditoria.detalle} />
+                    <DetalleAuditoria registro={registroAuditoria} />
                 )}
             </Modal>
         </div>

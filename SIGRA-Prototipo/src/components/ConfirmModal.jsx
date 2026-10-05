@@ -1,11 +1,6 @@
 import Modal from "./Modal";
-
-const COLORS = {
-    green: "#5EB453",
-    white: "#FFFFFF",
-    charcoal: "#323232",
-    muted: "#6E6E6E",
-};
+import { Button } from "./ui";
+import { COLORS } from "./uiTheme";
 
 export default function ConfirmModal({
     open,
@@ -25,22 +20,12 @@ export default function ConfirmModal({
             </p>
 
             <div className="flex items-center justify-end gap-3">
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    className="px-4 py-2.5 rounded-lg text-sm"
-                    style={{ color: COLORS.muted }}
-                >
+                <Button variant="ghost" onClick={onCancel}>
                     {cancelLabel}
-                </button>
-                <button
-                    type="button"
-                    onClick={onConfirm}
-                    className="px-5 py-2.5 rounded-lg text-sm font-medium"
-                    style={{ backgroundColor: COLORS.green, color: COLORS.white, border: "none" }}
-                >
+                </Button>
+                <Button variant="primary" onClick={onConfirm}>
                     {confirmLabel}
-                </button>
+                </Button>
             </div>
         </Modal>
     );

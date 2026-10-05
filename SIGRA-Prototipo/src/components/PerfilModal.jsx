@@ -1,24 +1,9 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
+import { Button, Notice } from "./ui";
+import { COLORS, inputClass, inputStyle } from "./uiTheme";
 import { obtenerPerfil, actualizarPerfil, cambiarPassword } from "../services/authService";
 
-const COLORS = {
-    green: "#5EB453",
-    greenDark: "#4CA23D",
-    greenTint: "#EAF6E8",
-    charcoal: "#323232",
-    muted: "#6E6E6E",
-    border: "#E3E3E3",
-    red: "#C0392B",
-    redTint: "#FCEBEB",
-    white: "#FFFFFF",
-};
-
-function inputClass() {
-    return "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none";
-}
-
-const inputStyle = { border: `1px solid ${COLORS.border}`, color: COLORS.charcoal };
 
 export default function PerfilModal({ open, onClose, onProfileUpdated, onLogout }) {
     const [cargando, setCargando] = useState(false);
@@ -39,12 +24,16 @@ export default function PerfilModal({ open, onClose, onProfileUpdated, onLogout 
     useEffect(() => {
         if (!open) return;
 
-        setError("");
-        setMensaje("");
-        setPasswordActual("");
-        setPasswordNueva("");
-        setPasswordConfirmar("");
-        setCargando(true);
+        let activo = true;
+        Promise.resolve().then(() => {
+            if (!activo) return;
+            setError("");
+            setMensaje("");
+            setPasswordActual("");
+            setPasswordNueva("");
+            setPasswordConfirmar("");
+            setCargando(true);
+        });
 
         obtenerPerfil()
             .then((perfil) => {
@@ -55,6 +44,10 @@ export default function PerfilModal({ open, onClose, onProfileUpdated, onLogout 
             })
             .catch((err) => setError(err.message ?? "No se pudo cargar tu perfil."))
             .finally(() => setCargando(false));
+
+        return () => {
+            activo = false;
+        };
     }, [open]);
 
     if (!open) return null;
@@ -102,16 +95,8 @@ export default function PerfilModal({ open, onClose, onProfileUpdated, onLogout 
 
     return (
         <Modal open={open} onClose={onClose} title="Mi perfil" subtitle="Actualizá tus datos o cambiá tu contraseña." width="max-w-lg">
-            {mensaje && (
-                <div className="mb-4 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: COLORS.greenTint, color: COLORS.greenDark }}>
-                    {mensaje}
-                </div>
-            )}
-            {error && (
-                <div className="mb-4 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: COLORS.redTint, color: COLORS.red }}>
-                    {error}
-                </div>
-            )}
+            {mensaje && <Notice>{mensaje}</Notice>}
+            {error && <Notice tone="error">{error}</Notice>}
 
             {cargando ? (
                 <p className="text-sm" style={{ color: COLORS.muted }}>Cargando tu perfil...</p>
@@ -122,32 +107,27 @@ export default function PerfilModal({ open, onClose, onProfileUpdated, onLogout 
 
                         <label className="block mb-3">
                             <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Correo</span>
-                            <input value={correo} disabled className={inputClass()} style={{ ...inputStyle, backgroundColor: COLORS.greenTint, color: COLORS.muted }} />
+                            <input value={correo} disabled className={inputClass} style={{ ...inputStyle, backgroundColor: COLORS.greenTint, color: COLORS.muted }} />
                         </label>
 
                         <label className="block mb-3">
                             <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Rol</span>
-                            <input value={rol} disabled className={inputClass()} style={{ ...inputStyle, backgroundColor: COLORS.greenTint, color: COLORS.muted }} />
+                            <input value={rol} disabled className={inputClass} style={{ ...inputStyle, backgroundColor: COLORS.greenTint, color: COLORS.muted }} />
                         </label>
 
                         <label className="block mb-3">
                             <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Nombre completo</span>
-                            <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={150} required className={inputClass()} style={inputStyle} />
+                            <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={150} required className={inputClass} style={inputStyle} />
                         </label>
 
                         <label className="block mb-4">
                             <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Teléfono</span>
-                            <input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={20} className={inputClass()} style={inputStyle} />
+                            <input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={20} className={inputClass} style={inputStyle} />
                         </label>
 
-                        <button
-                            type="submit"
-                            disabled={guardandoPerfil}
-                            className="px-5 py-2.5 rounded-lg text-sm font-medium"
-                            style={{ backgroundColor: COLORS.green, color: COLORS.white, border: "none" }}
-                        >
+                        <Button variant="primary" type="submit" disabled={guardandoPerfil}>
                             {guardandoPerfil ? "Guardando..." : "Guardar cambios"}
-                        </button>
+                        </Button>
                     </form>
 
                     <form onSubmit={handleCambiarPassword}>
@@ -155,27 +135,22 @@ export default function PerfilModal({ open, onClose, onProfileUpdated, onLogout 
 
                         <label className="block mb-3">
                             <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Contraseña actual</span>
-                            <input type="password" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} required className={inputClass()} style={inputStyle} />
+                            <input type="password" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} required className={inputClass} style={inputStyle} />
                         </label>
 
                         <label className="block mb-3">
                             <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Contraseña nueva</span>
-                            <input type="password" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)} required className={inputClass()} style={inputStyle} />
+                            <input type="password" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)} required className={inputClass} style={inputStyle} />
                         </label>
 
                         <label className="block mb-4">
                             <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Confirmar contraseña nueva</span>
-                            <input type="password" value={passwordConfirmar} onChange={(e) => setPasswordConfirmar(e.target.value)} required className={inputClass()} style={inputStyle} />
+                            <input type="password" value={passwordConfirmar} onChange={(e) => setPasswordConfirmar(e.target.value)} required className={inputClass} style={inputStyle} />
                         </label>
 
-                        <button
-                            type="submit"
-                            disabled={cambiandoPassword}
-                            className="px-5 py-2.5 rounded-lg text-sm font-medium"
-                            style={{ backgroundColor: COLORS.charcoal, color: COLORS.white, border: "none" }}
-                        >
+                        <Button type="submit" disabled={cambiandoPassword}>
                             {cambiandoPassword ? "Cambiando..." : "Cambiar contraseña"}
-                        </button>
+                        </Button>
                     </form>
                 </>
             )}

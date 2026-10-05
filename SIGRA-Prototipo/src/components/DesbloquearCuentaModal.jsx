@@ -1,21 +1,11 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
+import { Button, FieldLabel, Notice } from "./ui";
+import { COLORS, inputClass, inputStyle } from "./uiTheme";
 import { obtenerCuentasBloqueadas, desbloquearCuenta } from "../services/adminService";
 
-const COLORS = {
-    green: "#5EB453",
-    greenDark: "#4CA23D",
-    greenTint: "#EAF6E8",
-    charcoal: "#323232",
-    muted: "#6E6E6E",
-    border: "#E3E3E3",
-    red: "#C0392B",
-    redTint: "#FCEBEB",
-    white: "#FFFFFF",
-};
-
-function inputClass() {
-    return "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none";
+function iniciales(nombre = "") {
+    return nombre.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
 }
 
 export default function DesbloquearCuentaModal({ open, onClose }) {
@@ -102,17 +92,8 @@ export default function DesbloquearCuentaModal({ open, onClose }) {
             subtitle="Verificá los intentos recientes y registrá el motivo antes de desbloquear."
             width="max-w-2xl"
         >
-            {mensaje && (
-                <div className="mb-4 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: COLORS.greenTint, color: COLORS.greenDark }}>
-                    {mensaje}
-                </div>
-            )}
-
-            {error && (
-                <div className="mb-4 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: COLORS.redTint, color: COLORS.red }}>
-                    {error}
-                </div>
-            )}
+            {mensaje && <Notice>{mensaje}</Notice>}
+            {error && <Notice tone="error">{error}</Notice>}
 
             {cargando && (
                 <p className="text-sm" style={{ color: COLORS.muted }}>
@@ -121,57 +102,76 @@ export default function DesbloquearCuentaModal({ open, onClose }) {
             )}
 
             {!cargando && cuentas.length === 0 && !error && (
-                <p className="text-sm" style={{ color: COLORS.muted }}>
-                    No hay cuentas bloqueadas en este momento.
-                </p>
+                <div
+                    className="rounded-xl p-8 text-center"
+                    style={{ backgroundColor: COLORS.greenTint }}
+                >
+                    <p className="text-sm font-semibold" style={{ color: COLORS.greenDark }}>
+                        No hay cuentas bloqueadas
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: COLORS.muted }}>
+                        Todas las cuentas pueden iniciar sesión con normalidad.
+                    </p>
+                </div>
             )}
 
             {!cargando && cuentas.length > 0 && (
-                <div className="flex flex-col gap-3 max-h-[28rem] overflow-y-auto pr-1">
+                <div className="flex flex-col gap-3">
                     {cuentas.map((cuenta) => (
-                        <div key={cuenta.idUsuario} className="rounded-xl p-4" style={{ border: `1px solid ${COLORS.border}` }}>
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-sm font-semibold truncate" style={{ color: COLORS.charcoal }}>
-                                        {cuenta.nombre}
-                                    </p>
-                                    <p className="text-xs mt-0.5 truncate" style={{ color: COLORS.muted }}>
-                                        {cuenta.correo}
-                                    </p>
-                                    <p className="text-xs mt-1" style={{ color: COLORS.muted }}>
-                                        Intentos fallidos: {cuenta.intentosFallidos}
-                                        {cuenta.bloqueadoHasta && (
-                                            <> · Bloqueada hasta {new Date(cuenta.bloqueadoHasta).toLocaleString("es-CR")}</>
-                                        )}
-                                    </p>
-                                    {!cuenta.activo && (
-                                        <p className="text-xs mt-1 font-medium" style={{ color: COLORS.red }}>
-                                            Cuenta inactiva — debe reactivarla antes de poder desbloquearla.
+                        <div
+                            key={cuenta.idUsuario}
+                            className="rounded-xl p-4"
+                            style={{ border: `1px solid ${COLORS.border}` }}
+                        >
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div
+                                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm"
+                                        style={{ backgroundColor: COLORS.redTint, color: COLORS.red, fontWeight: 600 }}
+                                    >
+                                        {iniciales(cuenta.nombre)}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm truncate" style={{ color: COLORS.charcoal, fontWeight: 600 }}>
+                                            {cuenta.nombre}
                                         </p>
-                                    )}
+                                        <p className="text-xs truncate" style={{ color: COLORS.muted }}>
+                                            {cuenta.correo}
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                            <span className="px-2 py-0.5 rounded-md text-xs" style={{ backgroundColor: COLORS.redTint, color: COLORS.red }}>
+                                                {cuenta.intentosFallidos} intentos fallidos
+                                            </span>
+                                            {cuenta.bloqueadoHasta && (
+                                                <span className="px-2 py-0.5 rounded-md text-xs" style={{ backgroundColor: "#F1F1F1", color: COLORS.muted }}>
+                                                    Hasta {new Date(cuenta.bloqueadoHasta).toLocaleString("es-CR")}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <button
-                                    type="button"
+                                <Button
+                                    variant={filaAbierta === cuenta.idUsuario ? "ghost" : "primary"}
                                     onClick={() => handleAbrirFila(cuenta.idUsuario)}
                                     disabled={!cuenta.activo}
-                                    className="shrink-0 px-3.5 py-2 rounded-lg text-xs font-medium"
-                                    style={{
-                                        backgroundColor: cuenta.activo ? COLORS.green : COLORS.border,
-                                        color: cuenta.activo ? COLORS.white : COLORS.muted,
-                                        border: "none",
-                                        cursor: cuenta.activo ? "pointer" : "not-allowed",
-                                    }}
+                                    className="shrink-0"
                                 >
                                     {filaAbierta === cuenta.idUsuario ? "Cancelar" : "Desbloquear"}
-                                </button>
+                                </Button>
                             </div>
+
+                            {!cuenta.activo && (
+                                <p className="text-xs mt-3" style={{ color: COLORS.red }}>
+                                    Cuenta inactiva: debe reactivarla antes de poder desbloquearla.
+                                </p>
+                            )}
 
                             {filaAbierta === cuenta.idUsuario && (
                                 <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${COLORS.border}` }}>
                                     {cuenta.intentosRecientes?.length > 0 && (
-                                        <div className="mb-3">
-                                            <p className="text-xs font-semibold mb-1" style={{ color: COLORS.charcoal }}>
+                                        <div className="mb-4">
+                                            <p className="text-xs uppercase tracking-wide mb-2" style={{ color: COLORS.muted, fontWeight: 600 }}>
                                                 Intentos recientes
                                             </p>
                                             <ul className="text-xs space-y-1 max-h-24 overflow-y-auto" style={{ color: COLORS.muted }}>
@@ -184,28 +184,25 @@ export default function DesbloquearCuentaModal({ open, onClose }) {
                                         </div>
                                     )}
 
-                                    <label className="block mb-3">
-                                        <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>
-                                            Motivo del desbloqueo
-                                        </span>
+                                    <FieldLabel label="Motivo del desbloqueo">
                                         <textarea
                                             value={motivo}
                                             onChange={(e) => setMotivo(e.target.value)}
                                             rows={2}
-                                            className={inputClass()}
-                                            style={{ border: `1px solid ${COLORS.border}`, color: COLORS.charcoal }}
+                                            className={inputClass}
+                                            style={inputStyle}
                                         />
-                                    </label>
+                                    </FieldLabel>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDesbloquear(cuenta.idUsuario)}
-                                        disabled={accionCargando}
-                                        className="px-5 py-2.5 rounded-lg text-sm font-medium"
-                                        style={{ backgroundColor: COLORS.green, color: COLORS.white, border: "none" }}
-                                    >
-                                        {accionCargando ? "Desbloqueando..." : "Confirmar desbloqueo"}
-                                    </button>
+                                    <div className="flex justify-end mt-3">
+                                        <Button
+                                            variant="primary"
+                                            onClick={() => handleDesbloquear(cuenta.idUsuario)}
+                                            disabled={accionCargando}
+                                        >
+                                            {accionCargando ? "Desbloqueando..." : "Confirmar desbloqueo"}
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </div>

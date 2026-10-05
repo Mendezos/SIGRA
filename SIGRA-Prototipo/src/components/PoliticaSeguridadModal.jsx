@@ -1,16 +1,9 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
 import RecordForm from "./RecordForm";
+import { Notice } from "./ui";
+import { COLORS } from "./uiTheme";
 import { obtenerPoliticaActiva, guardarPolitica } from "../services/adminService";
-
-const COLORS = {
-    charcoal: "#323232",
-    muted: "#6E6E6E",
-    red: "#C0392B",
-    redTint: "#FCEBEB",
-    greenTint: "#EAF6E8",
-    greenDark: "#4CA23D",
-};
 
 const FIELDS = [
     { key: "minutosInactividad", label: "Minutos máximos de inactividad (1-240)", type: "number", required: true },
@@ -101,7 +94,7 @@ export default function PoliticaSeguridadModal({ open, onClose }) {
             )}
 
             {!cargando && error && (
-                <div className="mb-4 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: COLORS.redTint, color: COLORS.red }}>
+                <Notice tone="error">
                     {error}
                     {errores.length > 0 && (
                         <ul className="list-disc ml-4 mt-1">
@@ -110,14 +103,10 @@ export default function PoliticaSeguridadModal({ open, onClose }) {
                             ))}
                         </ul>
                     )}
-                </div>
+                </Notice>
             )}
 
-            {!cargando && mensaje && (
-                <div className="mb-4 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: COLORS.greenTint, color: COLORS.greenDark }}>
-                    {mensaje}
-                </div>
-            )}
+            {!cargando && mensaje && <Notice>{mensaje}</Notice>}
 
             {!cargando && valoresIniciales && (
                 <RecordForm
