@@ -3,12 +3,15 @@ using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
+using SIGRA.Abstracciones.Servicios;
 
 namespace SIGRA.Flujo.Flujos;
 
 public class AlquilerFlujo : IAlquilerFlujo
 {
     private const string ModuloAuditoria = "Alquiler";
+    private const string EstadoPorVencer90 = "Por vencer (90 días)";
+    private const string EstadoPorVencer30 = "Por vencer (30 días)";
     private const string MensajeEquipoNoDisponible = "El equipo seleccionado no se encuentra disponible en el inventario.";
     private static readonly string[] CategoriasRadio = { "Radio portátil", "Radio móvil" };
     private static readonly Regex PatronCorreo = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
@@ -17,12 +20,14 @@ public class AlquilerFlujo : IAlquilerFlujo
     private readonly IAlquilerDA _alquilerDA;
     private readonly IInventarioDA _inventarioDA;
     private readonly IAuditoriaDA _auditoriaDA;
+    private readonly IEmailService _emailService;
 
-    public AlquilerFlujo(IAlquilerDA alquilerDA, IInventarioDA inventarioDA, IAuditoriaDA auditoriaDA)
+    public AlquilerFlujo(IAlquilerDA alquilerDA, IInventarioDA inventarioDA, IAuditoriaDA auditoriaDA, IEmailService emailService)
     {
         _alquilerDA = alquilerDA;
         _inventarioDA = inventarioDA;
         _auditoriaDA = auditoriaDA;
+        _emailService = emailService;
     }
 
     // ---------- CARR-001: contacto inicial ----------
@@ -217,7 +222,7 @@ public class AlquilerFlujo : IAlquilerFlujo
 
     public Task<List<ContratoDto>> ListarContratosAsync(string? texto, string? estado)
     {
-        var estadosValidos = new[] { "Activo", "Por vencer", "Vencido", "Renovado", "Cancelado" };
+        var estadosValidos = new[] { "Activo", EstadoPorVencer90, EstadoPorVencer30, "Vencido", "Renovado", "Cancelado" };
         if (!string.IsNullOrWhiteSpace(estado) && !estadosValidos.Contains(estado))
             throw new ReglaNegocioException("El estado indicado no es válido.");
 
@@ -250,8 +255,8 @@ public class AlquilerFlujo : IAlquilerFlujo
         var contrato = await _alquilerDA.ObtenerContratoAsync(dto.IdContrato!.Value)
             ?? throw new ReglaNegocioException("El contrato indicado no existe.");
 
-        if (contrato.EstadoRegistrado != "Activo")
-            throw new ReglaNegocioException("Solo se pueden asignar radios a un contrato activo.");
+        if (contrato.EstadoRegistrado is not ("Activo" or "Renovado"))
+            throw new ReglaNegocioException("Solo se pueden asignar radios a un contrato vigente.");
 
         var equipo = await _inventarioDA.ObtenerEquipoAsync(null, serie)
             ?? throw new ReglaNegocioException("El número de serie ingresado no existe en el inventario.");
@@ -286,6 +291,213 @@ public class AlquilerFlujo : IAlquilerFlujo
             : (await _alquilerDA.ListarRadiosAsync(null, numeroSerie.Trim())).FirstOrDefault();
 
         return radio ?? throw new ReglaNegocioException("No se encontró ningún radio en alquiler con ese número de serie.");
+    }
+
+    // ---------- CARR-003: renovar ----------
+    public async Task<DetalleContratoDto> RenovarContratoAsync(int idContrato, RenovarContratoDto dto, int idUsuario, bool esAdministrador)
+    {
+        var detalle = await ObtenerContratoAsync(idContrato);
+        var contrato = detalle.Contrato;
+
+        if (!esAdministrador && contrato.IdVendedor != idUsuario)
+            throw new ReglaNegocioException("Solo puede renovar los contratos que usted registró.");
+
+        if (contrato.Estado == "Cancelado")
+            throw new ReglaNegocioException("No es posible renovar un contrato cancelado.");
+
+        if (contrato.Estado is not (EstadoPorVencer90 or EstadoPorVencer30 or "Vencido"))
+            throw new ReglaNegocioException("El contrato aún no se encuentra en periodo de renovación.");
+
+        if (dto.NuevaFechaVencimiento is null)
+            throw new ValidacionException("Debe completar los campos obligatorios.", new List<string> { "Nueva fecha de vencimiento" });
+
+        var minima = contrato.FechaVencimiento.Date > DateTime.Today ? contrato.FechaVencimiento.Date : DateTime.Today;
+        if (dto.NuevaFechaVencimiento.Value.Date <= minima)
+            throw new ReglaNegocioException("La nueva fecha de vencimiento debe ser posterior a la fecha de vencimiento actual y a la fecha de hoy.");
+
+        if (dto.NuevoMonto is <= 0)
+            throw new ReglaNegocioException("El monto mensual debe ser un valor numérico mayor a cero.");
+
+        var vigentes = detalle.Equipos.ToDictionary(e => e.IdEquipo);
+        var retirar = (dto.IdsRetirar ?? new List<int>()).Distinct().ToList();
+        foreach (var id in retirar)
+        {
+            if (!vigentes.ContainsKey(id))
+                throw new ReglaNegocioException("El equipo que desea retirar no forma parte del contrato.");
+        }
+
+        var agregar = new List<EquipoDetalleDto>();
+        foreach (var serie in (dto.SeriesAgregar ?? new List<string>()).Select(s => s?.Trim() ?? string.Empty).Where(s => s.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var equipo = await _inventarioDA.ObtenerEquipoAsync(null, serie)
+                ?? throw new ReglaNegocioException($"El número de serie ingresado no existe en el inventario ({serie}).");
+
+            if (equipo.Estado != "Disponible")
+                throw new ReglaNegocioException($"{MensajeEquipoNoDisponible.TrimEnd('.')} ({serie}: {equipo.Estado}).");
+
+            if (equipo.ManejaCantidad)
+                throw new ReglaNegocioException($"El equipo {serie} se maneja por cantidad; los accesorios se asocian al contrato por separado.");
+
+            agregar.Add(equipo);
+        }
+
+        if (vigentes.Count - retirar.Count + agregar.Count <= 0)
+            throw new ReglaNegocioException("El contrato debe conservar al menos un equipo. Si el cliente ya no continúa, cancele el contrato.");
+
+        var observacion = Normalizar(dto.Observacion);
+        await _alquilerDA.RenovarContratoAsync(idContrato, dto.NuevaFechaVencimiento.Value.Date, dto.NuevoMonto,
+            agregar.Select(e => e.IdEquipo), retirar, observacion, idUsuario);
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "CONTRATO_RENOVADO",
+            $"Vencimiento {contrato.FechaVencimiento:yyyy-MM-dd} -> {dto.NuevaFechaVencimiento:yyyy-MM-dd}"
+            + (dto.NuevoMonto is null ? "" : $"; monto mensual {contrato.MontoMensual:0.##} -> {dto.NuevoMonto:0.##}")
+            + (observacion is null ? "" : $". {observacion}"));
+
+        foreach (var equipo in agregar)
+            await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "EQUIPO_AGREGADO", equipo.NumeroSerie);
+        foreach (var id in retirar)
+            await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "EQUIPO_RETIRADO", vigentes[id].NumeroSerie);
+
+        return await ObtenerContratoAsync(idContrato);
+    }
+
+    public async Task<List<RenovacionDto>> ListarRenovacionesAsync(int idContrato, int idUsuario, bool esAdministrador)
+    {
+        var contrato = await _alquilerDA.ObtenerContratoAsync(idContrato)
+            ?? throw new ReglaNegocioException("El contrato indicado no existe.");
+
+        if (!esAdministrador && contrato.IdVendedor != idUsuario)
+            throw new ReglaNegocioException("Solo puede consultar el historial de renovaciones de sus propios contratos.");
+
+        return await _alquilerDA.ListarRenovacionesAsync(idContrato);
+    }
+
+    // ---------- CARR-004: cancelar ----------
+    public async Task<DetalleContratoDto> CancelarContratoAsync(int idContrato, CancelarContratoDto dto, int idUsuario)
+    {
+        var detalle = await ObtenerContratoAsync(idContrato);
+
+        if (detalle.Contrato.Estado is "Vencido" or "Cancelado")
+            throw new ReglaNegocioException("El contrato no puede cancelarse porque ya no se encuentra activo.");
+
+        var motivo = Normalizar(dto.Motivo)
+            ?? throw new ReglaNegocioException("Debe indicar el motivo de la cancelación.");
+
+        if (motivo.Length > 300)
+            throw new ReglaNegocioException("El motivo no puede superar los 300 caracteres.");
+
+        await _alquilerDA.CancelarContratoAsync(idContrato, motivo, idUsuario);
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "CONTRATO_CANCELADO",
+            $"{motivo}. Equipos liberados: {string.Join(", ", detalle.Equipos.Select(e => e.NumeroSerie))}");
+
+        return await ObtenerContratoAsync(idContrato);
+    }
+
+    // ---------- CARR-015: auditoría ----------
+    public async Task<List<AuditoriaContratoDto>> ListarAuditoriaContratoAsync(int idContrato)
+    {
+        if (await _alquilerDA.ObtenerContratoAsync(idContrato) is null)
+            throw new ReglaNegocioException("El contrato indicado no existe.");
+
+        return await _alquilerDA.ListarAuditoriaContratoAsync(idContrato);
+    }
+
+    // ---------- CARR-005: vencimientos y alertas ----------
+    public async Task<ResultadoProcesoVencimientosDto> ProcesarVencimientosAsync()
+    {
+        var resultado = new ResultadoProcesoVencimientosDto
+        {
+            ContratosVencidos = await _alquilerDA.MarcarContratosVencidosAsync()
+        };
+
+        var pendientes = await _alquilerDA.ListarAlertasPendientesAsync();
+        if (pendientes.Count == 0) return resultado;
+
+        var administradores = await _alquilerDA.ListarAdministradoresAsync();
+
+        foreach (var alerta in pendientes)
+        {
+            var codigo = $"CT-{alerta.IdContrato:0000}";
+            var (asunto, mensaje) = ArmarAlerta(alerta, codigo);
+
+            var destinatarios = new List<(string Correo, string Nombre)>();
+            if (alerta.Tipo != "3 anios" && !string.IsNullOrWhiteSpace(alerta.CorreoCliente))
+                destinatarios.Add((alerta.CorreoCliente!, alerta.Contacto ?? alerta.Empresa));
+            destinatarios.AddRange(administradores.Select(a => (a.Correo, a.Nombre)));
+
+            var enviados = 0;
+            foreach (var destino in destinatarios)
+            {
+                try
+                {
+                    await _emailService.EnviarAsync(destino.Correo, destino.Nombre, asunto, mensaje);
+                    enviados++;
+                }
+                catch (Exception ex)
+                {
+                    resultado.Errores.Add($"{codigo} ({alerta.Tipo}) a {destino.Correo}: {ex.Message}");
+                }
+            }
+
+            // Si ningún correo salió, la alerta se reintenta en la próxima ejecución.
+            if (destinatarios.Count > 0 && enviados == 0) continue;
+
+            await _alquilerDA.RegistrarAlertaAsync(alerta.IdContrato, alerta.Tipo);
+            await _auditoriaDA.RegistrarAsync(null, ModuloAuditoria, "Contrato", alerta.IdContrato, "CONTRATO_ALERTA",
+                $"{asunto} ({enviados} correo(s) enviado(s))");
+            resultado.AlertasGeneradas++;
+        }
+
+        return resultado;
+    }
+
+    private static (string Asunto, string Cuerpo) ArmarAlerta(AlertaContratoDto alerta, string codigo)
+    {
+        var vence = alerta.FechaVencimiento.ToString("dd/MM/yyyy");
+        return alerta.Tipo switch
+        {
+            "3 anios" => (
+                $"Contrato {codigo} cumple 3 años: renovación mayor próxima",
+                $"<p>El contrato <strong>{codigo}</strong> de <strong>{alerta.Empresa}</strong> cumple 3 años de vigencia. Se aproxima una renovación mayor.</p>"),
+            "30 dias" => (
+                $"Contrato {codigo} por vencer en 30 días",
+                $"<p>El contrato <strong>{codigo}</strong> de <strong>{alerta.Empresa}</strong> vence el <strong>{vence}</strong> (faltan 30 días o menos). Coordine su renovación con Radifax.</p>"),
+            _ => (
+                $"Contrato {codigo} por vencer en 90 días",
+                $"<p>El contrato <strong>{codigo}</strong> de <strong>{alerta.Empresa}</strong> vence el <strong>{vence}</strong> (faltan 90 días o menos). Ya puede coordinar su renovación con Radifax.</p>")
+        };
+    }
+
+    // ---------- CARR-007 / CARR-008: baterías ----------
+    public Task<List<RadioDto>> ListarRadiosConBateriaPorCambiarAsync() => _alquilerDA.ListarRadiosAsync(null, null, true);
+
+    public Task<List<CambioBateriaDto>> ListarBateriasAsync(int idRadio) => _alquilerDA.ListarBateriasAsync(idRadio);
+
+    public async Task<RadioDto> RegistrarCambioBateriaAsync(RegistrarBateriaDto dto, int idUsuario)
+    {
+        if (dto.IdEquipo is null)
+            throw new ValidacionException("Debe completar los campos obligatorios.", new List<string> { "Radio" });
+
+        var serieBateria = Normalizar(dto.NumeroSerieBateria)
+            ?? throw new ReglaNegocioException("Debe indicar el número de serie de la batería nueva.");
+
+        if (serieBateria.Length > 50)
+            throw new ReglaNegocioException("El número de serie de la batería no puede superar los 50 caracteres.");
+
+        var fecha = dto.FechaCambio?.Date ?? DateTime.Today;
+        if (fecha > DateTime.Today)
+            throw new ReglaNegocioException("La fecha del cambio no puede ser futura.");
+
+        var radio = (await _alquilerDA.ListarRadiosAsync(null, null)).FirstOrDefault(r => r.IdEquipo == dto.IdEquipo)
+            ?? throw new ReglaNegocioException("El radio indicado no está asignado a un contrato.");
+
+        await _alquilerDA.RegistrarBateriaAsync(radio.IdEquipo, serieBateria, fecha, idUsuario);
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Equipo", radio.IdEquipo, "BATERIA_CAMBIADA",
+            $"{radio.NumeroSerie}: nueva batería {serieBateria} instalada el {fecha:yyyy-MM-dd}");
+
+        return (await _alquilerDA.ListarRadiosAsync(null, radio.NumeroSerie)).First();
     }
 
     private static string? Normalizar(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();

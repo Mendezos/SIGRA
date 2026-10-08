@@ -8,14 +8,16 @@ BEGIN
     SELECT x.*
     FROM (
         SELECT c.IdContrato, cl.Empresa, c.Estado AS EstadoRegistrado, CASE
-        WHEN c.Estado = 'Activo' AND c.FechaVencimiento < CAST(GETDATE() AS DATE) THEN 'Vencido'
-        WHEN c.Estado = 'Activo' AND c.FechaVencimiento <= DATEADD(DAY, 30, CAST(GETDATE() AS DATE)) THEN 'Por vencer'
+        WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento < CAST(GETDATE() AS DATE) THEN 'Vencido'
+        WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento <= DATEADD(DAY, 30, CAST(GETDATE() AS DATE)) THEN N'Por vencer (30 días)'
+        WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento <= DATEADD(DAY, 90, CAST(GETDATE() AS DATE)) THEN N'Por vencer (90 días)'
         ELSE c.Estado
     END AS Estado,
            c.FechaInicio, c.FechaVencimiento, c.MontoMensual, c.Condiciones, c.IdVendedor, v.Nombre AS Vendedor,
-               (SELECT COUNT(*) FROM ContratoEquipo ce WHERE ce.IdContrato = c.IdContrato) AS CantidadEquipos,
+           c.MotivoCancelacion, c.FechaCancelacion,
+               (SELECT COUNT(*) FROM ContratoEquipo ce WHERE ce.IdContrato = c.IdContrato AND ce.FechaDevolucion IS NULL) AS CantidadEquipos,
                ISNULL((SELECT STRING_AGG(e.NumeroSerie, ', ') FROM ContratoEquipo ce
-                       INNER JOIN Equipo e ON e.IdEquipo = ce.IdEquipo WHERE ce.IdContrato = c.IdContrato), '') AS Series
+                       INNER JOIN Equipo e ON e.IdEquipo = ce.IdEquipo WHERE ce.IdContrato = c.IdContrato AND ce.FechaDevolucion IS NULL), '') AS Series
         FROM Contrato c
         INNER JOIN Cliente cl ON cl.IdCliente = c.IdCliente
         LEFT JOIN Usuario v ON v.IdUsuario = c.IdVendedor

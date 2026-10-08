@@ -324,3 +324,20 @@ BEGIN
     INSERT INTO ContactoHistorial (IdContacto, IdUsuario, IdVendedorAnterior, IdVendedorNuevo, Motivo)
     SELECT IdContacto, IdUsuarioRegistra, NULL, @IdVendedorCt, N'Asignación inicial' FROM ContactoInicial;
 END
+
+
+-- 9) Alquiler (semana 2): bitacora de los contratos de ejemplo y cambios de bateria
+INSERT INTO Auditoria (IdUsuario, Modulo, Entidad, IdEntidad, Accion, Fecha, Detalle)
+SELECT ct.IdVendedor, 'Alquiler', 'Contrato', ct.IdContrato, 'CONTRATO_REGISTRADO', CAST(ct.FechaInicio AS DATETIME),
+       cl.Empresa + N': contrato de ejemplo registrado'
+FROM Contrato ct
+INNER JOIN Cliente cl ON cl.IdCliente = ct.IdCliente
+WHERE NOT EXISTS (SELECT 1 FROM Auditoria a WHERE a.Modulo = 'Alquiler' AND a.Entidad = 'Contrato' AND a.IdEntidad = ct.IdContrato AND a.Accion = 'CONTRATO_REGISTRADO');
+
+IF NOT EXISTS (SELECT 1 FROM CambioBateria)
+BEGIN
+    INSERT INTO CambioBateria (IdRadio, IdBateriaNueva, NumeroSerieBateria, IdUsuario, FechaCambio)
+    SELECT e.IdEquipo, NULL, v.Bateria, (SELECT TOP 1 IdUsuario FROM Usuario WHERE Correo = 'ricardo.infante@radifaxcr.com'), v.Fecha
+    FROM (VALUES ('SN-88214', 'KNB45-0007', '2025-11-03'), ('SN-88214', 'KNB45-0001', '2024-10-20')) AS v(Serie, Bateria, Fecha)
+    INNER JOIN Equipo e ON e.NumeroSerie = v.Serie;
+END

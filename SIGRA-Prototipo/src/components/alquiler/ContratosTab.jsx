@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import DataTable from "../DataTable";
 import { Button, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -20,8 +21,65 @@ const columnas = [
     { key: "estado", label: "Estado" },
 ];
 
-export default function ContratosTab({ canRegister, canAsignarRadio }) {
+const COLORES_ESTADO = {
+    Activo: "#5EB453",
+    Renovado: "#3B82A0",
+    "Por vencer (90 días)": "#E0C14B",
+    "Por vencer (30 días)": "#E08A26",
+    Vencido: "#C0392B",
+    Cancelado: "#9A9A9A",
+};
+
+function Resumen({ todos }) {
+    const conteo = {};
+    todos.forEach((c) => { conteo[c.estado] = (conteo[c.estado] ?? 0) + 1; });
+    const datos = Object.entries(conteo).map(([name, value]) => ({ name, value }));
+    const vigentes = (conteo.Activo ?? 0) + (conteo.Renovado ?? 0);
+    const porVencer = (conteo["Por vencer (90 días)"] ?? 0) + (conteo["Por vencer (30 días)"] ?? 0);
+
+    const tarjetas = [
+        { titulo: "Contratos vigentes", valor: vigentes, color: COLORS.greenDark },
+        { titulo: "Por vencer (90 días)", valor: porVencer },
+        { titulo: "Vencidos", valor: conteo.Vencido ?? 0, color: COLORS.red },
+        { titulo: "Cancelados", valor: conteo.Cancelado ?? 0 },
+    ];
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div className="lg:col-span-2 grid grid-cols-2 gap-4 content-start">
+                {tarjetas.map((t) => (
+                    <div key={t.titulo} className="rounded-lg p-4" style={{ backgroundColor: COLORS.greenTint }}>
+                        <p className="text-xs mb-1" style={{ color: COLORS.muted }}>{t.titulo}</p>
+                        <p className="text-2xl" style={{ color: t.color ?? COLORS.charcoal, fontWeight: 600 }}>{t.valor}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="rounded-xl p-3" style={{ border: `1px solid ${COLORS.border}` }}>
+                <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: COLORS.muted, fontWeight: 600 }}>Contratos por estado</h3>
+                {datos.length === 0 ? (
+                    <p className="text-sm py-8 text-center" style={{ color: COLORS.muted }}>Sin contratos todavía</p>
+                ) : (
+                    <div style={{ width: "100%", height: 190 }}>
+                        <ResponsiveContainer>
+                            <PieChart>
+                                <Pie data={datos} dataKey="value" nameKey="name" innerRadius={42} outerRadius={70} paddingAngle={2}>
+                                    {datos.map((d) => <Cell key={d.name} fill={COLORES_ESTADO[d.name] ?? COLORS.muted} />)}
+                                </Pie>
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar, canCancelar, canVerAuditoria }) {
     const [contratos, setContratos] = useState([]);
+    const [todos, setTodos] = useState([]);
     const [texto, setTexto] = useState("");
     const [estado, setEstado] = useState("");
     const [cargando, setCargando] = useState(true);
@@ -33,7 +91,12 @@ export default function ContratosTab({ canRegister, canAsignarRadio }) {
 
     const cargar = useCallback(async () => {
         try {
-            setContratos(await api.listarContratos({ texto: texto.trim(), estado }));
+            const [filtrados, completos] = await Promise.all([
+                api.listarContratos({ texto: texto.trim(), estado }),
+                api.listarContratos(),
+            ]);
+            setContratos(filtrados);
+            setTodos(completos);
             setError("");
         } catch (e) {
             setError(e instanceof ApiError ? e.message : "No se pudieron cargar los contratos.");
@@ -90,6 +153,8 @@ export default function ContratosTab({ canRegister, canAsignarRadio }) {
             {mensaje && <Notice>{mensaje}</Notice>}
             {error && <Notice tone="error">{error}</Notice>}
 
+            {!cargando && <Resumen todos={todos} />}
+
             <div className="flex flex-wrap items-center gap-3 mb-4">
                 <div className="relative flex-1 min-w-[16rem] max-w-sm">
                     <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" color={COLORS.muted} />
@@ -142,6 +207,9 @@ export default function ContratosTab({ canRegister, canAsignarRadio }) {
                 detalle={detalle}
                 mensaje={mensajeDetalle}
                 canAsignarRadio={canAsignarRadio}
+                canRenovar={canRenovar}
+                canCancelar={canCancelar}
+                canVerAuditoria={canVerAuditoria}
                 onClose={() => setDetalle(null)}
                 onChanged={(nuevo) => { setDetalle(nuevo); cargar(); }}
             />

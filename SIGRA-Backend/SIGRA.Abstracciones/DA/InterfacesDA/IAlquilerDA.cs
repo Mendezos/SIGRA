@@ -27,6 +27,21 @@ public interface IAlquilerDA
     Task AgregarEquipoAContratoAsync(int idContrato, int idEquipo, DateTime fechaAsignacion, int idUsuario);
 
     // Fichas de radios (CARR-006)
-    Task<List<RadioDto>> ListarRadiosAsync(string? texto, string? numeroSerie);
+    Task<List<RadioDto>> ListarRadiosAsync(string? texto, string? numeroSerie, bool soloBateriaPorCambiar = false);
     Task<bool> TieneContratoActivoAsync(int idEquipo);
+
+    // Renovación, cancelación, auditoría y alertas de contratos (CARR-003, 004, 005, 015)
+    Task RenovarContratoAsync(int idContrato, DateTime nuevaFecha, decimal? nuevoMonto, IEnumerable<int> idsAgregar,
+        IEnumerable<int> idsRetirar, string? observacion, int idUsuario);
+    Task<List<RenovacionDto>> ListarRenovacionesAsync(int idContrato);
+    Task CancelarContratoAsync(int idContrato, string motivo, int idUsuario);
+    Task<List<AuditoriaContratoDto>> ListarAuditoriaContratoAsync(int idContrato);
+    Task<int> MarcarContratosVencidosAsync();
+    Task<List<AlertaContratoDto>> ListarAlertasPendientesAsync();
+    Task RegistrarAlertaAsync(int idContrato, string tipo);
+    Task<List<AdministradorDto>> ListarAdministradoresAsync();
+
+    // Baterías de radios (CARR-007, 008)
+    Task<List<CambioBateriaDto>> ListarBateriasAsync(int idRadio);
+    Task RegistrarBateriaAsync(int idRadio, string numeroSerieBateria, DateTime fechaCambio, int idUsuario);
 }

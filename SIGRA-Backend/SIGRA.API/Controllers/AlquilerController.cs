@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGRA.Abstracciones.Dtos;
+using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.API.Extensions;
 
@@ -83,6 +84,33 @@ public class AlquilerController : ControllerBase
         return Ok(await _flujo.RegistrarContratoAsync(dto, idVendedor, idUsuario));
     }
 
+    [HttpPost("contratos/{idContrato:int}/renovar")]
+    [Authorize(Roles = RolesContactos)]
+    public async Task<ActionResult<DetalleContratoDto>> Renovar(int idContrato, [FromBody] RenovarContratoDto dto) =>
+        Ok(await _flujo.RenovarContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.IsInRole(RolAdministrador)));
+
+    [HttpPost("contratos/{idContrato:int}/cancelar")]
+    [Authorize(Roles = RolAdministrador)]
+    public async Task<ActionResult<DetalleContratoDto>> Cancelar(int idContrato, [FromBody] CancelarContratoDto dto) =>
+        Ok(await _flujo.CancelarContratoAsync(idContrato, dto, User.ObtenerIdUsuario()));
+
+    [HttpGet("contratos/{idContrato:int}/renovaciones")]
+    [Authorize(Roles = RolesContactos)]
+    public async Task<ActionResult<List<RenovacionDto>>> Renovaciones(int idContrato) =>
+        Ok(await _flujo.ListarRenovacionesAsync(idContrato, User.ObtenerIdUsuario(), User.IsInRole(RolAdministrador)));
+
+    // Bitácora completa del contrato: solo el Administrador, y solo de lectura.
+    [HttpGet("contratos/{idContrato:int}/auditoria")]
+    [Authorize(Roles = RolAdministrador)]
+    public async Task<ActionResult<List<AuditoriaContratoDto>>> Auditoria(int idContrato) =>
+        Ok(await _flujo.ListarAuditoriaContratoAsync(idContrato));
+
+    [HttpPut("contratos/{idContrato:int}/auditoria/{idAuditoria:long}")]
+    [HttpDelete("contratos/{idContrato:int}/auditoria/{idAuditoria:long}")]
+    [Authorize(Roles = RolAdministrador)]
+    public ActionResult AuditoriaSoloLectura(int idContrato, long idAuditoria) =>
+        throw new ReglaNegocioException("La bitácora de auditoría es de solo lectura: sus eventos no se pueden editar ni eliminar.");
+
     // ---------- Radios en alquiler ----------
     [HttpGet("radios")]
     [Authorize(Roles = RolesLectura)]
@@ -93,6 +121,21 @@ public class AlquilerController : ControllerBase
     [Authorize(Roles = RolesLectura)]
     public async Task<ActionResult<RadioDto>> RadioPorSerie(string numeroSerie) =>
         Ok(await _flujo.ObtenerRadioPorSerieAsync(numeroSerie));
+
+    [HttpGet("radios/{idRadio:int}/baterias")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<List<CambioBateriaDto>>> Baterias(int idRadio) =>
+        Ok(await _flujo.ListarBateriasAsync(idRadio));
+
+    [HttpGet("baterias/alertas")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<List<RadioDto>>> BateriasPorCambiar() =>
+        Ok(await _flujo.ListarRadiosConBateriaPorCambiarAsync());
+
+    [HttpPost("radios/bateria")]
+    [Authorize(Roles = RolesRadios)]
+    public async Task<ActionResult<RadioDto>> CambiarBateria([FromBody] RegistrarBateriaDto dto) =>
+        Ok(await _flujo.RegistrarCambioBateriaAsync(dto, User.ObtenerIdUsuario()));
 
     [HttpPost("radios")]
     [Authorize(Roles = RolesRadios)]

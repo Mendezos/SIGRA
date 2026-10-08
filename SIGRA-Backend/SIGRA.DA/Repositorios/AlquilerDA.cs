@@ -128,9 +128,54 @@ public class AlquilerDA : IAlquilerDA
             IdUsuario = idUsuario
         });
 
-    public Task<List<RadioDto>> ListarRadiosAsync(string? texto, string? numeroSerie) =>
-        ConsultarAsync<RadioDto>("sp_Radio_Listar", new { Texto = texto, NumeroSerie = numeroSerie });
+    public Task<List<RadioDto>> ListarRadiosAsync(string? texto, string? numeroSerie, bool soloBateriaPorCambiar = false) =>
+        ConsultarAsync<RadioDto>("sp_Radio_Listar", new { Texto = texto, NumeroSerie = numeroSerie, SoloBateriaPorCambiar = soloBateriaPorCambiar });
 
     public Task<bool> TieneContratoActivoAsync(int idEquipo) =>
         EscalarAsync<bool>("sp_Radio_ContratoActivo", new { IdEquipo = idEquipo });
+
+    public Task RenovarContratoAsync(int idContrato, DateTime nuevaFecha, decimal? nuevoMonto, IEnumerable<int> idsAgregar,
+        IEnumerable<int> idsRetirar, string? observacion, int idUsuario) =>
+        EjecutarAsync("sp_Contrato_Renovar", new
+        {
+            IdContrato = idContrato,
+            NuevaFecha = nuevaFecha,
+            NuevoMonto = nuevoMonto,
+            IdsAgregar = string.Join(",", idsAgregar),
+            IdsRetirar = string.Join(",", idsRetirar),
+            Observacion = observacion,
+            IdUsuario = idUsuario
+        });
+
+    public Task<List<RenovacionDto>> ListarRenovacionesAsync(int idContrato) =>
+        ConsultarAsync<RenovacionDto>("sp_Contrato_Renovaciones", new { IdContrato = idContrato });
+
+    public Task CancelarContratoAsync(int idContrato, string motivo, int idUsuario) =>
+        EjecutarAsync("sp_Contrato_Cancelar", new { IdContrato = idContrato, Motivo = motivo, IdUsuario = idUsuario });
+
+    public Task<List<AuditoriaContratoDto>> ListarAuditoriaContratoAsync(int idContrato) =>
+        ConsultarAsync<AuditoriaContratoDto>("sp_Contrato_Auditoria", new { IdContrato = idContrato });
+
+    public Task<int> MarcarContratosVencidosAsync() => EscalarAsync<int>("sp_Contrato_MarcarVencidos");
+
+    public Task<List<AlertaContratoDto>> ListarAlertasPendientesAsync() =>
+        ConsultarAsync<AlertaContratoDto>("sp_Contrato_AlertasPendientes");
+
+    public Task RegistrarAlertaAsync(int idContrato, string tipo) =>
+        EjecutarAsync("sp_Contrato_AlertaRegistrar", new { IdContrato = idContrato, Tipo = tipo });
+
+    public Task<List<AdministradorDto>> ListarAdministradoresAsync() =>
+        ConsultarAsync<AdministradorDto>("sp_Administrador_Listar");
+
+    public Task<List<CambioBateriaDto>> ListarBateriasAsync(int idRadio) =>
+        ConsultarAsync<CambioBateriaDto>("sp_Bateria_Historial", new { IdRadio = idRadio });
+
+    public Task RegistrarBateriaAsync(int idRadio, string numeroSerieBateria, DateTime fechaCambio, int idUsuario) =>
+        EjecutarAsync("sp_Bateria_Registrar", new
+        {
+            IdRadio = idRadio,
+            NumeroSerieBateria = numeroSerieBateria,
+            FechaCambio = fechaCambio,
+            IdUsuario = idUsuario
+        });
 }

@@ -496,8 +496,8 @@ export const MODULES = [
 
 export const STATUS_STYLES = {
 
-    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado"],
-    warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto", "En mantenimiento", "En reparación", "En garantía", "En espera"],
+    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
+    warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto", "En mantenimiento", "En reparación", "En garantía", "En espera", "Por vencer (90 días)", "Por vencer (30 días)", "Próxima a vencer"],
     negative: ["Vencido", "Vencida", "Cancelado", "Cancelada", "Inactivo", "Escalado", "Anulada", "Descartado", "Dado de baja"],
 };
 

@@ -9,6 +9,6 @@ BEGIN
     INNER JOIN Equipo e ON e.IdEquipo = ce.IdEquipo
     INNER JOIN ModeloEquipo m ON m.IdModelo = e.IdModelo
     INNER JOIN CategoriaEquipo cat ON cat.IdCategoria = m.IdCategoria
-    WHERE ce.IdContrato = @IdContrato
+    WHERE ce.IdContrato = @IdContrato AND ce.FechaDevolucion IS NULL
     ORDER BY cat.Nombre, e.NumeroSerie;
 END

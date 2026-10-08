@@ -116,6 +116,8 @@ public class ContratoDto
     public string? Condiciones { get; set; }
     public int? IdVendedor { get; set; }
     public string? Vendedor { get; set; }
+    public string? MotivoCancelacion { get; set; }
+    public DateTime? FechaCancelacion { get; set; }
     public int CantidadEquipos { get; set; }
     public string Series { get; set; } = string.Empty;
 }
@@ -157,4 +159,79 @@ public class RadioDto
     public string Empresa { get; set; } = string.Empty;
     public DateTime FechaAsignacion { get; set; }
     public DateTime? UltimoCambioBateria { get; set; }
+    public string? NumeroSerieBateria { get; set; }
+    public string EstadoBateria { get; set; } = string.Empty;
+    public DateTime? FechaVencimientoBateria { get; set; }
+}
+
+public class RenovarContratoDto
+{
+    public DateTime? NuevaFechaVencimiento { get; set; }
+    public decimal? NuevoMonto { get; set; }
+    public string? Observacion { get; set; }
+    public List<string>? SeriesAgregar { get; set; }
+    public List<int>? IdsRetirar { get; set; }
+}
+
+public class CancelarContratoDto
+{
+    public string? Motivo { get; set; }
+}
+
+public class RenovacionDto
+{
+    public DateTime FechaRenovacion { get; set; }
+    public string? Usuario { get; set; }
+    public DateTime? FechaVencimientoAnterior { get; set; }
+    public DateTime NuevaFechaVencimiento { get; set; }
+    public decimal? MontoMensual { get; set; }
+    public string? Observacion { get; set; }
+}
+
+public class AuditoriaContratoDto
+{
+    public long IdAuditoria { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Accion { get; set; } = string.Empty;
+    public string? Detalle { get; set; }
+    public string Usuario { get; set; } = string.Empty;
+}
+
+public class AlertaContratoDto
+{
+    public int IdContrato { get; set; }
+    public string Empresa { get; set; } = string.Empty;
+    public string? Contacto { get; set; }
+    public string? CorreoCliente { get; set; }
+    public DateTime FechaInicio { get; set; }
+    public DateTime FechaVencimiento { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+}
+
+public class AdministradorDto
+{
+    public int IdUsuario { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Correo { get; set; } = string.Empty;
+}
+
+public class CambioBateriaDto
+{
+    public DateTime FechaCambio { get; set; }
+    public string? NumeroSerieBateria { get; set; }
+    public string Usuario { get; set; } = string.Empty;
+}
+
+public class RegistrarBateriaDto
+{
+    public int? IdEquipo { get; set; }
+    public string? NumeroSerieBateria { get; set; }
+    public DateTime? FechaCambio { get; set; }
+}
+
+public class ResultadoProcesoVencimientosDto
+{
+    public int ContratosVencidos { get; set; }
+    public int AlertasGeneradas { get; set; }
+    public List<string> Errores { get; set; } = new();
 }

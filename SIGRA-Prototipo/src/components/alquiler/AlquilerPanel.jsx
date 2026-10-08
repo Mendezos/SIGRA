@@ -5,6 +5,8 @@ import ContratosTab from "./ContratosTab";
 import RadiosTab from "./RadiosTab";
 import {
     puedeAsignarRadio,
+    puedeCancelarContrato,
+    puedeVerAuditoria,
     puedeReasignarContacto,
     puedeRegistrarContacto,
     puedeRegistrarContrato,
@@ -26,7 +28,13 @@ export default function AlquilerPanel({ user }) {
             <SubTabs tabs={tabs} active={tab} onSelect={setTab} />
 
             {tab === "contratos" && (
-                <ContratosTab canRegister={puedeRegistrarContrato(user.role)} canAsignarRadio={puedeAsignarRadio(user.role)} />
+                <ContratosTab
+                    canRegister={puedeRegistrarContrato(user.role)}
+                    canAsignarRadio={puedeAsignarRadio(user.role)}
+                    canRenovar={puedeRegistrarContrato(user.role)}
+                    canCancelar={puedeCancelarContrato(user.role)}
+                    canVerAuditoria={puedeVerAuditoria(user.role)}
+                />
             )}
             {tab === "radios" && <RadiosTab canAsignar={puedeAsignarRadio(user.role)} />}
             {tab === "contactos" && (

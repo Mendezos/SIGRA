@@ -7,6 +7,8 @@
     [MontoMensual]     DECIMAL (12, 2) NOT NULL,
     [Condiciones]      VARCHAR (MAX)   NULL,
     [IdVendedor]       INT             NULL,
+    [MotivoCancelacion] VARCHAR (300)  NULL,
+    [FechaCancelacion] DATE            NULL,
     CONSTRAINT [PK_Contrato] PRIMARY KEY CLUSTERED ([IdContrato] ASC),
     CONSTRAINT [CK_Contrato_Fechas] CHECK ([FechaVencimiento]>[FechaInicio]),
     CONSTRAINT [CK_Contrato_Monto] CHECK ([MontoMensual]>=(0)),

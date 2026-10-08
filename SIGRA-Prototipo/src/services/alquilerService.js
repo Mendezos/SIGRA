@@ -11,7 +11,8 @@ function query(params) {
 
 export const ESTADOS_CONTRATO = [
     { value: "Activo", label: "Activo" },
-    { value: "Por vencer", label: "Por vencer (30 días)" },
+    { value: "Por vencer (90 días)", label: "Por vencer (90 días)" },
+    { value: "Por vencer (30 días)", label: "Por vencer (30 días)" },
     { value: "Vencido", label: "Vencido" },
     { value: "Renovado", label: "Renovado" },
     { value: "Cancelado", label: "Cancelado" },
@@ -35,7 +36,17 @@ export const listarContratos = ({ texto, estado } = {}) => apiRequest(`/alquiler
 export const obtenerContrato = (id) => apiRequest(`/alquiler/contratos/${id}`);
 export const registrarContrato = (datos) => apiRequest("/alquiler/contratos", { method: "POST", body: datos });
 
+export const renovarContrato = (id, datos) => apiRequest(`/alquiler/contratos/${id}/renovar`, { method: "POST", body: datos });
+export const cancelarContrato = (id, motivo) => apiRequest(`/alquiler/contratos/${id}/cancelar`, { method: "POST", body: { motivo } });
+export const listarRenovaciones = (id) => apiRequest(`/alquiler/contratos/${id}/renovaciones`);
+export const listarAuditoriaContrato = (id) => apiRequest(`/alquiler/contratos/${id}/auditoria`);
+
 // Radios en alquiler
 export const listarRadios = (texto) => apiRequest(`/alquiler/radios${query({ texto })}`);
 export const obtenerRadioPorSerie = (serie) => apiRequest(`/alquiler/radios/serie/${encodeURIComponent(serie)}`);
 export const agregarRadio = (datos) => apiRequest("/alquiler/radios", { method: "POST", body: datos });
+
+// Baterías de los radios
+export const listarBaterias = (idRadio) => apiRequest(`/alquiler/radios/${idRadio}/baterias`);
+export const registrarCambioBateria = (datos) => apiRequest("/alquiler/radios/bateria", { method: "POST", body: datos });
+export const bateriasPorCambiar = () => apiRequest("/alquiler/baterias/alertas");

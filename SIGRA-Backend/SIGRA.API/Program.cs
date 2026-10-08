@@ -100,6 +100,7 @@ builder.Services.AddScoped<IRolFlujo, RolFlujo>();
 builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
 builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
 builder.Services.AddScoped<IAlquilerFlujo, AlquilerFlujo>();
+builder.Services.AddHostedService<SIGRA.API.Servicios.ContratosVencimientoService>();
 
 var app = builder.Build();
 

@@ -20,4 +20,14 @@ public interface IAlquilerFlujo
 
     Task<List<RadioDto>> ListarRadiosAsync(string? texto);
     Task<RadioDto> ObtenerRadioPorSerieAsync(string numeroSerie);
+
+    Task<DetalleContratoDto> RenovarContratoAsync(int idContrato, RenovarContratoDto dto, int idUsuario, bool esAdministrador);
+    Task<DetalleContratoDto> CancelarContratoAsync(int idContrato, CancelarContratoDto dto, int idUsuario);
+    Task<List<RenovacionDto>> ListarRenovacionesAsync(int idContrato, int idUsuario, bool esAdministrador);
+    Task<List<AuditoriaContratoDto>> ListarAuditoriaContratoAsync(int idContrato);
+    Task<ResultadoProcesoVencimientosDto> ProcesarVencimientosAsync();
+
+    Task<List<RadioDto>> ListarRadiosConBateriaPorCambiarAsync();
+    Task<List<CambioBateriaDto>> ListarBateriasAsync(int idRadio);
+    Task<RadioDto> RegistrarCambioBateriaAsync(RegistrarBateriaDto dto, int idUsuario);
 }
