@@ -177,3 +177,107 @@ SET Cedula          = COALESCE(u.Cedula, d.Cedula),
     FechaCreacion   = COALESCE(u.FechaCreacion, SYSUTCDATETIME())
 FROM Usuario u
 INNER JOIN @DatosCuentas d ON d.Correo = u.Correo;
+
+
+-- 7) Inventario: catalogo base y equipos de ejemplo (solo se insertan si no existen)
+INSERT INTO CategoriaEquipo (Nombre, ManejaCantidad)
+SELECT v.Nombre, v.ManejaCantidad
+FROM (VALUES
+    (N'Radio portátil', 0), (N'Radio móvil', 0), (N'Repetidora', 0),
+    (N'Accesorio', 1), (N'Repuesto', 1), (N'Batería', 1)
+) AS v(Nombre, ManejaCantidad)
+WHERE NOT EXISTS (SELECT 1 FROM CategoriaEquipo c WHERE c.Nombre = v.Nombre);
+
+INSERT INTO Proveedor (Nombre, Contacto, Correo, Telefono)
+SELECT v.Nombre, v.Contacto, v.Correo, v.Telefono
+FROM (VALUES
+    (N'Motorola Solutions Costa Rica', N'Laura Jiménez', 'ventas@motorola-cr.example', '22001000'),
+    (N'Kenwood Latinoamérica', N'Pablo Rojas', 'pedidos@kenwood-la.example', '22002000'),
+    (N'Hytera Comunicaciones', N'Marta Solís', 'cuentas@hytera-cr.example', '22003000'),
+    (N'Distribuidora Tecnológica CR', N'Andrés Mora', 'contacto@distec.example', '22004000')
+) AS v(Nombre, Contacto, Correo, Telefono)
+WHERE NOT EXISTS (SELECT 1 FROM Proveedor p WHERE p.Nombre = v.Nombre);
+
+INSERT INTO ModeloEquipo (IdCategoria, Marca, Modelo, DescripcionTecnica)
+SELECT c.IdCategoria, v.Marca, v.Modelo, v.Descripcion
+FROM (VALUES
+    (N'Radio portátil', 'Motorola', 'CP200', N'Radio portátil VHF/UHF, 16 canales, 4 W'),
+    (N'Radio portátil', 'Kenwood', 'TK-3170', N'Radio portátil UHF, 16 canales, 5 W'),
+    (N'Radio portátil', 'Kenwood', 'TK-3401', N'Radio portátil UHF, 16 canales, 4 W, resistente al agua'),
+    (N'Radio móvil', 'Motorola', 'DGM4100', N'Radio móvil digital VHF, 25 W'),
+    (N'Repetidora', 'Motorola', 'SLR 1000', N'Repetidora UHF de 40 W, duplexor integrado'),
+    (N'Batería', 'Kenwood', 'KNB-45', N'Batería Li-Ion 1550 mAh para serie TK-3000'),
+    (N'Accesorio', 'Motorola', 'Antena UHF', N'Antena helicoidal UHF 450-470 MHz')
+) AS v(Categoria, Marca, Modelo, Descripcion)
+INNER JOIN CategoriaEquipo c ON c.Nombre = v.Categoria
+WHERE NOT EXISTS (SELECT 1 FROM ModeloEquipo m WHERE m.IdCategoria = c.IdCategoria AND m.Marca = v.Marca AND m.Modelo = v.Modelo);
+
+INSERT INTO StockMinimoCategoria (IdCategoria, CantidadMinima)
+SELECT c.IdCategoria, v.Minimo
+FROM (VALUES (N'Radio portátil', 5), (N'Batería', 10), (N'Repetidora', 1)) AS v(Categoria, Minimo)
+INNER JOIN CategoriaEquipo c ON c.Nombre = v.Categoria
+WHERE NOT EXISTS (SELECT 1 FROM StockMinimoCategoria s WHERE s.IdCategoria = c.IdCategoria);
+
+IF NOT EXISTS (SELECT 1 FROM Equipo)
+BEGIN
+    DECLARE @IdAdminInv INT = (SELECT TOP 1 IdUsuario FROM Usuario WHERE Correo = 'admin@radifaxcr.com');
+
+    INSERT INTO Equipo (IdModelo, IdProveedor, NumeroSerie, Estado, Propietario, Ubicacion, FechaAdquisicion, CostoCompra, Cantidad)
+    SELECT m.IdModelo, p.IdProveedor, v.Serie, v.Estado, v.Propietario, v.Ubicacion, v.Fecha, v.Costo, v.Cantidad
+    FROM (VALUES
+        ('SN-88213', 'Motorola', 'CP200',   N'Motorola Solutions Costa Rica', 'Disponible',        'Radifax', N'Bodega San José', '2025-02-10', 185000, 1),
+        ('SN-88214', 'Kenwood',  'TK-3170', N'Kenwood Latinoamérica',        'Alquilado',         'Radifax', N'Hotel Los Sueños', '2025-03-04', 142000, 1),
+        ('SN-88215', 'Kenwood',  'TK-3170', N'Kenwood Latinoamérica',        'Disponible',        'Radifax', N'Bodega San José', '2025-03-04', 142000, 1),
+        ('SN-88216', 'Kenwood',  'TK-3170', N'Kenwood Latinoamérica',        'Disponible',        'Radifax', N'Bodega San José', '2025-03-04', 142000, 1),
+        ('SN-90011', 'Motorola', 'CP200',   N'Motorola Solutions Costa Rica', 'En mantenimiento', 'Radifax', N'Taller Radifax', '2024-11-18', 185000, 1),
+        ('SN-90032', 'Kenwood',  'TK-3401', N'Kenwood Latinoamérica',        'Alquilado',         'Radifax', N'Autobuses San José', '2025-06-20', 158000, 1),
+        ('SN-90033', 'Kenwood',  'TK-3401', N'Kenwood Latinoamérica',        N'En garantía',      'Radifax', N'Taller Radifax', '2025-06-20', 158000, 1),
+        ('SN-70101', 'Motorola', 'DGM4100', N'Motorola Solutions Costa Rica', 'Disponible',        'Radifax', N'Bodega San José', '2025-01-15', 320000, 1),
+        ('SN-77002', 'Motorola', 'SLR 1000', N'Motorola Solutions Costa Rica', N'En reparación',  'Radifax', N'Taller Radifax', '2024-08-09', 1450000, 1),
+        ('SN-77003', 'Motorola', 'SLR 1000', N'Motorola Solutions Costa Rica', 'Alquilado',       N'Cliente', N'Cerro Buena Vista', '2025-09-01', 1450000, 1),
+        ('SN-60001', 'Motorola', 'CP200',   N'Motorola Solutions Costa Rica', 'Dado de baja',     'Radifax', N'Bodega San José', '2022-05-02', 120000, 1),
+        ('LT-KNB45-01', 'Kenwood', 'KNB-45', N'Distribuidora Tecnológica CR', 'Disponible',       'Radifax', N'Bodega San José', '2026-01-12', 18000, 24),
+        ('LT-ANT-01',   'Motorola', 'Antena UHF', N'Distribuidora Tecnológica CR', 'Disponible',  'Radifax', N'Bodega San José', '2026-01-12', 6500, 15)
+    ) AS v(Serie, Marca, Modelo, Proveedor, Estado, Propietario, Ubicacion, Fecha, Costo, Cantidad)
+    INNER JOIN ModeloEquipo m ON m.Marca = v.Marca AND m.Modelo = v.Modelo
+    INNER JOIN Proveedor p ON p.Nombre = v.Proveedor;
+
+    UPDATE Equipo SET FechaBaja = '2026-03-15', MotivoBaja = N'Daño irreparable en la placa principal' WHERE NumeroSerie = 'SN-60001';
+
+    INSERT INTO MovimientoInventario (IdEquipo, IdUsuario, TipoMovimiento, EstadoAnterior, EstadoNuevo, Fecha, Observacion, Cantidad)
+    SELECT e.IdEquipo, @IdAdminInv, 'Compra', NULL, 'Disponible', DATEADD(HOUR, 8, CAST(e.FechaAdquisicion AS DATETIME)),
+           N'Alta del equipo en el inventario', e.Cantidad
+    FROM Equipo e;
+
+    INSERT INTO BitacoraEquipo (IdEquipo, Fecha, Descripcion)
+    SELECT e.IdEquipo, DATEADD(HOUR, 8, CAST(e.FechaAdquisicion AS DATETIME)), N'Equipo registrado en el inventario con estado Disponible.'
+    FROM Equipo e;
+
+    INSERT INTO MovimientoInventario (IdEquipo, IdUsuario, TipoMovimiento, EstadoAnterior, EstadoNuevo, Fecha, Observacion)
+    SELECT e.IdEquipo, @IdAdminInv, N'Cambio de estado', 'Disponible', e.Estado, DATEADD(DAY, 20, CAST(e.FechaAdquisicion AS DATETIME)), N'Cambio de estado registrado en el inventario'
+    FROM Equipo e
+    WHERE e.Estado <> 'Disponible';
+END
+
+INSERT INTO AccesorioModelo (IdModelo, Nombre, Cantidad)
+SELECT m.IdModelo, v.Nombre, v.Cantidad
+FROM (VALUES
+    ('Motorola', 'CP200',   N'Cargador de escritorio', 12),
+    ('Motorola', 'CP200',   N'Clip de cinturón', 30),
+    ('Kenwood',  'TK-3170', N'Cargador de escritorio', 8),
+    ('Kenwood',  'TK-3170', N'Audífono con micrófono', 20),
+    ('Kenwood',  'TK-3401', N'Antena UHF', 10)
+) AS v(Marca, Modelo, Nombre, Cantidad)
+INNER JOIN ModeloEquipo m ON m.Marca = v.Marca AND m.Modelo = v.Modelo
+WHERE NOT EXISTS (SELECT 1 FROM AccesorioModelo a WHERE a.IdModelo = m.IdModelo AND a.Nombre = v.Nombre);
+
+INSERT INTO Repuesto (IdModelo, Nombre, Cantidad)
+SELECT m.IdModelo, v.Nombre, v.Cantidad
+FROM (VALUES
+    ('Motorola', 'CP200',   N'Pantalla LCD', 6),
+    ('Motorola', 'CP200',   N'Botón PTT', 14),
+    ('Kenwood',  'TK-3170', N'Placa principal', 3),
+    ('Motorola', 'SLR 1000', N'Fuente de poder', 2)
+) AS v(Marca, Modelo, Nombre, Cantidad)
+INNER JOIN ModeloEquipo m ON m.Marca = v.Marca AND m.Modelo = v.Modelo
+WHERE NOT EXISTS (SELECT 1 FROM Repuesto r WHERE r.IdModelo = m.IdModelo AND r.Nombre = v.Nombre);

@@ -85,6 +85,7 @@ builder.Services.AddScoped<ISesionDA, SesionDA>();
 builder.Services.AddScoped<IRolPermisoDA, RolPermisoDA>();
 builder.Services.AddScoped<IRolDA, RolDA>();
 builder.Services.AddScoped<IModuloDA, ModuloDA>();
+builder.Services.AddScoped<IInventarioDA, InventarioDA>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -96,6 +97,7 @@ builder.Services.AddScoped<ICuentaFlujo, CuentaFlujo>();
 builder.Services.AddScoped<IRecuperacionPasswordFlujo, RecuperacionPasswordFlujo>();
 builder.Services.AddScoped<IRolFlujo, RolFlujo>();
 builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
+builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
 
 var app = builder.Build();
 

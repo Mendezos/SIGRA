@@ -7,6 +7,7 @@
     [EstadoNuevo]    VARCHAR (30)  NOT NULL,
     [Fecha]          DATETIME      CONSTRAINT [DF_MovimientoInventario_Fecha] DEFAULT (getdate()) NOT NULL,
     [Observacion]    VARCHAR (MAX) NULL,
+    [Cantidad]       INT           CONSTRAINT [DF_MovimientoInventario_Cantidad] DEFAULT ((1)) NOT NULL,
     CONSTRAINT [PK_MovimientoInventario] PRIMARY KEY CLUSTERED ([IdMovimiento] ASC),
     CONSTRAINT [FK_MovimientoInventario_Equipo] FOREIGN KEY ([IdEquipo]) REFERENCES [dbo].[Equipo] ([IdEquipo]),
     CONSTRAINT [FK_MovimientoInventario_Usuario] FOREIGN KEY ([IdUsuario]) REFERENCES [dbo].[Usuario] ([IdUsuario])

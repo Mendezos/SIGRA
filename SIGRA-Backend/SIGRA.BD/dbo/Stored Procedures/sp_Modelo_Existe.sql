@@ -1,0 +1,8 @@
+CREATE PROCEDURE sp_Modelo_Existe
+    @IdModelo INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT CASE WHEN EXISTS (SELECT 1 FROM ModeloEquipo WHERE IdModelo = @IdModelo) THEN 1 ELSE 0 END;
+END

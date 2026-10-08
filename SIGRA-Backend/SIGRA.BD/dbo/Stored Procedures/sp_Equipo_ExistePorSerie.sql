@@ -1,0 +1,8 @@
+CREATE PROCEDURE sp_Equipo_ExistePorSerie
+    @NumeroSerie VARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT CASE WHEN EXISTS (SELECT 1 FROM Equipo WHERE NumeroSerie = @NumeroSerie) THEN 1 ELSE 0 END;
+END
