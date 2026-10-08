@@ -24,7 +24,13 @@ export const fechaHora = (valor) =>
 export const fechaCorta = (valor) =>
     valor ? new Date(valor).toLocaleDateString("es-CR", { dateStyle: "medium" }) : "";
 
-export const hoyISO = () => new Date().toISOString().slice(0, 10);
+// Fecha local (no UTC) para que después de las 6 p. m. no se adelante un día.
+export const hoyISO = () => {
+    const ahora = new Date();
+    const mes = String(ahora.getMonth() + 1).padStart(2, "0");
+    const dia = String(ahora.getDate()).padStart(2, "0");
+    return `${ahora.getFullYear()}-${mes}-${dia}`;
+};
 
 const MAX_LADO_FOTO = 900;
 const MAX_BYTES_FOTO = 6 * 1024 * 1024;

@@ -281,3 +281,46 @@ FROM (VALUES
 ) AS v(Marca, Modelo, Nombre, Cantidad)
 INNER JOIN ModeloEquipo m ON m.Marca = v.Marca AND m.Modelo = v.Modelo
 WHERE NOT EXISTS (SELECT 1 FROM Repuesto r WHERE r.IdModelo = m.IdModelo AND r.Nombre = v.Nombre);
+
+
+-- 8) Alquiler: clientes, contratos y contactos de ejemplo (solo si aun no hay contratos)
+INSERT INTO Cliente (Empresa, Contacto, Correo, Telefono)
+SELECT v.Empresa, v.Contacto, v.Correo, v.Telefono
+FROM (VALUES
+    (N'Hotel Los Sueños', N'Carolina Vega', 'compras@lossuenos.example', '26300000'),
+    (N'Autobuses San José', N'Mario Quesada', 'flota@autobusessj.example', '22550000'),
+    (N'Bomberos de Costa Rica', N'Cap. Luis Araya', 'logistica@bomberos.example', '22200000'),
+    (N'Marina Pez Vela', N'Daniela Ruiz', 'operaciones@pezvela.example', '27770000')
+) AS v(Empresa, Contacto, Correo, Telefono)
+WHERE NOT EXISTS (SELECT 1 FROM Cliente c WHERE c.Empresa = v.Empresa);
+
+IF NOT EXISTS (SELECT 1 FROM Contrato)
+BEGIN
+    DECLARE @IdVendedorCt INT = (SELECT TOP 1 IdUsuario FROM Usuario WHERE Correo = 'kimberly.sanchez@radifaxcr.com');
+
+    INSERT INTO Contrato (IdCliente, Estado, FechaInicio, FechaVencimiento, MontoMensual, Condiciones, IdVendedor)
+    SELECT c.IdCliente, 'Activo', v.Inicio, v.Vence, v.Monto, v.Condiciones, @IdVendedorCt
+    FROM (VALUES
+        (N'Hotel Los Sueños', '2025-11-02', '2026-11-02', 85000, N'Alquiler anual de radios para el personal del hotel. Incluye mantenimiento preventivo.'),
+        (N'Autobuses San José', '2026-02-01', '2027-02-01', 120000, N'Radios móviles para la flota. Cambio de baterías incluido.'),
+        (N'Bomberos de Costa Rica', '2026-05-15', '2027-05-15', 310000, N'Repetidora instalada en sitio propiedad del cliente.')
+    ) AS v(Empresa, Inicio, Vence, Monto, Condiciones)
+    INNER JOIN Cliente c ON c.Empresa = v.Empresa;
+
+    INSERT INTO ContratoEquipo (IdContrato, IdEquipo, FechaAsignacion)
+    SELECT ct.IdContrato, e.IdEquipo, ct.FechaInicio
+    FROM (VALUES (N'Hotel Los Sueños', 'SN-88214'), (N'Autobuses San José', 'SN-90032'), (N'Bomberos de Costa Rica', 'SN-77003')) AS v(Empresa, Serie)
+    INNER JOIN Cliente c ON c.Empresa = v.Empresa
+    INNER JOIN Contrato ct ON ct.IdCliente = c.IdCliente
+    INNER JOIN Equipo e ON e.NumeroSerie = v.Serie;
+
+    INSERT INTO ContactoInicial (Empresa, Contacto, MedioContacto, DatoContacto, Motivo, IdVendedor, Estado, FechaRegistro, IdUsuarioRegistra)
+    SELECT v.Empresa, v.Contacto, v.Medio, v.Dato, v.Motivo, @IdVendedorCt, 'Asignado', DATEADD(DAY, v.Dias, GETDATE()), (SELECT TOP 1 IdUsuario FROM Usuario WHERE Correo = 'admin@radifaxcr.com')
+    FROM (VALUES
+        (N'Marina Pez Vela', N'Daniela Ruiz', N'Teléfono', '27770000', N'Consulta por alquiler de 6 radios para temporada alta', -3),
+        (N'Refinadora Costarricense', N'Jorge Salas', 'Correo', 'jsalas@refinadora.example', N'Cotización de repetidora para planta', -1)
+    ) AS v(Empresa, Contacto, Medio, Dato, Motivo, Dias);
+
+    INSERT INTO ContactoHistorial (IdContacto, IdUsuario, IdVendedorAnterior, IdVendedorNuevo, Motivo)
+    SELECT IdContacto, IdUsuarioRegistra, NULL, @IdVendedorCt, N'Asignación inicial' FROM ContactoInicial;
+END

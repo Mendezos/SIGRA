@@ -17,6 +17,7 @@ import {
 } from "../data/roleCapabilities";
 import CuentasPanel from "./CuentasPanel";
 import InventarioPanel from "./inventario/InventarioPanel";
+import AlquilerPanel from "./alquiler/AlquilerPanel";
 
 const COLORS = {
     green: "#5EB453",
@@ -428,6 +429,7 @@ export default function ModuleView({
 
     const showMetrics =
         module.id !== "inventario" &&
+        module.id !== "alquiler" &&
         (!module.metricsRoles ||
             module.metricsRoles.includes(user.role));
 
@@ -805,6 +807,8 @@ export default function ModuleView({
                 </>
             ) : module.id === "inventario" ? (
                 <InventarioPanel user={user} />
+            ) : module.id === "alquiler" ? (
+                <AlquilerPanel user={user} />
             ) : (
                 <EntityPanel
                     idPrefix={idPrefixFor(module.id)}

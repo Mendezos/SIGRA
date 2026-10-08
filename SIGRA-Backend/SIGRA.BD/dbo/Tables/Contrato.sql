@@ -6,9 +6,11 @@
     [FechaVencimiento] DATE            NOT NULL,
     [MontoMensual]     DECIMAL (12, 2) NOT NULL,
     [Condiciones]      VARCHAR (MAX)   NULL,
+    [IdVendedor]       INT             NULL,
     CONSTRAINT [PK_Contrato] PRIMARY KEY CLUSTERED ([IdContrato] ASC),
     CONSTRAINT [CK_Contrato_Fechas] CHECK ([FechaVencimiento]>[FechaInicio]),
     CONSTRAINT [CK_Contrato_Monto] CHECK ([MontoMensual]>=(0)),
+    CONSTRAINT [FK_Contrato_Vendedor] FOREIGN KEY ([IdVendedor]) REFERENCES [dbo].[Usuario] ([IdUsuario]),
     CONSTRAINT [FK_Contrato_Cliente] FOREIGN KEY ([IdCliente]) REFERENCES [dbo].[Cliente] ([IdCliente])
 );
 
