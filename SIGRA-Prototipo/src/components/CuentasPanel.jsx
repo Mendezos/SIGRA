@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DataTable from "./DataTable";
 import { Plus, RefreshCw, Check, Minus, ShieldCheck } from "lucide-react";
 import StatusBadge from "./StatusBadge";
@@ -239,6 +239,22 @@ export default function CuentasPanel({ user }) {
 
     const administrador = user.role === "Administrador del sistema";
 
+    const actualizarLista = useCallback(async () => {
+        setCargando(true);
+        setError("");
+        try {
+            const [lista, catalogo] = await Promise.all([
+                api.listarCuentas(), api.listarRoles(),
+            ]);
+            setCuentas(lista);
+            setRoles(catalogo);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setCargando(false);
+        }
+    }, []);
+
     useEffect(() => {
         if (!aviso) return;
 
@@ -377,23 +393,6 @@ export default function CuentasPanel({ user }) {
         setPendiente(null);
         setModo(tipo);
         setIdRol("");
-    }
-
-    async function actualizarLista() {
-        setCargando(true);
-        setError("");
-
-        try {
-            const [lista, catalogo] = await Promise.all([
-                api.listarCuentas(), api.listarRoles(),
-            ]);
-            setCuentas(lista);
-            setRoles(catalogo);
-        } catch (e) {
-            setError(e.message);
-        } finally {
-            setCargando(false);
-        }
     }
 
     function preparar(values) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DataTable from "./DataTable";
 import Modal from "./Modal";
 import {
@@ -59,7 +59,7 @@ export default function RolesPanel({ user, onRolesChange }) {
         return () => window.clearTimeout(temporizador);
     }, [aviso]);
 
-    async function cargarRoles(notificarCambio = false) {
+    const cargarRoles = useCallback(async (notificarCambio = false) => {
         setCargando(true);
         setError("");
         try {
@@ -77,7 +77,7 @@ export default function RolesPanel({ user, onRolesChange }) {
         } finally {
             setCargando(false);
         }
-    }
+    }, [onRolesChange]);
 
     useEffect(() => {
         if (!esAdministrador) return;
@@ -90,7 +90,7 @@ export default function RolesPanel({ user, onRolesChange }) {
         return () => {
             activo = false;
         };
-    }, [esAdministrador]);
+    }, [esAdministrador, cargarRoles]);
 
     if (!esAdministrador) {
         return (
