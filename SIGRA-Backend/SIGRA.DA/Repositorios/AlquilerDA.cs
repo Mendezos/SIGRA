@@ -97,7 +97,7 @@ public class AlquilerDA : IAlquilerDA
         ConsultarAsync<EquipoDisponibleDto>("sp_Equipo_ListarParaContrato");
 
     public Task<int> InsertarContratoAsync(string empresa, DateTime fechaInicio, DateTime fechaVencimiento, decimal montoMensual,
-        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario) =>
+        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null) =>
         EscalarAsync<int>("sp_Contrato_Insertar", new
         {
             Empresa = empresa,
@@ -107,11 +107,24 @@ public class AlquilerDA : IAlquilerDA
             Condiciones = condiciones,
             IdVendedor = idVendedor,
             IdsEquipo = string.Join(",", idsEquipo),
-            IdUsuario = idUsuario
+            IdUsuario = idUsuario,
+            AccesoriosJson = accesorios is null ? null : System.Text.Json.JsonSerializer.Serialize(accesorios, JsonCamel)
         });
 
     public Task<List<ContratoDto>> ListarContratosAsync(string? texto, string? estado) =>
         ConsultarAsync<ContratoDto>("sp_Contrato_Listar", new { Texto = texto, Estado = estado });
+
+    private static readonly System.Text.Json.JsonSerializerOptions JsonCamel = new() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+
+    public Task<List<ContratoAccesorioDto>> ListarAccesoriosDeContratoAsync(int idContrato) =>
+        ConsultarAsync<ContratoAccesorioDto>("sp_Contrato_Accesorios", new { IdContrato = idContrato });
+
+    public Task GuardarAccesoriosDeContratoAsync(int idContrato, IEnumerable<AccesorioContratoItemDto> accesorios) =>
+        EjecutarAsync("sp_ContratoAccesorio_Guardar", new
+        {
+            IdContrato = idContrato,
+            ItemsJson = System.Text.Json.JsonSerializer.Serialize(accesorios, JsonCamel)
+        });
 
     public Task<ContratoDto?> ObtenerContratoAsync(int idContrato) =>
         PrimeroAsync<ContratoDto>("sp_Contrato_Obtener", new { IdContrato = idContrato });

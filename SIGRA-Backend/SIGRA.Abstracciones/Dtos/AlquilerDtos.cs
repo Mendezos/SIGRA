@@ -102,6 +102,7 @@ public class RegistrarContratoDto
     public decimal? MontoMensual { get; set; }
     public string? Condiciones { get; set; }
     public List<string>? Series { get; set; }
+    public List<AccesorioContratoItemDto>? Accesorios { get; set; }
 }
 
 public class ContratoDto
@@ -137,6 +138,7 @@ public class DetalleContratoDto
 {
     public ContratoDto Contrato { get; set; } = new();
     public List<ContratoEquipoDto> Equipos { get; set; } = new();
+    public List<ContratoAccesorioDto> Accesorios { get; set; } = new();
 }
 
 public class AgregarRadioDto
@@ -234,4 +236,23 @@ public class ResultadoProcesoVencimientosDto
     public int ContratosVencidos { get; set; }
     public int AlertasGeneradas { get; set; }
     public List<string> Errores { get; set; } = new();
+}
+
+public class AccesorioContratoItemDto
+{
+    public int IdAccesorioModelo { get; set; }
+    public int Cantidad { get; set; }
+}
+
+public class ContratoAccesorioDto
+{
+    public int IdAccesorioModelo { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Modelo { get; set; } = string.Empty;
+    public int Cantidad { get; set; }
+}
+
+public class GuardarAccesoriosContratoDto
+{
+    public List<AccesorioContratoItemDto>? Accesorios { get; set; }
 }

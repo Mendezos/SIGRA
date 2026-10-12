@@ -341,3 +341,16 @@ BEGIN
     FROM (VALUES ('SN-88214', 'KNB45-0007', '2025-11-03'), ('SN-88214', 'KNB45-0001', '2024-10-20')) AS v(Serie, Bateria, Fecha)
     INNER JOIN Equipo e ON e.NumeroSerie = v.Serie;
 END
+
+
+-- 10) Accesorios entregados en los contratos de ejemplo
+IF NOT EXISTS (SELECT 1 FROM ContratoAccesorio)
+BEGIN
+    INSERT INTO ContratoAccesorio (IdContrato, IdAccesorioModelo, Cantidad)
+    SELECT ct.IdContrato, a.IdAccesorioModelo, v.Cantidad
+    FROM (VALUES (N'Hotel Los Sueños', N'Cargador de escritorio', 1), (N'Hotel Los Sueños', N'Audífono con micrófono', 2)) AS v(Empresa, Accesorio, Cantidad)
+    INNER JOIN Cliente cl ON cl.Empresa = v.Empresa
+    INNER JOIN Contrato ct ON ct.IdCliente = cl.IdCliente
+    INNER JOIN AccesorioModelo a ON a.Nombre = v.Accesorio
+    INNER JOIN ModeloEquipo m ON m.IdModelo = a.IdModelo AND m.Modelo = 'TK-3170';
+END

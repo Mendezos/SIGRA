@@ -62,6 +62,29 @@ public class InventarioController : ControllerBase
         return Ok(await _flujo.ObtenerFichaPorIdAsync(idEquipo));
     }
 
+    // La bitácora del equipo es de solo lectura: se alimenta sola al cerrarse las boletas.
+    [HttpGet("equipos/{idEquipo:int}/bitacora")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<List<BitacoraEquipoDto>>> Bitacora(int idEquipo) =>
+        Ok(await _flujo.ObtenerBitacoraAsync(idEquipo));
+
+    [HttpPut("equipos/{idEquipo:int}/bitacora/{idBitacora:long}")]
+    [HttpDelete("equipos/{idEquipo:int}/bitacora/{idBitacora:long}")]
+    [Authorize(Roles = RolesLectura)]
+    public ActionResult BitacoraSoloLectura(int idEquipo, long idBitacora) =>
+        throw new ReglaNegocioException("La bitácora del equipo es de solo lectura: sus registros no se pueden editar ni eliminar.");
+
+    // Puntos de integración con el módulo de boletas: abrir/cerrar una boleta actualiza el inventario.
+    [HttpPost("equipos/{idEquipo:int}/boleta-abierta")]
+    [Authorize(Roles = RolesEscritura)]
+    public async Task<ActionResult<FichaEquipoDto>> BoletaAbierta(int idEquipo, [FromBody] EventoBoletaEquipoDto dto) =>
+        Ok(await _flujo.RegistrarBoletaAbiertaAsync(idEquipo, dto, User.ObtenerIdUsuario()));
+
+    [HttpPost("equipos/{idEquipo:int}/boleta-cerrada")]
+    [Authorize(Roles = RolesEscritura)]
+    public async Task<ActionResult<FichaEquipoDto>> BoletaCerrada(int idEquipo, [FromBody] EventoBoletaEquipoDto dto) =>
+        Ok(await _flujo.RegistrarBoletaCerradaAsync(idEquipo, dto, User.ObtenerIdUsuario()));
+
     [HttpPatch("equipos/{idEquipo:int}/estado")]
     [Authorize(Roles = RolesEscritura)]
     public async Task<ActionResult<FichaEquipoDto>> CambiarEstado(int idEquipo, [FromBody] CambiarEstadoEquipoDto dto) =>

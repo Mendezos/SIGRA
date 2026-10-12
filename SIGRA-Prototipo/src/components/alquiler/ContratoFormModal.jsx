@@ -5,7 +5,9 @@ import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
-import { hoyISO } from "./helpers";
+import { listarArticulos, obtenerFichaPorSerie } from "../../services/inventarioService";
+import AccesoriosPicker from "./AccesoriosPicker";
+import { aItemsApi, hoyISO } from "./helpers";
 
 export default function ContratoFormModal({ onClose, onSaved }) {
     const [clientes, setClientes] = useState([]);
@@ -15,6 +17,9 @@ export default function ContratoFormModal({ onClose, onSaved }) {
     const [fechaVencimiento, setFechaVencimiento] = useState("");
     const [monto, setMonto] = useState("");
     const [condiciones, setCondiciones] = useState("");
+    const [catalogoAccesorios, setCatalogoAccesorios] = useState([]);
+    const [accesorios, setAccesorios] = useState([]);
+    const [validandoSerie, setValidandoSerie] = useState(false);
     const [series, setSeries] = useState([]);
     const [serieNueva, setSerieNueva] = useState("");
     const [error, setError] = useState("");
@@ -23,11 +28,12 @@ export default function ContratoFormModal({ onClose, onSaved }) {
 
     useEffect(() => {
         let activo = true;
-        Promise.all([api.listarClientes(), api.listarEquiposDisponibles()])
-            .then(([cl, eq]) => {
+        Promise.all([api.listarClientes(), api.listarEquiposDisponibles(), listarArticulos("accesorios")])
+            .then(([cl, eq, acc]) => {
                 if (!activo) return;
                 setClientes(cl);
                 setDisponibles(eq);
+                setCatalogoAccesorios(acc);
             })
             .catch((e) => activo && setError(e.message ?? "No se pudieron cargar los catálogos."));
         return () => {
@@ -35,16 +41,34 @@ export default function ContratoFormModal({ onClose, onSaved }) {
         };
     }, []);
 
-    function agregarSerie() {
+    // Valida contra el inventario antes de agregar el equipo a la lista (INVE-006)
+    async function agregarSerie() {
         const serie = serieNueva.trim();
         if (!serie) return;
         if (series.some((s) => s.toLowerCase() === serie.toLowerCase())) {
             setError("Ese número de serie ya está en la lista del contrato.");
             return;
         }
+
         setError("");
-        setSeries((lista) => [...lista, serie]);
-        setSerieNueva("");
+        setValidandoSerie(true);
+        try {
+            const ficha = await obtenerFichaPorSerie(serie);
+            if (ficha.equipo.estado !== "Disponible") {
+                setError(`Este equipo no está disponible actualmente. Estado actual: ${ficha.equipo.estado}.`);
+                return;
+            }
+            if (ficha.equipo.manejaCantidad) {
+                setError("Este artículo se maneja por cantidad; agréguelo en la sección de accesorios.");
+                return;
+            }
+            setSeries((lista) => [...lista, ficha.equipo.numeroSerie]);
+            setSerieNueva("");
+        } catch {
+            setError("El número de serie ingresado no existe en el inventario.");
+        } finally {
+            setValidandoSerie(false);
+        }
     }
 
     function detalleSerie(serie) {
@@ -69,6 +93,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
                 montoMensual: monto === "" ? null : Number(monto),
                 condiciones: condiciones || null,
                 series: todas,
+                accesorios: aItemsApi(accesorios),
             });
             onSaved(detalle);
         } catch (err) {
@@ -157,7 +182,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
                                 <option key={d.idEquipo} value={d.numeroSerie}>{d.marca} {d.modelo} · {d.categoria}</option>
                             ))}
                         </datalist>
-                        <Button className="flex items-center gap-1 shrink-0" onClick={agregarSerie}>
+                        <Button className="flex items-center gap-1 shrink-0" disabled={validandoSerie} onClick={agregarSerie}>
                             <Plus size={14} /> Agregar
                         </Button>
                     </div>
@@ -177,6 +202,13 @@ export default function ContratoFormModal({ onClose, onSaved }) {
                             ))}
                         </ul>
                     )}
+                </div>
+
+                <div className="sm:col-span-2">
+                    <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>
+                        Accesorios entregados (opcional)
+                    </span>
+                    <AccesoriosPicker catalogo={catalogoAccesorios} value={accesorios} onChange={setAccesorios} />
                 </div>
             </form>
         </Modal>

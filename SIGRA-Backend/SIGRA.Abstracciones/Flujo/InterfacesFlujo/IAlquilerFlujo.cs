@@ -17,6 +17,7 @@ public interface IAlquilerFlujo
     Task<List<ContratoDto>> ListarContratosAsync(string? texto, string? estado);
     Task<DetalleContratoDto> ObtenerContratoAsync(int idContrato);
     Task<DetalleContratoDto> AgregarRadioAContratoAsync(AgregarRadioDto dto, int idUsuario);
+    Task<DetalleContratoDto> GuardarAccesoriosContratoAsync(int idContrato, GuardarAccesoriosContratoDto dto, int idUsuario, bool esAdministrador);
 
     Task<List<RadioDto>> ListarRadiosAsync(string? texto);
     Task<RadioDto> ObtenerRadioPorSerieAsync(string numeroSerie);

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Boxes } from "lucide-react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
-import { Button, DetailGrid, FieldLabel, Notice } from "../ui";
+import { Button, DetailGrid, FieldLabel, Notice, SubTabs } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/inventarioService";
@@ -51,12 +51,52 @@ function Historial({ items }) {
     );
 }
 
+function Bitacora({ idEquipo }) {
+    const [lista, setLista] = useState(null);
+
+    useEffect(() => {
+        let activo = true;
+        api.obtenerBitacora(idEquipo)
+            .then((r) => activo && setLista(r))
+            .catch(() => activo && setLista([]));
+        return () => {
+            activo = false;
+        };
+    }, [idEquipo]);
+
+    if (!lista) return <p className="text-sm" style={{ color: COLORS.muted }}>Cargando bitácora...</p>;
+
+    return (
+        <>
+            <p className="text-xs mb-4" style={{ color: COLORS.muted }}>
+                La bitácora es de solo lectura: se completa sola cuando se cierra una boleta de mantenimiento o reparación.
+            </p>
+            {lista.length === 0 ? (
+                <p className="text-sm" style={{ color: COLORS.muted }}>Este equipo todavía no tiene registros en la bitácora.</p>
+            ) : (
+                <ol className="relative ml-2" style={{ borderLeft: `2px solid ${COLORS.border}` }}>
+                    {lista.map((b) => (
+                        <li key={b.idBitacora} className="pl-5 pb-4 relative">
+                            <span className="absolute -left-[7px] top-1 w-3 h-3 rounded-full" style={{ backgroundColor: b.idTicket ? COLORS.red : "#3B82A0", border: "2px solid white" }} />
+                            <p className="text-sm" style={{ color: COLORS.charcoal }}>{b.descripcion}</p>
+                            <p className="text-xs mt-0.5" style={{ color: COLORS.muted }}>
+                                {fechaHora(b.fecha)}{b.codigoSeguimiento ? ` · boleta ${b.codigoSeguimiento}` : ""}
+                            </p>
+                        </li>
+                    ))}
+                </ol>
+            )}
+        </>
+    );
+}
+
 export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }) {
     const [nuevoEstado, setNuevoEstado] = useState("");
     const [motivo, setMotivo] = useState("");
     const [error, setError] = useState("");
     const [mensaje, setMensaje] = useState("");
     const [guardando, setGuardando] = useState(false);
+    const [vista, setVista] = useState("historial");
 
     if (!ficha) return null;
     const { equipo, historial } = ficha;
@@ -166,12 +206,12 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
                 </section>
             )}
 
-            <section>
-                <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>
-                    Historial del equipo
-                </h3>
-                <Historial items={historial} />
-            </section>
+            <SubTabs
+                tabs={[{ key: "historial", label: "Historial completo" }, { key: "bitacora", label: "Bitácora de boletas" }]}
+                active={vista}
+                onSelect={setVista}
+            />
+            {vista === "historial" ? <Historial items={historial} /> : <Bitacora key={historial.length} idEquipo={equipo.idEquipo} />}
         </Modal>
     );
 }

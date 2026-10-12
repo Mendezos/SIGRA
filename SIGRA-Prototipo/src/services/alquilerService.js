@@ -36,6 +36,8 @@ export const listarContratos = ({ texto, estado } = {}) => apiRequest(`/alquiler
 export const obtenerContrato = (id) => apiRequest(`/alquiler/contratos/${id}`);
 export const registrarContrato = (datos) => apiRequest("/alquiler/contratos", { method: "POST", body: datos });
 
+export const guardarAccesoriosContrato = (id, accesorios) =>
+    apiRequest(`/alquiler/contratos/${id}/accesorios`, { method: "PUT", body: { accesorios } });
 export const renovarContrato = (id, datos) => apiRequest(`/alquiler/contratos/${id}/renovar`, { method: "POST", body: datos });
 export const cancelarContrato = (id, motivo) => apiRequest(`/alquiler/contratos/${id}/cancelar`, { method: "POST", body: { motivo } });
 export const listarRenovaciones = (id) => apiRequest(`/alquiler/contratos/${id}/renovaciones`);

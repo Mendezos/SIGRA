@@ -6,6 +6,7 @@ import { COLORS } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
 import AsignarRadioModal from "./AsignarRadioModal";
+import AccesoriosContratoModal from "./AccesoriosContratoModal";
 import CancelarContratoModal from "./CancelarContratoModal";
 import RenovarContratoModal from "./RenovarContratoModal";
 import { colones, fechaCorta, fechaHora } from "./helpers";
@@ -18,13 +19,14 @@ const ETIQUETAS_ACCION = {
     RADIO_ASIGNADO: "Radio asignado",
     EQUIPO_AGREGADO: "Equipo agregado",
     EQUIPO_RETIRADO: "Equipo retirado",
+    ACCESORIOS_ACTUALIZADOS: "Accesorios entregados actualizados",
 };
 
 const ESTADOS_RENOVABLES = ["Por vencer (90 días)", "Por vencer (30 días)", "Vencido"];
 const ESTADOS_NO_CANCELABLES = ["Vencido", "Cancelado"];
 
-function Resumen({ detalle, onAsignarRadio, canAsignarRadio }) {
-    const { contrato, equipos } = detalle;
+function Resumen({ detalle, onAsignarRadio, canAsignarRadio, canEditarAccesorios, onEditarAccesorios }) {
+    const { contrato, equipos, accesorios } = detalle;
     const cancelado = contrato.estado === "Cancelado";
 
     return (
@@ -82,6 +84,30 @@ function Resumen({ detalle, onAsignarRadio, canAsignarRadio }) {
                         </tbody>
                     </table>
                 </div>
+            </section>
+
+            <section className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>
+                        Accesorios entregados
+                    </h3>
+                    {canEditarAccesorios && ["Activo", "Renovado"].includes(contrato.estadoRegistrado) && (
+                        <Button onClick={onEditarAccesorios}>Editar accesorios</Button>
+                    )}
+                </div>
+
+                {accesorios.length === 0 ? (
+                    <p className="text-sm" style={{ color: COLORS.muted }}>Este contrato no tiene accesorios asociados.</p>
+                ) : (
+                    <ul className="flex flex-wrap gap-2">
+                        {accesorios.map((a) => (
+                            <li key={a.idAccesorioModelo} className="rounded-lg px-3 py-2 text-sm" style={{ border: `1px solid ${COLORS.border}`, color: COLORS.charcoal }}>
+                                <span style={{ fontWeight: 600 }}>{a.cantidad} × {a.nombre}</span>
+                                <span className="ml-2 text-xs" style={{ color: COLORS.muted }}>{a.modelo}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </section>
         </>
     );
@@ -219,7 +245,13 @@ export default function ContratoDetalleModal({
             <SubTabs tabs={tabs} active={tab} onSelect={setTab} />
 
             {tab === "resumen" && (
-                <Resumen detalle={detalle} canAsignarRadio={canAsignarRadio} onAsignarRadio={() => setAccion("radio")} />
+                <Resumen
+                    detalle={detalle}
+                    canAsignarRadio={canAsignarRadio}
+                    onAsignarRadio={() => setAccion("radio")}
+                    canEditarAccesorios={canRenovar}
+                    onEditarAccesorios={() => setAccion("accesorios")}
+                />
             )}
             {tab === "renovaciones" && <Renovaciones key={`${contrato.idContrato}-${contrato.fechaVencimiento}`} idContrato={contrato.idContrato} />}
             {tab === "auditoria" && <Auditoria key={`${contrato.idContrato}-${contrato.estado}-${contrato.fechaVencimiento}-${detalle.equipos.length}`} idContrato={contrato.idContrato} />}
@@ -229,6 +261,13 @@ export default function ContratoDetalleModal({
                     idContratoInicial={contrato.idContrato}
                     onClose={() => setAccion(null)}
                     onSaved={(nuevo, serie) => terminar(nuevo, `El radio ${serie} se asignó correctamente al contrato.`)}
+                />
+            )}
+            {accion === "accesorios" && (
+                <AccesoriosContratoModal
+                    detalle={detalle}
+                    onClose={() => setAccion(null)}
+                    onSaved={(nuevo) => terminar(nuevo, "Los accesorios entregados se actualizaron correctamente.")}
                 />
             )}
             {accion === "renovar" && (

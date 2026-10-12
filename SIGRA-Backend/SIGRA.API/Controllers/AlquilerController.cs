@@ -84,6 +84,11 @@ public class AlquilerController : ControllerBase
         return Ok(await _flujo.RegistrarContratoAsync(dto, idVendedor, idUsuario));
     }
 
+    [HttpPut("contratos/{idContrato:int}/accesorios")]
+    [Authorize(Roles = RolesContactos)]
+    public async Task<ActionResult<DetalleContratoDto>> GuardarAccesorios(int idContrato, [FromBody] GuardarAccesoriosContratoDto dto) =>
+        Ok(await _flujo.GuardarAccesoriosContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.IsInRole(RolAdministrador)));
+
     [HttpPost("contratos/{idContrato:int}/renovar")]
     [Authorize(Roles = RolesContactos)]
     public async Task<ActionResult<DetalleContratoDto>> Renovar(int idContrato, [FromBody] RenovarContratoDto dto) =>

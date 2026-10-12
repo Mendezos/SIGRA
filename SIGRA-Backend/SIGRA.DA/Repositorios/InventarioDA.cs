@@ -28,7 +28,14 @@ public class InventarioDA : IInventarioDA
     private async Task EjecutarAsync(string sp, object parametros)
     {
         using var conexion = _conexionFactory.CrearConexion();
-        await conexion.ExecuteAsync(sp, parametros, commandType: CommandType.StoredProcedure);
+        try
+        {
+            await conexion.ExecuteAsync(sp, parametros, commandType: CommandType.StoredProcedure);
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 50001)
+        {
+            throw new SIGRA.Abstracciones.Excepciones.ReglaNegocioException(ex.Message);
+        }
     }
 
     // Accesorios y repuestos comparten la misma forma; el nombre del SP depende del tipo.
@@ -104,6 +111,12 @@ public class InventarioDA : IInventarioDA
 
     public Task<List<MovimientoDto>> ListarMovimientosAsync(int? idEquipo, string? tipo) =>
         ConsultarAsync<MovimientoDto>("sp_Movimiento_Listar", new { IdEquipo = idEquipo, Tipo = tipo });
+
+    public Task<List<BitacoraEquipoDto>> ListarBitacoraAsync(int idEquipo) =>
+        ConsultarAsync<BitacoraEquipoDto>("sp_Equipo_Bitacora", new { IdEquipo = idEquipo });
+
+    public Task RegistrarBitacoraAsync(int idEquipo, int? idTicket, string descripcion) =>
+        EjecutarAsync("sp_Bitacora_Registrar", new { IdEquipo = idEquipo, IdTicket = idTicket, Descripcion = descripcion });
 
     public Task<List<StockCategoriaDto>> StockPorCategoriaAsync() => ConsultarAsync<StockCategoriaDto>("sp_Stock_PorCategoria");
 

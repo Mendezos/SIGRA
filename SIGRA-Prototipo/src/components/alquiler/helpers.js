@@ -15,3 +15,7 @@ export const puedeVerAuditoria = (role) => tiene(role, [ADMIN]);
 export const puedeAsignarRadio = (role) => tiene(role, [ADMIN, "coordinador tecnico", "tecnico"]);
 
 export { colones, fechaCorta, fechaHora, hoyISO } from "../inventario/helpers";
+
+// Convierte la lista del formulario (textos) al formato que espera la API.
+export const aItemsApi = (value) =>
+    value.map((i) => ({ idAccesorioModelo: Number(i.idAccesorioModelo), cantidad: Number(i.cantidad) }));

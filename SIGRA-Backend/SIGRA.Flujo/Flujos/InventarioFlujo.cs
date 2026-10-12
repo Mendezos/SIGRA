@@ -21,11 +21,13 @@ public class InventarioFlujo : IInventarioFlujo
 
     private readonly IInventarioDA _inventarioDA;
     private readonly IAuditoriaDA _auditoriaDA;
+    private readonly IUsuarioDA _usuarioDA;
 
-    public InventarioFlujo(IInventarioDA inventarioDA, IAuditoriaDA auditoriaDA)
+    public InventarioFlujo(IInventarioDA inventarioDA, IAuditoriaDA auditoriaDA, IUsuarioDA usuarioDA)
     {
         _inventarioDA = inventarioDA;
         _auditoriaDA = auditoriaDA;
+        _usuarioDA = usuarioDA;
     }
 
     public Task<List<CategoriaDto>> ListarCategoriasAsync() => _inventarioDA.ListarCategoriasAsync();
@@ -274,6 +276,83 @@ public class InventarioFlujo : IInventarioFlujo
 
     public Task<List<MovimientoDto>> ListarMovimientosAsync(int? idEquipo, string? tipo) =>
         _inventarioDA.ListarMovimientosAsync(idEquipo, Normalizar(tipo));
+
+    // ---------- INVE-007 / INVE-011: integración con boletas ----------
+    private static readonly string[] EstadosTaller = { "En mantenimiento", "En reparación", "En garantía" };
+    private static readonly string[] ResultadosBoleta = { "Reparado", "No reparado", "Garantía" };
+
+    public Task<List<BitacoraEquipoDto>> ObtenerBitacoraAsync(int idEquipo) => _inventarioDA.ListarBitacoraAsync(idEquipo);
+
+    public async Task<FichaEquipoDto> RegistrarBoletaAbiertaAsync(int idEquipo, EventoBoletaEquipoDto dto, int idUsuario)
+    {
+        var equipo = await _inventarioDA.ObtenerEquipoAsync(idEquipo, null)
+            ?? throw new ReglaNegocioException("El equipo indicado no existe.");
+
+        var estadoTaller = dto.TipoServicio switch
+        {
+            "Reparación" => "En reparación",
+            "Mantenimiento" => "En mantenimiento",
+            _ => throw new ReglaNegocioException("El tipo de servicio debe ser Reparación o Mantenimiento.")
+        };
+
+        if (equipo.Estado == "Dado de baja")
+            throw new ReglaNegocioException("El equipo está dado de baja y no puede ingresar a una boleta.");
+
+        if (equipo.Estado != estadoTaller)
+        {
+            await _inventarioDA.CambiarEstadoAsync(idEquipo, estadoTaller, idUsuario, "Cambio de estado",
+                $"Boleta {EtiquetaBoleta(dto.IdTicket)} abierta ({dto.TipoServicio})", null);
+
+            await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Equipo", idEquipo, "EQUIPO_ESTADO_CAMBIADO",
+                $"{equipo.NumeroSerie}: {equipo.Estado} -> {estadoTaller} (boleta abierta)");
+        }
+
+        return await ObtenerFichaPorIdAsync(idEquipo);
+    }
+
+    public async Task<FichaEquipoDto> RegistrarBoletaCerradaAsync(int idEquipo, EventoBoletaEquipoDto dto, int idUsuario)
+    {
+        var equipo = await _inventarioDA.ObtenerEquipoAsync(idEquipo, null)
+            ?? throw new ReglaNegocioException("El equipo indicado no existe.");
+
+        if (dto.TipoServicio is not ("Reparación" or "Mantenimiento"))
+            throw new ReglaNegocioException("El tipo de servicio debe ser Reparación o Mantenimiento.");
+
+        if (dto.Resultado is null || !ResultadosBoleta.Contains(dto.Resultado))
+            throw new ReglaNegocioException("El resultado debe ser Reparado, No reparado o Garantía.");
+
+        var tecnico = Normalizar(dto.Tecnico)
+            ?? (await _usuarioDA.ObtenerPorIdAsync(idUsuario))?.Nombre
+            ?? "Sin registro";
+
+        // INVE-011: cada boleta cerrada queda en la bitácora del equipo (solo lectura)
+        await _inventarioDA.RegistrarBitacoraAsync(idEquipo, dto.IdTicket,
+            $"Boleta {EtiquetaBoleta(dto.IdTicket)} cerrada. Servicio: {dto.TipoServicio}. Resultado: {dto.Resultado}. Técnico: {tecnico}.");
+
+        // INVE-007: el estado del equipo se actualiza solo
+        if (EstadosTaller.Contains(equipo.Estado))
+        {
+            if (dto.Resultado == "Reparado")
+            {
+                var alquilado = await _inventarioDA.TieneContratoActivoAsync(idEquipo);
+                var destino = alquilado ? "Alquilado" : "Disponible";
+                await _inventarioDA.CambiarEstadoAsync(idEquipo, destino, idUsuario, "Equipo reparado",
+                    $"Boleta {EtiquetaBoleta(dto.IdTicket)} cerrada con resultado Reparado", null);
+            }
+            else if (dto.Resultado == "Garantía" && equipo.Estado != "En garantía")
+            {
+                await _inventarioDA.CambiarEstadoAsync(idEquipo, "En garantía", idUsuario, "Cambio de estado",
+                    $"Boleta {EtiquetaBoleta(dto.IdTicket)} cerrada con resultado Garantía", null);
+            }
+        }
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Equipo", idEquipo, "BOLETA_CERRADA",
+            $"{equipo.NumeroSerie}: {dto.TipoServicio}, resultado {dto.Resultado}");
+
+        return await ObtenerFichaPorIdAsync(idEquipo);
+    }
+
+    private static string EtiquetaBoleta(int? idTicket) => idTicket is null ? "(sin número)" : $"#{idTicket}";
 
     // ---------- INVE-004 / INVE-005: stock ----------
     public Task<List<StockCategoriaDto>> StockPorCategoriaAsync() => _inventarioDA.StockPorCategoriaAsync();

@@ -17,6 +17,11 @@ public interface IInventarioFlujo
     Task<FichaEquipoDto> RegistrarEntradaAsync(RegistrarMovimientoEquipoDto dto, int idUsuario);
     Task<FichaEquipoDto> RegistrarSalidaAsync(RegistrarMovimientoEquipoDto dto, int idUsuario);
     Task<List<MovimientoDto>> ListarMovimientosAsync(int? idEquipo, string? tipo);
+    Task<List<BitacoraEquipoDto>> ObtenerBitacoraAsync(int idEquipo);
+
+    // Puntos de integración con el módulo de boletas (INVE-007 e INVE-011)
+    Task<FichaEquipoDto> RegistrarBoletaAbiertaAsync(int idEquipo, EventoBoletaEquipoDto dto, int idUsuario);
+    Task<FichaEquipoDto> RegistrarBoletaCerradaAsync(int idEquipo, EventoBoletaEquipoDto dto, int idUsuario);
 
     Task<List<StockCategoriaDto>> StockPorCategoriaAsync();
     Task<List<StockModeloDto>> StockPorModeloAsync(int? idCategoria);

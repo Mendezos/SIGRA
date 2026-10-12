@@ -59,6 +59,10 @@ export function cambiarEstadoEquipo(idEquipo, estado, motivo) {
     });
 }
 
+export function obtenerBitacora(idEquipo) {
+    return apiRequest(`/inventario/equipos/${idEquipo}/bitacora`);
+}
+
 export function listarMovimientos({ idEquipo, tipo } = {}) {
     return apiRequest(`/inventario/movimientos${query({ idEquipo, tipo })}`);
 }

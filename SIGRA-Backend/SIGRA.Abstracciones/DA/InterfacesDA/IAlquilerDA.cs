@@ -20,10 +20,12 @@ public interface IAlquilerDA
     Task<List<ClienteDto>> ListarClientesAsync();
     Task<List<EquipoDisponibleDto>> ListarEquiposParaContratoAsync();
     Task<int> InsertarContratoAsync(string empresa, DateTime fechaInicio, DateTime fechaVencimiento, decimal montoMensual,
-        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario);
+        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null);
     Task<List<ContratoDto>> ListarContratosAsync(string? texto, string? estado);
     Task<ContratoDto?> ObtenerContratoAsync(int idContrato);
     Task<List<ContratoEquipoDto>> ListarEquiposDeContratoAsync(int idContrato);
+    Task<List<ContratoAccesorioDto>> ListarAccesoriosDeContratoAsync(int idContrato);
+    Task GuardarAccesoriosDeContratoAsync(int idContrato, IEnumerable<AccesorioContratoItemDto> accesorios);
     Task AgregarEquipoAContratoAsync(int idContrato, int idEquipo, DateTime fechaAsignacion, int idUsuario);
 
     // Fichas de radios (CARR-006)

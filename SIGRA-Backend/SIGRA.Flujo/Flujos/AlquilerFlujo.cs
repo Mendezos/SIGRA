@@ -211,8 +211,10 @@ public class AlquilerFlujo : IAlquilerFlujo
             idsEquipo.Add(equipo.IdEquipo);
         }
 
+        var accesorios = await ValidarAccesoriosAsync(dto.Accesorios);
+
         var idContrato = await _alquilerDA.InsertarContratoAsync(empresa, dto.FechaInicio.Value.Date, dto.FechaVencimiento.Value.Date,
-                dto.MontoMensual.Value, Normalizar(dto.Condiciones), idVendedor, idsEquipo, idUsuario);
+                dto.MontoMensual.Value, Normalizar(dto.Condiciones), idVendedor, idsEquipo, idUsuario, accesorios);
 
         await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "CONTRATO_REGISTRADO",
             $"{empresa}: {idsEquipo.Count} equipo(s), {dto.FechaInicio:yyyy-MM-dd} a {dto.FechaVencimiento:yyyy-MM-dd}");
@@ -238,7 +240,9 @@ public class AlquilerFlujo : IAlquilerFlujo
         contrato.CantidadEquipos = equipos.Count;
         contrato.Series = string.Join(", ", equipos.Select(e => e.NumeroSerie));
 
-        return new DetalleContratoDto { Contrato = contrato, Equipos = equipos };
+        var accesoriosContrato = await _alquilerDA.ListarAccesoriosDeContratoAsync(idContrato);
+
+        return new DetalleContratoDto { Contrato = contrato, Equipos = equipos, Accesorios = accesoriosContrato };
     }
 
     // ---------- CARR-006: fichas de radios ----------
@@ -291,6 +295,45 @@ public class AlquilerFlujo : IAlquilerFlujo
             : (await _alquilerDA.ListarRadiosAsync(null, numeroSerie.Trim())).FirstOrDefault();
 
         return radio ?? throw new ReglaNegocioException("No se encontró ningún radio en alquiler con ese número de serie.");
+    }
+
+    // ---------- INVE-009: accesorios entregados ----------
+    private async Task<List<AccesorioContratoItemDto>> ValidarAccesoriosAsync(List<AccesorioContratoItemDto>? items)
+    {
+        var lista = items ?? new List<AccesorioContratoItemDto>();
+        if (lista.Count == 0) return lista;
+
+        if (lista.GroupBy(i => i.IdAccesorioModelo).Any(g => g.Count() > 1))
+            throw new ReglaNegocioException("Un accesorio solo puede aparecer una vez en la lista; sume las cantidades.");
+
+        if (lista.Any(i => i.Cantidad < 1))
+            throw new ReglaNegocioException("La cantidad de cada accesorio debe ser un número entero mayor a cero.");
+
+        var catalogo = (await _inventarioDA.ListarArticulosAsync("accesorio")).Select(a => a.Id).ToHashSet();
+        if (lista.Any(i => !catalogo.Contains(i.IdAccesorioModelo)))
+            throw new ReglaNegocioException("Alguno de los accesorios seleccionados no existe en el catálogo.");
+
+        return lista;
+    }
+
+    public async Task<DetalleContratoDto> GuardarAccesoriosContratoAsync(int idContrato, GuardarAccesoriosContratoDto dto, int idUsuario, bool esAdministrador)
+    {
+        var contrato = await _alquilerDA.ObtenerContratoAsync(idContrato)
+            ?? throw new ReglaNegocioException("El contrato indicado no existe.");
+
+        if (!esAdministrador && contrato.IdVendedor != idUsuario)
+            throw new ReglaNegocioException("Solo puede editar los accesorios de los contratos que usted registró.");
+
+        if (contrato.EstadoRegistrado is not ("Activo" or "Renovado"))
+            throw new ReglaNegocioException("Solo se pueden editar los accesorios de un contrato vigente.");
+
+        var accesorios = await ValidarAccesoriosAsync(dto.Accesorios);
+        await _alquilerDA.GuardarAccesoriosDeContratoAsync(idContrato, accesorios);
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "ACCESORIOS_ACTUALIZADOS",
+            accesorios.Count == 0 ? "Se quitaron todos los accesorios entregados" : $"{accesorios.Count} accesorio(s), {accesorios.Sum(a => a.Cantidad)} unidad(es) en total");
+
+        return await ObtenerContratoAsync(idContrato);
     }
 
     // ---------- CARR-003: renovar ----------

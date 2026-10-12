@@ -20,6 +20,8 @@ public interface IInventarioDA
     Task CambiarEstadoAsync(int idEquipo, string estadoNuevo, int idUsuario, string tipoMovimiento, string? observacion, string? motivoBaja);
     Task AjustarCantidadAsync(int idEquipo, int delta, int idUsuario, string tipoMovimiento, string? observacion);
     Task<List<MovimientoDto>> ListarMovimientosAsync(int? idEquipo, string? tipo);
+    Task<List<BitacoraEquipoDto>> ListarBitacoraAsync(int idEquipo);
+    Task RegistrarBitacoraAsync(int idEquipo, int? idTicket, string descripcion);
 
     Task<List<StockCategoriaDto>> StockPorCategoriaAsync();
     Task<List<StockModeloDto>> StockPorModeloAsync(int? idCategoria);

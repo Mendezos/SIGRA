@@ -177,3 +177,20 @@ public class GuardarArticuloBodegaDto
     public string? Nombre { get; set; }
     public int? Cantidad { get; set; }
 }
+
+public class BitacoraEquipoDto
+{
+    public long IdBitacora { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Descripcion { get; set; } = string.Empty;
+    public int? IdTicket { get; set; }
+    public string? CodigoSeguimiento { get; set; }
+}
+
+public class EventoBoletaEquipoDto
+{
+    public int? IdTicket { get; set; }
+    public string? TipoServicio { get; set; }
+    public string? Resultado { get; set; }
+    public string? Tecnico { get; set; }
+}

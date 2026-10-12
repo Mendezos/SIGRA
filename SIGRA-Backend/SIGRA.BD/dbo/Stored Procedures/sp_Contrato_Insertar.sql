@@ -6,7 +6,8 @@ CREATE PROCEDURE sp_Contrato_Insertar
     @Condiciones       VARCHAR(MAX) = NULL,
     @IdVendedor        INT = NULL,
     @IdsEquipo         VARCHAR(MAX),
-    @IdUsuario         INT
+    @IdUsuario         INT,
+    @AccesoriosJson    NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -46,6 +47,11 @@ BEGIN
 
     INSERT INTO ContratoEquipo (IdContrato, IdEquipo, FechaAsignacion)
     SELECT @IdContrato, IdEquipo, @FechaInicio FROM @Equipos;
+
+    IF @AccesoriosJson IS NOT NULL
+        INSERT INTO ContratoAccesorio (IdContrato, IdAccesorioModelo, Cantidad)
+        SELECT @IdContrato, j.IdAccesorioModelo, j.Cantidad
+        FROM OPENJSON(@AccesoriosJson) WITH (IdAccesorioModelo INT '$.idAccesorioModelo', Cantidad INT '$.cantidad') j;
 
     INSERT INTO MovimientoInventario (IdEquipo, IdUsuario, TipoMovimiento, EstadoAnterior, EstadoNuevo, Observacion)
     SELECT IdEquipo, @IdUsuario, N'Asignación a contrato', 'Disponible', 'Alquilado',
