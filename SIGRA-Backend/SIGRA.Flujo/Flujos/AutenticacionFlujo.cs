@@ -3,6 +3,7 @@ using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
 using SIGRA.Abstracciones.Servicios;
+using SIGRA.Flujo.Utilidades;
 
 namespace SIGRA.Flujo.Flujos;
 
@@ -74,7 +75,15 @@ public class AutenticacionFlujo : IAutenticacionFlujo
             {
                 await _auditoriaDA.RegistrarAsync(usuario.IdUsuario, "Autenticacion", "Usuario", usuario.IdUsuario, "CUENTA_BLOQUEADA");
                 await NotificarBloqueoAsync(usuario.Correo, usuario.Nombre, resultado.BloqueadoHasta);
+
+                throw new CuentaBloqueadaException(
+                    $"Superó el máximo de {politica.MaxIntentosFallidos} intentos fallidos. Su cuenta fue bloqueada por {politica.MinutosBloqueo} minuto(s).",
+                    politica.MinutosBloqueo);
             }
+
+            var intentosRestantes = politica.MaxIntentosFallidos - resultado.IntentosFallidos;
+            if (intentosRestantes <= 2)
+                throw new ReglaNegocioException($"{MensajeGenericoLogin} Le quedan {intentosRestantes} intento(s) antes de que su cuenta se bloquee.");
 
             throw new ReglaNegocioException(MensajeGenericoLogin);
         }
@@ -129,9 +138,54 @@ public class AutenticacionFlujo : IAutenticacionFlujo
             IdUsuario = usuario.IdUsuario,
             Nombre = usuario.Nombre,
             Correo = usuario.Correo,
+            Telefono = usuario.Telefono,
+            Foto = usuario.Foto,
             Rol = usuario.NombreRol,
             Permisos = permisos
         };
+    }
+
+    public async Task<PerfilUsuarioDto> ActualizarPerfilAsync(int idUsuario, string nombre, string? telefono, string? foto)
+    {
+        var usuario = await _usuarioDA.ObtenerPorIdAsync(idUsuario)
+            ?? throw new SesionInvalidaException("El usuario asociado a la sesión ya no existe.");
+
+        var errores = new List<string>();
+        var nombreNormalizado = (nombre ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(nombreNormalizado))
+            errores.Add("El nombre es obligatorio.");
+        else if (nombreNormalizado.Length > 150)
+            errores.Add("El nombre no puede superar los 150 caracteres.");
+
+        if (errores.Count > 0)
+            throw new ValidacionException("Uno o más valores están fuera del rango permitido.", errores);
+
+        await _usuarioDA.ActualizarPerfilAsync(idUsuario, nombreNormalizado, telefono, foto);
+        await _auditoriaDA.RegistrarAsync(idUsuario, "Autenticacion", "Usuario", idUsuario, "PERFIL_ACTUALIZADO");
+
+        return await ObtenerPerfilAsync(idUsuario);
+    }
+
+    public async Task CambiarPasswordAsync(int idUsuario, string passwordActual, string passwordNueva)
+    {
+        var usuario = await _usuarioDA.ObtenerPorIdAsync(idUsuario)
+            ?? throw new SesionInvalidaException("El usuario asociado a la sesión ya no existe.");
+
+        if (!_hasher.Verificar(passwordActual ?? string.Empty, usuario.PasswordHash))
+            throw new ReglaNegocioException("La contraseña actual es incorrecta.");
+
+        var politica = await _politicaDA.ObtenerActivaAsync()
+            ?? throw new ReglaNegocioException("No hay una política de seguridad configurada. Contacte a Administración.");
+
+        var errores = PoliticaPasswordValidador.Validar(passwordNueva, politica.LongitudMinimaPassword);
+        if (errores.Count > 0)
+            throw new ValidacionException("La contraseña no cumple la política de seguridad.", errores);
+
+        var hash = _hasher.Hash(passwordNueva);
+        await _usuarioDA.ActualizarPasswordHashAsync(idUsuario, hash);
+        await _sesionDA.CerrarTodasDelUsuarioAsync(idUsuario);
+        await _auditoriaDA.RegistrarAsync(idUsuario, "Autenticacion", "Usuario", idUsuario, "PASSWORD_CAMBIADA");
     }
 
     private async Task NotificarBloqueoAsync(string correo, string nombre, DateTime? bloqueadoHasta)

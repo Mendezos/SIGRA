@@ -109,7 +109,7 @@ export const MODULES = [
     {
         id: "tickets",
         label: "Tickets de servicio técnico",
-        subtitle: "Boletas de mantenimiento y reparación (GTST-001 a GTST-022)",
+        subtitle: "Boletas de mantenimiento y reparación",
         metrics: [
             { label: "Boletas abiertas", value: "14" },
             { label: "En taller", value: "6" },
@@ -143,7 +143,7 @@ export const MODULES = [
     {
         id: "alquiler",
         label: "Alquiler de radios y repetidoras",
-        subtitle: "Contratos de alquiler y control de baterías (CARR-001 a CARR-015)",
+        subtitle: "Contratos de alquiler y control de baterías",
         metrics: [
             { label: "Contratos activos", value: "38" },
             { label: "Por vencer (30 días)", value: "5" },
@@ -176,7 +176,7 @@ export const MODULES = [
     {
         id: "inventario",
         label: "Inventario de equipos",
-        subtitle: "Catálogo de radios, repetidoras y accesorios (INVE-001 a INVE-011)",
+        subtitle: "Catálogo de radios, repetidoras y accesorios",
         metrics: [
             { label: "Equipos totales", value: "214" },
             { label: "Disponibles", value: "61" },
@@ -210,7 +210,7 @@ export const MODULES = [
         id: "dashboard",
         label: "Dashboard y reportes",
 
-        subtitle: "Mis informes y paneles — indicadores y reportes según tu rol (DAR-001 a DAR-011)",
+        subtitle: "Mis informes y paneles — indicadores y reportes según tu rol",
 
         metrics: [
             { label: "Ingresos del mes", value: "₡4.2M" },
@@ -247,7 +247,7 @@ export const MODULES = [
         id: "ia",
         label: "Agente de inteligencia artificial",
 
-        subtitle: "Historial y control del asistente — solo Administrador del sistema (AIA-001 a AIA-011)",
+        subtitle: "Historial y control del asistente — solo Administrador del sistema",
         adminOnly: true,
 
         metrics: [
@@ -278,7 +278,7 @@ export const MODULES = [
     {
         id: "contratos",
         label: "Contratos y facturación",
-        subtitle: "Plantillas, contratos, facturas y notas de crédito (GCFS-001 a GCFS-019)",
+        subtitle: "Plantillas, contratos, facturas y notas de crédito",
         metrics: [
             { label: "Facturado este mes", value: "₡3.1M" },
             { label: "En garantía", value: "3" },
@@ -360,7 +360,7 @@ export const MODULES = [
     {
         id: "giras",
         label: "Giras y planificación de rutas",
-        subtitle: "Planificación de visitas de mantenimiento y ventas (GGPR-001 a GGPR-017)",
+        subtitle: "Planificación de visitas de mantenimiento y ventas",
         metrics: [
             { label: "Giras este mes", value: "9" },
             { label: "En curso", value: "1" },
@@ -400,7 +400,7 @@ export const MODULES = [
     {
         id: "crm",
         label: "CRM y prospectos",
-        subtitle: "Prospectos, cotizaciones y seguimiento comercial (CRMGPSC-001 a CRMGPSC-026)",
+        subtitle: "Prospectos, cotizaciones y seguimiento comercial",
         metrics: [
             { label: "Prospectos activos", value: "17" },
             { label: "Cotizaciones en curso", value: "6" },
@@ -430,7 +430,7 @@ export const MODULES = [
 
         id: "clientes",
         label: "Clientes",
-        subtitle: "Empresas cliente activas de Radifax — distinto del CRM de prospectos (GUA / módulo transversal)",
+        subtitle: "Empresas cliente activas de Radifax — distinto del CRM de prospectos",
         metrics: [
             { label: "Clientes activos", value: "8" },
             { label: "Con contrato vigente", value: "5" },
@@ -465,7 +465,7 @@ export const MODULES = [
 
         id: "frecuencias",
         label: "Frecuencias de radio",
-        subtitle: "Trámites y control de radiofrecuencias ante el gobierno (RCFR-001 a RCFR-010)",
+        subtitle: "Trámites y control de radiofrecuencias ante el gobierno",
         metrics: [
             { label: "Frecuencias vigentes", value: "22" },
             { label: "Por renovar (6 meses)", value: "4" },
@@ -496,8 +496,8 @@ export const MODULES = [
 
 export const STATUS_STYLES = {
 
-    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Convertido", "Generado", "Compartido", "Completado", "Aplicada"],
-    warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto"],
+    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
+    warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto", "En mantenimiento", "En reparación", "En garantía", "En espera", "Por vencer (90 días)", "Por vencer (30 días)", "Próxima a vencer"],
     negative: ["Vencido", "Vencida", "Cancelado", "Cancelada", "Inactivo", "Escalado", "Anulada", "Descartado", "Dado de baja"],
 };
 

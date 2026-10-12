@@ -59,5 +59,11 @@ export default function App() {
         );
     }
 
-    return <Dashboard user={user} onLogout={handleLogout} />;
+    return (
+        <Dashboard
+            user={user}
+            onLogout={handleLogout}
+            onProfileUpdated={(perfil) => setUser(buildUser(perfil))}
+        />
+    );
 }

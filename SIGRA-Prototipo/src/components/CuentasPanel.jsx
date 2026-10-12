@@ -5,9 +5,11 @@ import StatusBadge from "./StatusBadge";
 import RecordForm from "./RecordForm";
 import Modal from "./Modal";
 import ConfirmModal from "./ConfirmModal";
+import RolesPanel from "./RolesPanel";
 import { MODULES } from "../data/modules";
 import { MODULE_KEY_TO_ID } from "../data/roleCapabilities";
 import * as api from "../services/cuentasService";
+import { desbloquearCuenta } from "../services/adminService";
 import {
     ACCIONES_AUDITORIA,
     ENTIDADES_AUDITORIA,
@@ -308,6 +310,11 @@ export default function CuentasPanel({ user }) {
             key: "motivo", label: "Motivo de inactivación",
             type: "textarea", required: true, maxLength: 500,
         },
+    ] : modo === "desbloquear" ? [
+        {
+            key: "motivo", label: "Motivo del desbloqueo",
+            type: "textarea", required: true, maxLength: 500,
+        },
     ] : campos.map((campo) => {
         const valorAnterior = seleccionada?.[campo.key];
         if (campo.key === "estadoCivil" && esEstadoCivilRetirado(valorAnterior)) return campo;
@@ -436,6 +443,7 @@ export default function CuentasPanel({ user }) {
             if (tipo === "crear") await api.crearCuenta(datos);
             else if (tipo === "editar") await api.editarCuenta(id, datos);
             else if (tipo === "rol") await api.cambiarRol(id, datos);
+            else if (tipo === "desbloquear") await desbloquearCuenta(id, datos.motivo);
             else {
                 await api.cambiarEstado(id, {
                     ...datos,
@@ -504,6 +512,14 @@ export default function CuentasPanel({ user }) {
                 }}>
                     Bitácora
                 </button>
+                <button className={`px-4 py-2.5 text-sm border-b-2 -mb-px ${tab === "roles" ? "border-[#5EB453] text-[#5EB453] font-semibold" : "border-transparent text-[#6E6E6E] font-normal"}`}
+                    aria-pressed={tab === "roles"} onClick={() => {
+                        setTab("roles");
+                        setAviso("");
+                        setError("");
+                    }}>
+                    Roles y permisos
+                </button>
             </nav>
 
             {aviso && <p role="status" className="text-green-700">{aviso}</p>}
@@ -555,6 +571,8 @@ export default function CuentasPanel({ user }) {
                             </select>
                         </>} />
                 </>
+            ) : tab === "roles" ? (
+                <RolesPanel user={user} onRolesChange={actualizarLista} />
             ) : (
                 <>
                     <form className="flex flex-wrap items-end gap-3 mb-4" onSubmit={(e) => {
@@ -658,6 +676,11 @@ export default function CuentasPanel({ user }) {
                             >
                                 Cambiar rol
                             </button>
+                            {seleccionada.bloqueada && (
+                                <button className={roleButton} onClick={() => abrir("desbloquear")}>
+                                    Desbloquear
+                                </button>
+                            )}
                             <button className={primaryButton} onClick={() => abrir("editar")}>
                                 Editar datos
                             </button>
@@ -673,6 +696,7 @@ export default function CuentasPanel({ user }) {
                     inactivar: "Inactivar cuenta",
                     reactivar: "Reactivar cuenta",
                     rol: "Cambiar rol",
+                    desbloquear: "Desbloquear cuenta",
                 }[modo]}
                 subtitle={modo === "crear" ? "Completá los datos y seleccioná el rol de la nueva cuenta." : seleccionada?.nombre}
                 onClose={() => {
@@ -757,6 +781,8 @@ export default function CuentasPanel({ user }) {
                         ? `Se asignará el rol ${rolSeleccionado?.nombre} a ${seleccionada?.nombre}. Se cerrarán sus sesiones anteriores.`
                         : pendiente?.tipo === "inactivar"
                             ? `Se inactivará la cuenta de ${seleccionada?.nombre} y se cerrarán sus sesiones.`
+                            : pendiente?.tipo === "desbloquear"
+                                ? `Se desbloqueará la cuenta de ${seleccionada?.nombre}.`
                             : "¿Confirmás que los datos son correctos?"
                 }
                 onConfirm={guardar}

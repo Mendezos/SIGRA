@@ -18,6 +18,7 @@ import {
     ArrowRight,
     ShieldCheck,
     Unlock,
+    UserCog,
 } from "lucide-react";
 import { MODULES } from "../data/modules";
 import {
@@ -35,6 +36,7 @@ import GenerateReportModal from "../components/GenerateReportModal";
 import StatusBadge from "../components/StatusBadge";
 import PoliticaSeguridadModal from "../components/PoliticaSeguridadModal";
 import DesbloquearCuentaModal from "../components/DesbloquearCuentaModal";
+import PerfilModal from "../components/PerfilModal";
 import ConfirmModal from "../components/ConfirmModal";
 
 const COLORS = {
@@ -102,6 +104,7 @@ function Sidebar({
     onRequestLogout,
     onOpenPolitica,
     onOpenDesbloqueo,
+    onOpenPerfil,
 }) {
     const visibleModules = MODULES.filter((module) =>
         canAccessModule(user.permisos, module.id)
@@ -267,18 +270,38 @@ function Sidebar({
                 </div>
             )}
 
-            <button
-                type="button"
-                onClick={onRequestLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm mt-2"
-                style={{ color: COLORS.muted }}
+            <div
+                className="pt-3 mt-2"
+                style={{
+                    borderTop: `1px solid ${COLORS.border}`,
+                }}
             >
-                <LogOut
-                    size={17}
-                    color={COLORS.muted}
-                />
-                Cerrar sesión
-            </button>
+                <button
+                    type="button"
+                    onClick={onOpenPerfil}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm"
+                    style={{ color: COLORS.charcoal }}
+                >
+                    <UserCog
+                        size={17}
+                        color={COLORS.muted}
+                    />
+                    Mi perfil
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onRequestLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm"
+                    style={{ color: COLORS.muted }}
+                >
+                    <LogOut
+                        size={17}
+                        color={COLORS.muted}
+                    />
+                    Cerrar sesión
+                </button>
+            </div>
         </aside>
     );
 }
@@ -675,6 +698,7 @@ function Welcome({
 export default function Dashboard({
     user,
     onLogout,
+    onProfileUpdated,
 }) {
     const [active, setActive] = useState(null);
     const [notice, setNotice] = useState("");
@@ -686,6 +710,8 @@ export default function Dashboard({
     const [desbloqueoModalOpen, setDesbloqueoModalOpen] =
         useState(false);
     const [logoutModalOpen, setLogoutModalOpen] =
+        useState(false);
+    const [perfilModalOpen, setPerfilModalOpen] =
         useState(false);
 
     const currentModule =
@@ -765,6 +791,7 @@ export default function Dashboard({
                 onRequestLogout={() => setLogoutModalOpen(true)}
                 onOpenPolitica={() => setPoliticaModalOpen(true)}
                 onOpenDesbloqueo={() => setDesbloqueoModalOpen(true)}
+                onOpenPerfil={() => setPerfilModalOpen(true)}
             />
 
             {currentModule ? (
@@ -814,6 +841,13 @@ export default function Dashboard({
             <DesbloquearCuentaModal
                 open={desbloqueoModalOpen}
                 onClose={() => setDesbloqueoModalOpen(false)}
+            />
+
+            <PerfilModal
+                open={perfilModalOpen}
+                onClose={() => setPerfilModalOpen(false)}
+                onProfileUpdated={onProfileUpdated}
+                onLogout={onLogout}
             />
 
             <ConfirmModal

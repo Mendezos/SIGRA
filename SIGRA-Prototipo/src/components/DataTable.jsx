@@ -21,7 +21,7 @@ export default function DataTable({
     searchPlaceholder = "Buscar...",
     initialShowInactive = false,
     initialEstadoFilter = "",
-    pagination = false,
+    pagination = true,
     paginationResetKey = "",
     searchVisibleColumns = false,
     tableClassName = "",
@@ -29,15 +29,20 @@ export default function DataTable({
     toolbarContent,
     showInactiveToggle = true,
     statusOptions,
+    hideInactiveToggle = false,
+    initialPageSize = 10,
+    showSearch = true,
+    showEstadoFilter = true,
+    emptyMessage = "No hay registros que coincidan con la búsqueda o los filtros.",
 }) {
     const [query, setQuery] = useState("");
     const [estadoFilter, setEstadoFilter] = useState(initialEstadoFilter);
     const [venceHasta, setVenceHasta] = useState("");
     const [showInactive, setShowInactive] = useState(initialShowInactive);
-    const [pageSize, setPageSize] = useState(10);
+    const [pageSize, setPageSize] = useState(initialPageSize);
     const [page, setPage] = useState({ number: 1, filtersKey: "" });
 
-    const hasEstadoColumn = columns.some((c) => c.key === "estado");
+    const hasEstadoColumn = showEstadoFilter && columns.some((c) => c.key === "estado");
     const hasVenceColumn = columns.some((c) => c.key === "vence");
     const hasInactiveRows = rows.some((r) => r.activo === false);
 
@@ -100,7 +105,7 @@ export default function DataTable({
     return (
         <div className="min-w-0 max-w-full">
             <div className="flex flex-wrap items-center gap-3 mb-4">
-                <div className="relative max-w-xs w-full">
+                {showSearch && (<div className="relative max-w-xs w-full">
                     <Search
                         size={15}
                         className="absolute left-3 top-1/2 -translate-y-1/2"
@@ -117,7 +122,7 @@ export default function DataTable({
                             color: COLORS.charcoal,
                         }}
                     />
-                </div>
+                </div>)}
 
                 {hasEstadoColumn && (
                     <select
@@ -171,7 +176,7 @@ export default function DataTable({
 
                 {toolbarContent}
 
-                {hasInactiveRows && showInactiveToggle && (
+                {hasInactiveRows && showInactiveToggle && !hideInactiveToggle && (
                     <label
                         className="flex items-center gap-2 text-xs ml-auto"
                         style={{ color: COLORS.muted }}
@@ -223,8 +228,7 @@ export default function DataTable({
                                     className="px-4 py-6 text-center text-sm"
                                     style={{ color: COLORS.muted }}
                                 >
-                                    No hay registros que coincidan con la búsqueda
-                                    o los filtros.
+                                    {emptyMessage}
                                 </td>
                             </tr>
                         )}
@@ -286,7 +290,8 @@ export default function DataTable({
                             style={{ border: `1px solid ${COLORS.border}` }}
                             onChange={(e) => setPageSize(Number(e.target.value))}
                         >
-                            {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+                            {[...new Set([5, 10, 25, 50, initialPageSize])].sort((a, b) => a - b)
+                                .map((size) => <option key={size} value={size}>{size}</option>)}
                         </select>
                     </label>
                     <nav aria-label="Paginación" className="flex items-center gap-3">

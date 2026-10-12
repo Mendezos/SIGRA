@@ -19,4 +19,13 @@ public class RolPermisoDA : IRolPermisoDA
             "sp_RolPermiso_ObtenerPorRol", new { IdRol = idRol }, commandType: CommandType.StoredProcedure);
         return resultado.ToList();
     }
+
+    public async Task DefinirAsync(int idRol, int idModulo, bool lectura, bool escritura, bool edicion, bool eliminacion)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        await conexion.ExecuteAsync(
+            "sp_RolPermiso_Definir",
+            new { IdRol = idRol, IdModulo = idModulo, Lectura = lectura, Escritura = escritura, Edicion = edicion, Eliminacion = eliminacion },
+            commandType: CommandType.StoredProcedure);
+    }
 }

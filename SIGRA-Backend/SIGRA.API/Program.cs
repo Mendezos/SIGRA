@@ -83,6 +83,10 @@ builder.Services.AddScoped<ITokenRecuperacionDA, TokenRecuperacionDA>();
 builder.Services.AddScoped<IPoliticaSeguridadDA, PoliticaSeguridadDA>();
 builder.Services.AddScoped<ISesionDA, SesionDA>();
 builder.Services.AddScoped<IRolPermisoDA, RolPermisoDA>();
+builder.Services.AddScoped<IRolDA, RolDA>();
+builder.Services.AddScoped<IModuloDA, ModuloDA>();
+builder.Services.AddScoped<IInventarioDA, InventarioDA>();
+builder.Services.AddScoped<IAlquilerDA, AlquilerDA>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -92,6 +96,11 @@ builder.Services.AddScoped<IAutenticacionFlujo, AutenticacionFlujo>();
 builder.Services.AddScoped<IPoliticaSeguridadFlujo, PoliticaSeguridadFlujo>();
 builder.Services.AddScoped<ICuentaFlujo, CuentaFlujo>();
 builder.Services.AddScoped<IRecuperacionPasswordFlujo, RecuperacionPasswordFlujo>();
+builder.Services.AddScoped<IRolFlujo, RolFlujo>();
+builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
+builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
+builder.Services.AddScoped<IAlquilerFlujo, AlquilerFlujo>();
+builder.Services.AddHostedService<SIGRA.API.Servicios.ContratosVencimientoService>();
 
 var app = builder.Build();
 

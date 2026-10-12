@@ -31,6 +31,8 @@ public class PerfilUsuarioDto
     public int IdUsuario { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
+    public string? Telefono { get; set; }
+    public string? Foto { get; set; }
     public string Rol { get; set; } = string.Empty;
     public List<PermisoModuloDto> Permisos { get; set; } = new();
 }
@@ -88,4 +90,17 @@ public class RespuestaMensajeDto
 public class RespuestaErrorDto
 {
     public string Mensaje { get; set; } = string.Empty;
+}
+
+public class ActualizarPerfilDto
+{
+    public string Nombre { get; set; } = string.Empty;
+    public string? Telefono { get; set; }
+    public string? Foto { get; set; }
+}
+
+public class CambiarPasswordPropioDto
+{
+    public string PasswordActual { get; set; } = string.Empty;
+    public string PasswordNueva { get; set; } = string.Empty;
 }
