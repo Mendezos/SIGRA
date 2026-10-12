@@ -1,5 +1,5 @@
 
-﻿// Datos y esquemas de los módulos funcionales del Sistema Integral de Gestión Radifax.
+// Datos y esquemas de los módulos funcionales del Sistema Integral de Gestión Radifax.
 
 // Los datos son de ejemplo ("quemados"), tal y como se acordó con el docente: este curso
 // cubre análisis y modelado de requerimientos, no la implementación final con backend real.
@@ -41,7 +41,7 @@ export const MODULES = [
     {
         id: "usuarios",
         label: "Usuarios y accesos",
-        subtitle: "Cuentas, roles y permisos internos (GUA-001 a GUA-018)",
+        subtitle: "Cuentas, roles y permisos internos",
         metrics: [
             { label: "Usuarios activos", value: "11" },
             { label: "Roles definidos", value: "5" },

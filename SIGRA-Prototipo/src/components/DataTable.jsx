@@ -20,11 +20,22 @@ export default function DataTable({
     onRowClick,
     searchPlaceholder = "Buscar...",
     initialShowInactive = false,
+    initialEstadoFilter = "",
+    pagination = false,
+    paginationResetKey = "",
+    searchVisibleColumns = false,
+    tableClassName = "",
+    tableContainerClassName = "",
+    toolbarContent,
+    showInactiveToggle = true,
+    statusOptions,
 }) {
     const [query, setQuery] = useState("");
-    const [estadoFilter, setEstadoFilter] = useState("");
+    const [estadoFilter, setEstadoFilter] = useState(initialEstadoFilter);
     const [venceHasta, setVenceHasta] = useState("");
     const [showInactive, setShowInactive] = useState(initialShowInactive);
+    const [pageSize, setPageSize] = useState(10);
+    const [page, setPage] = useState({ number: 1, filtersKey: "" });
 
     const hasEstadoColumn = columns.some((c) => c.key === "estado");
     const hasVenceColumn = columns.some((c) => c.key === "vence");
@@ -33,8 +44,8 @@ export default function DataTable({
     const estadoOptions = useMemo(() => {
         if (!hasEstadoColumn) return [];
 
-        return [...new Set(rows.map((r) => r.estado).filter(Boolean))];
-    }, [rows, hasEstadoColumn]);
+        return statusOptions ?? [...new Set(rows.map((r) => r.estado).filter(Boolean))];
+    }, [rows, hasEstadoColumn, statusOptions]);
 
     const filtered = useMemo(() => {
         let result = rows;
@@ -62,17 +73,32 @@ export default function DataTable({
             const q = query.trim().toLowerCase();
 
             result = result.filter((row) =>
-                Object.values(row).some((v) =>
+                (searchVisibleColumns ? columns.map((c) => row[c.key]) : Object.values(row)).some((v) =>
                     String(v ?? "").toLowerCase().includes(q)
                 )
             );
         }
 
         return result;
-    }, [rows, query, estadoFilter, venceHasta, showInactive]);
+    }, [rows, query, estadoFilter, venceHasta, showInactive, columns, searchVisibleColumns]);
+
+    const filtersKey = JSON.stringify([
+        query, estadoFilter, venceHasta, showInactive, pageSize, paginationResetKey,
+    ]);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    if (pagination && (page.filtersKey !== filtersKey || page.number > totalPages)) {
+        setPage({ number: page.filtersKey !== filtersKey ? 1 : totalPages, filtersKey });
+    }
+    const currentPage = Math.min(page.filtersKey === filtersKey ? page.number : 1, totalPages);
+    const firstRow = (currentPage - 1) * pageSize;
+    const visibleRows = pagination ? filtered.slice(firstRow, firstRow + pageSize) : filtered;
+
+    function goToPage(number) {
+        setPage({ number, filtersKey });
+    }
 
     return (
-        <div>
+        <div className="min-w-0 max-w-full">
             <div className="flex flex-wrap items-center gap-3 mb-4">
                 <div className="relative max-w-xs w-full">
                     <Search
@@ -84,6 +110,7 @@ export default function DataTable({
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder={searchPlaceholder}
+                        aria-label={searchPlaceholder}
                         className="w-full pl-9 pr-3 py-2 rounded-lg text-sm"
                         style={{
                             border: `1px solid ${COLORS.border}`,
@@ -95,6 +122,7 @@ export default function DataTable({
                 {hasEstadoColumn && (
                     <select
                         value={estadoFilter}
+                        aria-label="Filtrar por estado"
                         onChange={(e) => setEstadoFilter(e.target.value)}
                         className={selectClass()}
                         style={{
@@ -141,7 +169,9 @@ export default function DataTable({
                     </label>
                 )}
 
-                {hasInactiveRows && (
+                {toolbarContent}
+
+                {hasInactiveRows && showInactiveToggle && (
                     <label
                         className="flex items-center gap-2 text-xs ml-auto"
                         style={{ color: COLORS.muted }}
@@ -158,14 +188,17 @@ export default function DataTable({
             </div>
 
             <div
-                className="rounded-xl overflow-hidden"
+                className={`rounded-xl overflow-auto max-w-full ${tableContainerClassName}`}
                 style={{ border: `1px solid ${COLORS.border}` }}
+                tabIndex={0}
+                role="region"
+                aria-label="Tabla de registros con desplazamiento horizontal"
             >
                 <table
-                    className="w-full text-sm"
+                    className={`w-full text-sm ${tableClassName}`}
                     style={{ borderCollapse: "collapse" }}
                 >
-                    <thead>
+                    <thead className="sticky top-0" style={{ backgroundColor: COLORS.greenTint }}>
                         <tr style={{ backgroundColor: COLORS.greenTint }}>
                             {columns.map((c) => (
                                 <th
@@ -196,7 +229,7 @@ export default function DataTable({
                             </tr>
                         )}
 
-                        {filtered.map((row, i) => (
+                        {visibleRows.map((row, i) => (
                             <tr
                                 key={row.id ?? i}
                                 onClick={() => onRowClick?.(row)}
@@ -215,7 +248,7 @@ export default function DataTable({
                                 {columns.map((c) => (
                                     <td
                                         key={c.key}
-                                        className="px-4 py-3"
+                                        className={`px-4 py-3 ${c.cellClassName ?? ""}`}
                                         style={{ color: COLORS.charcoal }}
                                     >
                                         {c.key === "estado" ? (
@@ -241,9 +274,40 @@ export default function DataTable({
                 </table>
             </div>
 
-            <p className="text-xs mt-2" style={{ color: COLORS.muted }}>
-                {filtered.length} de {rows.length} registros
-            </p>
+            {pagination ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm">
+                    <p role="status" style={{ color: COLORS.muted }}>
+                        {filtered.length === 0 ? "0 registros" :
+                            `Mostrando ${firstRow + 1}–${Math.min(firstRow + pageSize, filtered.length)} de ${filtered.length} registros`}
+                    </p>
+                    <label className="flex items-center gap-2" style={{ color: COLORS.muted }}>
+                        Registros por página
+                        <select className={selectClass()} value={pageSize}
+                            style={{ border: `1px solid ${COLORS.border}` }}
+                            onChange={(e) => setPageSize(Number(e.target.value))}
+                        >
+                            {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+                        </select>
+                    </label>
+                    <nav aria-label="Paginación" className="flex items-center gap-3">
+                        <button type="button" className="border rounded-lg px-3 py-2 disabled:opacity-50"
+                            disabled={currentPage === 1} onClick={() => goToPage(currentPage - 1)}
+                        >
+                            Anterior
+                        </button>
+                        <span>Página {currentPage} de {totalPages}</span>
+                        <button type="button" className="border rounded-lg px-3 py-2 disabled:opacity-50"
+                            disabled={currentPage === totalPages} onClick={() => goToPage(currentPage + 1)}
+                        >
+                            Siguiente
+                        </button>
+                    </nav>
+                </div>
+            ) : (
+                <p className="text-xs mt-2" style={{ color: COLORS.muted }}>
+                    {filtered.length} de {rows.length} registros
+                </p>
+            )}
         </div>
     );
 }

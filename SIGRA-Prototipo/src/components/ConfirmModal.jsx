@@ -15,6 +15,7 @@ export default function ConfirmModal({
     cancelLabel = "Cancelar",
     onConfirm,
     onCancel,
+    variant = "primary",
 }) {
     if (!open) return null;
 
@@ -37,7 +38,7 @@ export default function ConfirmModal({
                     type="button"
                     onClick={onConfirm}
                     className="px-5 py-2.5 rounded-lg text-sm font-medium"
-                    style={{ backgroundColor: COLORS.green, color: COLORS.white, border: "none" }}
+                    style={{ backgroundColor: variant === "danger" ? "#C0392B" : COLORS.green, color: COLORS.white, border: "none" }}
                 >
                     {confirmLabel}
                 </button>
