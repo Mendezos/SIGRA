@@ -97,7 +97,7 @@ public class AlquilerDA : IAlquilerDA
         ConsultarAsync<EquipoDisponibleDto>("sp_Equipo_ListarParaContrato");
 
     public Task<int> InsertarContratoAsync(string empresa, DateTime fechaInicio, DateTime fechaVencimiento, decimal montoMensual,
-        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null) =>
+        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null, bool cubreReparaciones = false) =>
         EscalarAsync<int>("sp_Contrato_Insertar", new
         {
             Empresa = empresa,
@@ -105,6 +105,7 @@ public class AlquilerDA : IAlquilerDA
             FechaVencimiento = fechaVencimiento,
             MontoMensual = montoMensual,
             Condiciones = condiciones,
+            CubreReparaciones = cubreReparaciones,
             IdVendedor = idVendedor,
             IdsEquipo = string.Join(",", idsEquipo),
             IdUsuario = idUsuario,

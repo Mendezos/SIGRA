@@ -34,6 +34,15 @@ const NO_ACCESS = {
 };
 
 export const ROLE_CAPABILITIES = {
+    Recepcionista: {
+        moduleIds: ["tickets"],
+        canGenerateTicket: true,
+        canAssignTechnician: false,
+        canRescheduleGiras: false,
+        quickModules: ["tickets"],
+        reportTypes: [],
+        moduleActions: { tickets: { view: true, create: true, edit: true, deactivate: false } },
+    },
     "Administrador del sistema": {
         moduleIds: ALL_MODULES,
         fullAccess: true,
@@ -250,7 +259,7 @@ export function getQuickModuleIds(role) {
 }
 
 export function canGenerateTicket(role) {
-    return getRoleCapabilities(role).canGenerateTicket;
+    return ["Administrador del sistema", "Coordinador técnico", "Recepcionista"].includes(role);
 }
 
 export function canAssignTechnician(role) {

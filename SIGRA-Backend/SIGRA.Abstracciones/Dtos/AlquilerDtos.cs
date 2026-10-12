@@ -101,6 +101,7 @@ public class RegistrarContratoDto
     public DateTime? FechaVencimiento { get; set; }
     public decimal? MontoMensual { get; set; }
     public string? Condiciones { get; set; }
+    public bool CubreReparaciones { get; set; }
     public List<string>? Series { get; set; }
     public List<AccesorioContratoItemDto>? Accesorios { get; set; }
 }
@@ -115,6 +116,7 @@ public class ContratoDto
     public DateTime FechaVencimiento { get; set; }
     public decimal MontoMensual { get; set; }
     public string? Condiciones { get; set; }
+    public bool CubreReparaciones { get; set; }
     public int? IdVendedor { get; set; }
     public string? Vendedor { get; set; }
     public string? MotivoCancelacion { get; set; }

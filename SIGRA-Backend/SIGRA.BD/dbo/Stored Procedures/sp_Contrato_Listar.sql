@@ -13,7 +13,7 @@ BEGIN
         WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento <= DATEADD(DAY, 90, CAST(GETDATE() AS DATE)) THEN N'Por vencer (90 días)'
         ELSE c.Estado
     END AS Estado,
-           c.FechaInicio, c.FechaVencimiento, c.MontoMensual, c.Condiciones, c.IdVendedor, v.Nombre AS Vendedor,
+           c.FechaInicio, c.FechaVencimiento, c.MontoMensual, c.Condiciones, c.CubreReparaciones, c.IdVendedor, v.Nombre AS Vendedor,
            c.MotivoCancelacion, c.FechaCancelacion,
                (SELECT COUNT(*) FROM ContratoEquipo ce WHERE ce.IdContrato = c.IdContrato AND ce.FechaDevolucion IS NULL) AS CantidadEquipos,
                ISNULL((SELECT STRING_AGG(e.NumeroSerie, ', ') FROM ContratoEquipo ce

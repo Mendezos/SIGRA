@@ -22,6 +22,7 @@ export default function DataTable({
     initialShowInactive = false,
     initialEstadoFilter = "",
     pagination = true,
+    showCount = true,
     paginationResetKey = "",
     searchVisibleColumns = false,
     tableClassName = "",
@@ -258,7 +259,7 @@ export default function DataTable({
                                         {c.key === "estado" ? (
                                             <StatusBadge value={row[c.key]} />
                                         ) : (
-                                            row[c.key] || "—"
+                                            row[c.key] === "" ? "—" : row[c.key] ?? "—"
                                         )}
 
                                         {c.key === columns[0].key &&
@@ -308,7 +309,7 @@ export default function DataTable({
                         </button>
                     </nav>
                 </div>
-            ) : (
+            ) : showCount && (
                 <p className="text-xs mt-2" style={{ color: COLORS.muted }}>
                     {filtered.length} de {rows.length} registros
                 </p>

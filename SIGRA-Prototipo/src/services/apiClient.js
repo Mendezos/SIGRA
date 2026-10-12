@@ -15,11 +15,12 @@ export function clearToken() {
 }
 
 export class ApiError extends Error {
-    constructor(mensaje, { status, errores, minutosRestantes } = {}) {
+    constructor(mensaje, { status, errores, minutosRestantes, codigo } = {}) {
         super(mensaje);
         this.status = status;
         this.errores = errores ?? [];
         this.minutosRestantes = minutosRestantes ?? null;
+        this.codigo = codigo ?? null;
     }
 }
 
@@ -67,8 +68,22 @@ export async function apiRequest(path, { method = "GET", body, auth = true } = {
             status: response.status,
             errores: data?.errores,
             minutosRestantes: data?.minutosRestantes,
+            codigo: data?.codigo,
         });
     }
 
     return data;
+}
+
+export async function apiDownload(path) {
+    const token = getToken();
+    let response;
+    try { response = await fetch(`${BASE_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); }
+    catch { throw new ApiError("No se pudo conectar con el servidor.", { status: 0 }); }
+    if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        if (response.status === 401) { clearToken(); onSesionInvalida?.(data?.mensaje); }
+        throw new ApiError(data?.mensaje ?? "No se pudo generar el documento.", { status: response.status, codigo: data?.codigo });
+    }
+    return response.blob();
 }

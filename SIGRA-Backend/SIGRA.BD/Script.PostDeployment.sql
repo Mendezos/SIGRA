@@ -354,3 +354,13 @@ BEGIN
     INNER JOIN AccesorioModelo a ON a.Nombre = v.Accesorio
     INNER JOIN ModeloEquipo m ON m.IdModelo = a.IdModelo AND m.Modelo = 'TK-3170';
 END
+
+-- GTST: recepción y parámetros iniciales, sin modificar permisos personalizados existentes.
+IF NOT EXISTS (SELECT 1 FROM Rol WHERE Nombre=N'Recepcionista')
+    INSERT Rol(Nombre,Descripcion,Activo) VALUES(N'Recepcionista',N'Registra ingresos al taller y consulta comprobantes e historiales de servicio.',1);
+INSERT RolPermiso(IdRol,IdPermiso,Lectura,Escritura,Edicion,Eliminacion)
+SELECT r.IdRol,p.IdPermiso,1,1,1,0 FROM Rol r CROSS JOIN Permiso p
+WHERE r.Nombre=N'Recepcionista' AND p.IdModulo=2
+AND NOT EXISTS(SELECT 1 FROM RolPermiso rp WHERE rp.IdRol=r.IdRol AND rp.IdPermiso=p.IdPermiso);
+IF NOT EXISTS(SELECT 1 FROM ConfiguracionTickets WHERE Id=1)
+    INSERT ConfiguracionTickets(Id,CargaMaxima,DiasHabilesEstimados) VALUES(1,5,5);

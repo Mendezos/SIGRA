@@ -10,7 +10,7 @@ BEGIN
         WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento <= DATEADD(DAY, 90, CAST(GETDATE() AS DATE)) THEN N'Por vencer (90 días)'
         ELSE c.Estado
     END AS Estado,
-           c.FechaInicio, c.FechaVencimiento, c.MontoMensual, c.Condiciones, c.IdVendedor, v.Nombre AS Vendedor,
+           c.FechaInicio, c.FechaVencimiento, c.MontoMensual, c.Condiciones, c.CubreReparaciones, c.IdVendedor, v.Nombre AS Vendedor,
            c.MotivoCancelacion, c.FechaCancelacion, 0 AS CantidadEquipos, '' AS Series
     FROM Contrato c
     INNER JOIN Cliente cl ON cl.IdCliente = c.IdCliente

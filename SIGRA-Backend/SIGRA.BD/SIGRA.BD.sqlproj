@@ -207,4 +207,45 @@
     <Build Include="dbo\Tables\ContratoAccesorio.sql" />
     <Build Include="dbo\Tables\Repuesto.sql" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Build Include="dbo\Stored Procedures\sp_Correlativo_Siguiente.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Notificacion_Registrar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_AsignarInterno.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Auditoria.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Cambiar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Catalogos.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Configurar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_GarantiaSeguimiento.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Garantias.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Historial.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Indicadores.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Inventario.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Registrar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Resumen.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Seguimiento.sql" />
+    <Build Include="dbo\Tables\ConfiguracionTickets.sql" />
+    <Build Include="dbo\Tables\Correlativo.sql" />
+    <Build Include="dbo\Tables\CorreoPendiente.sql" />
+    <Build Include="dbo\Tables\GarantiaSeguimiento.sql" />
+    <Build Include="dbo\Tables\GarantiaTicket.sql" />
+    <Build Include="dbo\Tables\Notificacion.sql" />
+    <Build Include="dbo\Tables\TicketAsignacion.sql" />
+    <Build Include="dbo\Tables\TicketEdicion.sql" />
+    <Build Include="dbo\Tables\TicketEsperaRepuesto.sql" />
+    <Build Include="dbo\Tables\TicketGestion.sql" />
+    <Build Include="dbo\Tables\TicketInventarioEvento.sql" />
+    <Build Include="dbo\Tables\UsuarioEspecialidad.sql" />
+    <Build Include="dbo\Views\vw_TicketDetalle.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\Stored Procedures\sp_Correo_Encolar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Correo_Finalizar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Correo_Tomar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Notificacion_Consultar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Notificacion_Leer.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Bloquear.sql" />
+  </ItemGroup>
 </Project>

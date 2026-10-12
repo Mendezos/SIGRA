@@ -38,6 +38,7 @@ function Resumen({ detalle, onAsignarRadio, canAsignarRadio, canEditarAccesorios
                     { label: "Fecha de inicio", value: fechaCorta(contrato.fechaInicio) },
                     { label: "Fecha de vencimiento", value: fechaCorta(contrato.fechaVencimiento) },
                     { label: "Monto mensual", value: colones(contrato.montoMensual) },
+                    { label: "Cobertura de reparaciones", value: contrato.cubreReparaciones ? "Incluida" : "No incluida" },
                     { label: "Equipos asociados", value: String(equipos.length) },
                     { label: "Condiciones", value: contrato.condiciones, wide: true },
                     ...(cancelado

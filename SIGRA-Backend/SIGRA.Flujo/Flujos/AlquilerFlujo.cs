@@ -214,7 +214,7 @@ public class AlquilerFlujo : IAlquilerFlujo
         var accesorios = await ValidarAccesoriosAsync(dto.Accesorios);
 
         var idContrato = await _alquilerDA.InsertarContratoAsync(empresa, dto.FechaInicio.Value.Date, dto.FechaVencimiento.Value.Date,
-                dto.MontoMensual.Value, Normalizar(dto.Condiciones), idVendedor, idsEquipo, idUsuario, accesorios);
+                dto.MontoMensual.Value, Normalizar(dto.Condiciones), idVendedor, idsEquipo, idUsuario, accesorios, dto.CubreReparaciones);
 
         await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "CONTRATO_REGISTRADO",
             $"{empresa}: {idsEquipo.Count} equipo(s), {dto.FechaInicio:yyyy-MM-dd} a {dto.FechaVencimiento:yyyy-MM-dd}");

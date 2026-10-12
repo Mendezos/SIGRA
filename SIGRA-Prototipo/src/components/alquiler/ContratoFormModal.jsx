@@ -17,6 +17,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
     const [fechaVencimiento, setFechaVencimiento] = useState("");
     const [monto, setMonto] = useState("");
     const [condiciones, setCondiciones] = useState("");
+    const [cubreReparaciones, setCubreReparaciones] = useState(false);
     const [catalogoAccesorios, setCatalogoAccesorios] = useState([]);
     const [accesorios, setAccesorios] = useState([]);
     const [validandoSerie, setValidandoSerie] = useState(false);
@@ -92,6 +93,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
                 fechaVencimiento: fechaVencimiento || null,
                 montoMensual: monto === "" ? null : Number(monto),
                 condiciones: condiciones || null,
+                cubreReparaciones,
                 series: todas,
                 accesorios: aItemsApi(accesorios),
             });
@@ -158,6 +160,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
                 </FieldLabel>
 
                 <div className="sm:col-span-2">
+                    <label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={cubreReparaciones} onChange={e => setCubreReparaciones(e.target.checked)} />Incluye cobertura de reparaciones de los equipos</label>
                     <FieldLabel label="Condiciones del contrato">
                         <textarea value={condiciones} onChange={(e) => setCondiciones(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                     </FieldLabel>

@@ -4,7 +4,8 @@ CREATE PROCEDURE sp_Equipo_CambiarEstado
     @IdUsuario      INT,
     @TipoMovimiento VARCHAR(50),
     @Observacion    VARCHAR(MAX) = NULL,
-    @MotivoBaja     VARCHAR(300) = NULL
+    @MotivoBaja     VARCHAR(300) = NULL,
+    @Fecha         DATETIME = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -22,8 +23,8 @@ BEGIN
         MotivoBaja = CASE WHEN @EstadoNuevo = 'Dado de baja' THEN @MotivoBaja ELSE NULL END
     WHERE IdEquipo = @IdEquipo;
 
-    INSERT INTO MovimientoInventario (IdEquipo, IdUsuario, TipoMovimiento, EstadoAnterior, EstadoNuevo, Observacion)
-    VALUES (@IdEquipo, @IdUsuario, @TipoMovimiento, @EstadoAnterior, @EstadoNuevo, @Observacion);
+    INSERT INTO MovimientoInventario (IdEquipo, IdUsuario, TipoMovimiento, EstadoAnterior, EstadoNuevo, Observacion, Fecha)
+    VALUES (@IdEquipo, @IdUsuario, @TipoMovimiento, @EstadoAnterior, @EstadoNuevo, @Observacion, COALESCE(@Fecha,GETDATE()));
 
     COMMIT TRANSACTION;
 END
