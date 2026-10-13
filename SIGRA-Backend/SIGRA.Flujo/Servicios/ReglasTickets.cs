@@ -68,6 +68,8 @@ public static class ReglasTickets
         Requerido(dto.Empresa, 150, "Empresa o cliente", errores);
         Requerido(dto.Contacto, 150, "Nombre de contacto", errores);
         Requerido(dto.Telefono, 20, "Teléfono de contacto", errores);
+        if (!string.IsNullOrWhiteSpace(dto.Telefono) && !TelefonoValido(dto.Telefono))
+            errores.Add("El teléfono debe tener 8 dígitos; puede incluir el prefijo +506.");
         if (dto.Cargo?.Length > 100) errores.Add("El cargo no puede superar los 100 caracteres.");
         if (dto.Correo is not null && !CorreoValido(dto.Correo)) errores.Add("El correo electrónico no es válido.");
         if (string.IsNullOrWhiteSpace(dto.TipoServicio)) errores.Add("Debe seleccionar un tipo de servicio.");
@@ -95,6 +97,9 @@ public static class ReglasTickets
         }
         if (errores.Count > 0) throw new ValidacionException("Completá o corregí los campos obligatorios.", errores);
     }
+
+    public static bool TelefonoValido(string? telefono) => telefono is not null && telefono.Length <= 20
+        && System.Text.RegularExpressions.Regex.IsMatch(telefono, @"\A\s*(?:\+506(?:\s|-)*)?(?:[0-9](?:\s|-)*){7}[0-9]\s*\z");
 
     public static bool CorreoValido(string correo) => !string.IsNullOrEmpty(correo) && correo.Length <= 150 && MailAddress.TryCreate(correo, out var direccion)
         && direccion.Address == correo && correo.Contains('@') && !correo.Any(char.IsWhiteSpace);

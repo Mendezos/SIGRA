@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import DataTable from "../DataTable";
+import StatusBadge from "../StatusBadge";
 import { Button, Notice } from "../ui";
 import { inputClass, inputStyle } from "../uiTheme";
 import * as api from "../../services/ticketsService";
@@ -9,7 +10,7 @@ import DetalleTicketModal from "./DetalleTicketModal";
 import TicketsReportes from "./TicketsReportes";
 import { ESTADOS, fecha, gestion, mensajeError, recepcion, tecnico, TIPOS_SERVICIO } from "./helpers";
 
-const columnas = [{ key: "numeroBoleta", label: "Boleta" }, { key: "empresa", label: "Cliente" }, { key: "tecnicoTexto", label: "Técnico responsable" }, { key: "tipoServicio", label: "Servicio" }, { key: "estado", label: "Estado" }, { key: "recepcionTexto", label: "Recepción física" }, { key: "fechaTexto", label: "Fecha de ingreso" }];
+const columnas = [{ key: "numeroBoleta", label: "Boleta" }, { key: "empresa", label: "Cliente" }, { key: "tecnicoTexto", label: "Técnico responsable" }, { key: "tipoServicio", label: "Servicio" }, { key: "estado", label: "Estado" }, { key: "etapaTexto", label: "Etapa de reparación" }, { key: "recepcionTexto", label: "Recepción física" }, { key: "fechaTexto", label: "Fecha de ingreso" }];
 const inicialFiltro = { texto: "", idCliente: "", idTecnico: "", tipoServicio: "", estado: "", resolucion: "", desde: "", hasta: "", sinRecepcionFisica: false, incluirInactivos: false };
 
 export default function TicketsPanel({ user }) {
@@ -58,7 +59,7 @@ export default function TicketsPanel({ user }) {
                 </div>
             </form>
             {cargando && <p role="status" className="text-sm text-[#6E6E6E]">Cargando boletas...</p>}
-            <DataTable columns={columnas} rows={datos.items.map(b => ({ ...b, id: b.idTicket, tecnicoTexto: b.tecnico ?? b.estadoAsignacion ?? "Sin asignar", recepcionTexto: b.fechaRecepcionFisica ? "Confirmada" : "Pendiente", fechaTexto: fecha(b.fechaRecepcion) }))} onRowClick={abrir} pagination={false} showCount={false} showSearch={false} showEstadoFilter={false} hideInactiveToggle initialShowInactive emptyMessage="No se encontraron boletas con esos filtros." tableClassName="min-w-[1000px]" />
+            <DataTable columns={columnas} rows={datos.items.map(b => ({ ...b, id: b.idTicket, tecnicoTexto: b.tecnico ?? b.estadoAsignacion ?? "Sin asignar", etapaTexto: b.esReparacion ? <StatusBadge value={b.trabajo.etapa} /> : "—", recepcionTexto: b.fechaRecepcionFisica ? "Confirmada" : "Pendiente", fechaTexto: fecha(b.fechaRecepcion) }))} onRowClick={abrir} pagination={false} showCount={false} showSearch={false} showEstadoFilter={false} hideInactiveToggle initialShowInactive emptyMessage="No se encontraron boletas con esos filtros." tableClassName="min-w-[1100px]" />
             <div className="flex flex-wrap justify-between items-center gap-3 text-sm text-[#6E6E6E]"><p role="status">{datos.total ? `Mostrando ${(pagina - 1) * tamanoPagina + 1}–${Math.min(pagina * tamanoPagina, datos.total)} de ${datos.total} boletas` : "0 boletas"}</p><label>Registros por página <select aria-label="Registros por página" className={inputClass} style={inputStyle} value={tamanoPagina} onChange={e => { setTamano(Number(e.target.value)); setPagina(1); }}>{[10, 25, 50].map(n => <option key={n}>{n}</option>)}</select></label><div className="flex gap-3 items-center"><Button disabled={pagina <= 1 || cargando} onClick={() => setPagina(p => p - 1)}>Anterior</Button><span>Página {pagina} de {totalPaginas}</span><Button disabled={pagina >= totalPaginas || cargando} onClick={() => setPagina(p => p + 1)}>Siguiente</Button></div></div>
         </> : <TicketsReportes key={tab} tab={tab} numeroInicial={numeroAuditoria} user={user} clientes={clientes} tecnicos={tecnicos} onChanged={actualizar} />}
         {creando && <EntradaTicketModal onClose={() => setCreando(false)} onSaved={guardado} />}

@@ -11,7 +11,7 @@ export default function TrabajoTicketModal({ boleta, onClose, onSaved }) {
     const [error, setError] = useState(""); const [guardando, setGuardando] = useState(false); const [confirmar, setConfirmar] = useState(null);
     const [version, setVersion] = useState(boleta.version); const [facturada, setFacturada] = useState(boleta.facturaEmitida);
     const cubierto = boleta.equipos.length > 0 && boleta.equipos.every(e => e.cubiertoPorContrato);
-    const garantia = trabajo.resolucion === "Garantía" || trabajo.servicioRealizado === "Garantía aplicada";
+    const garantia = boleta.esReparacion ? trabajo.resolucion === "Garantía" : trabajo.servicioRealizado === "Garantía aplicada";
     const cobra = !garantia && (trabajo.tieneCobro || (boleta.esReparacion && trabajo.resolucion === "Reparado" && !cubierto));
     function campo(key, value) { setTrabajo(t => ({ ...t, [key]: value })); }
     function body() { return { version, trabajo: { ...trabajo, tieneCobro: cobra, monto: trabajo.monto === "" ? null : Number(trabajo.monto) } }; }

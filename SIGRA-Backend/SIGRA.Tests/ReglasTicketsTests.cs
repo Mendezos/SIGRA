@@ -34,6 +34,20 @@ public class ReglasTicketsTests
     }
     [Fact] public void ObligatoriosEnumeranEtiquetas()
     {var d=Entrada();d.Contacto="";d.Telefono="";var ex=Assert.Throws<ValidacionException>(()=>ReglasTickets.ValidarEntrada(d));Assert.Contains(ex.Errores,x=>x.StartsWith("Nombre de contacto"));Assert.Contains(ex.Errores,x=>x.StartsWith("Teléfono de contacto"));}
+    [Theory]
+    [InlineData("88888888", true)] [InlineData("8888-8888", true)] [InlineData("8888 8888", true)]
+    [InlineData("+50688888888", true)] [InlineData("+506 8888-8888", true)] [InlineData(" 88888888 ", true)]
+    [InlineData("8888888", false)] [InlineData("888888888", false)] [InlineData("8888abcd", false)]
+    [InlineData("+50788888888", false)] [InlineData("50688888888", false)] [InlineData("", false)] [InlineData(null, false)]
+    public void TelefonoNacionalTieneOchoDigitosYPrefijoOpcional(string? telefono, bool valido)
+        => Assert.Equal(valido, ReglasTickets.TelefonoValido(telefono));
+    [Fact] public void EntradaRechazaTelefonoInvalidoYConservaFormatoValido()
+    {
+        var d = Entrada(); d.Telefono = "8888887";
+        Assert.Contains(Assert.Throws<ValidacionException>(() => ReglasTickets.ValidarEntrada(d)).Errores, e => e.Contains("8 dígitos"));
+        d.Telefono = "+506 8888-8888"; ReglasTickets.ValidarEntrada(d);
+        Assert.Equal("+506 8888-8888", d.Telefono);
+    }
     [Theory] [InlineData(false,true)] [InlineData(true,false)]
     public void ReparadoNecesitaFacturaSiNoEstaCubierto(bool cubierto,bool requiere)
     {var t=new TrabajoTicketDto{Hallazgos="Falla en placa",Resolucion="Reparado"};if(requiere)Assert.Throws<ValidacionException>(()=>ReglasTickets.ValidarTrabajo(t,true,true,cubierto));else ReglasTickets.ValidarTrabajo(t,true,true,cubierto);}
