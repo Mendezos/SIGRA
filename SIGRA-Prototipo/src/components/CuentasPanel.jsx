@@ -528,12 +528,6 @@ export default function CuentasPanel({ user }) {
             {tab === "cuentas" ? (
                 <>
                     <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
-                        <button className={secondaryButton} disabled={cargando}
-                            onClick={actualizarLista}
-                        >
-                            <RefreshCw size={15} className={cargando ? "animate-spin" : ""} />
-                            Actualizar lista
-                        </button>
                         <button className={primaryButton}
                             disabled={cargando || roles.length === 0}
                             onClick={() => {

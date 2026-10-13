@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import DataTable from "../DataTable";
 import { Button, Notice } from "../ui";
 import { inputClass, inputStyle } from "../uiTheme";
 import * as api from "../../services/ticketsService";
 import EntradaTicketModal from "./EntradaTicketModal";
 import DetalleTicketModal from "./DetalleTicketModal";
-import SeguimientoTickets from "./SeguimientoTickets";
 import TicketsReportes from "./TicketsReportes";
 import { ESTADOS, fecha, gestion, mensajeError, recepcion, tecnico, TIPOS_SERVICIO } from "./helpers";
 
@@ -48,18 +47,19 @@ export default function TicketsPanel({ user }) {
         <nav className="flex flex-wrap gap-1 border-b border-[#E3E3E3] mb-5" aria-label="Secciones de servicio técnico">{tabs.map(t => <button key={t.key} type="button" aria-pressed={tab === t.key} className={`px-4 py-2.5 text-sm border-b-2 -mb-px ${tab === t.key ? "border-[#5EB453] text-[#5EB453] font-semibold" : "border-transparent text-[#6E6E6E]"}`} onClick={() => { setTab(t.key); setError(""); }}>{t.label}</button>)}</nav>
         {aviso && <Notice>{aviso}</Notice>}{error && <Notice tone="error">{error}</Notice>}
         {tab === "boletas" ? <>
-            <div className="flex flex-wrap justify-end gap-3"><Button onClick={actualizar} disabled={cargando}><RefreshCw size={14} className={`inline mr-2 ${cargando ? "animate-spin" : ""}`} />Actualizar lista</Button>{recepcion(user) && <Button variant="primary" onClick={() => setCreando(true)}><Plus size={14} className="inline mr-2" />Registrar boleta</Button>}</div>
-            <form className="flex flex-wrap gap-3 items-end" onSubmit={e => { e.preventDefault(); actualizar(); }}>
-                <input aria-label="Buscar boletas" placeholder="Buscar boleta, cliente, contacto o serie..." className={inputClass + " w-full sm:w-80"} style={inputStyle} value={filtro.texto} onChange={e => cambiarFiltro("texto", e.target.value)} />
-                {[["estado", "Todos los estados", ESTADOS.map(v => [v, v])], ["tipoServicio", "Todos los servicios", TIPOS_SERVICIO.map(v => [v, v])], ["idCliente", "Todos los clientes", clientes.map(c => [c.idCliente, c.empresa])], ["idTecnico", "Todos los técnicos", tecnicos.map(t => [t.idUsuario, t.nombre])], ["resolucion", "Todas las resoluciones", ["Reparado", "No reparado", "Garantía", "Mantenimiento realizado"].map(v => [v, v])]].map(([key, label, opciones]) => <select key={key} aria-label={label} className={inputClass} style={inputStyle} value={filtro[key]} disabled={key === "idTecnico" && tecnico(user) && !filtro.sinRecepcionFisica} onChange={e => cambiarFiltro(key, e.target.value)}><option value="">{label}</option>{opciones.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select>)}
-                {[["desde", "Desde"], ["hasta", "Hasta"]].map(([key, label]) => <label key={key} className="text-xs text-[#6E6E6E]">{label}<input aria-label={label} type="date" className={inputClass + " block mt-1"} style={inputStyle} value={filtro[key]} onChange={e => cambiarFiltro(key, e.target.value)} /></label>)}
-                {tecnico(user) && <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={filtro.sinRecepcionFisica} onChange={e => cambiarFiltro("sinRecepcionFisica", e.target.checked)} />Pendientes de recepción física</label>}
-                {gestion(user) && <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={filtro.incluirInactivos} onChange={e => cambiarFiltro("incluirInactivos", e.target.checked)} />Incluir inactivas</label>}
+            <div className="flex flex-wrap justify-end gap-3">{recepcion(user) && <Button variant="primary" onClick={() => setCreando(true)}><Plus size={14} className="inline mr-2" />Registrar boleta</Button>}</div>
+            <form className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 items-end rounded-lg border border-[#E3E3E3] bg-[#FAFCF9] p-3" onSubmit={e => { e.preventDefault(); actualizar(); }}>
+                <input aria-label="Buscar boletas" placeholder="Buscar boleta, código, cliente, contacto o serie..." className={inputClass + " xl:col-span-2 px-3 py-2 text-xs"} style={inputStyle} value={filtro.texto} onChange={e => cambiarFiltro("texto", e.target.value)} />
+                {[["estado", "Todos los estados", ESTADOS.map(v => [v, v])], ["tipoServicio", "Todos los servicios", TIPOS_SERVICIO.map(v => [v, v])], ["idCliente", "Todos los clientes", clientes.map(c => [c.idCliente, c.empresa])], ["idTecnico", "Todos los técnicos", tecnicos.map(t => [t.idUsuario, t.nombre])], ["resolucion", "Todas las resoluciones", ["Reparado", "No reparado", "Garantía", "Mantenimiento realizado"].map(v => [v, v])]].map(([key, label, opciones]) => <select key={key} aria-label={label} className={inputClass + " min-w-0 px-3 py-2 text-xs"} style={inputStyle} value={filtro[key]} disabled={key === "idTecnico" && tecnico(user) && !filtro.sinRecepcionFisica} onChange={e => cambiarFiltro(key, e.target.value)}><option value="">{label}</option>{opciones.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select>)}
+                <div className="sm:col-span-2 xl:col-span-4 flex flex-wrap items-end gap-x-4 gap-y-2">
+                    {[["desde", "Desde"], ["hasta", "Hasta"]].map(([key, label]) => <label key={key} className="text-[11px] text-[#6E6E6E]">{label}<input aria-label={label} type="date" className={inputClass + " mt-1 px-3 py-2 text-xs"} style={inputStyle} value={filtro[key]} onChange={e => cambiarFiltro(key, e.target.value)} /></label>)}
+                    {tecnico(user) && <label className="flex items-center gap-2 pb-2 text-xs text-[#6E6E6E]"><input type="checkbox" checked={filtro.sinRecepcionFisica} onChange={e => cambiarFiltro("sinRecepcionFisica", e.target.checked)} />Pendientes de recepción física</label>}
+                    {gestion(user) && <label className="flex items-center gap-2 pb-2 text-xs text-[#6E6E6E]"><input type="checkbox" checked={filtro.incluirInactivos} onChange={e => cambiarFiltro("incluirInactivos", e.target.checked)} />Incluir inactivas</label>}
+                </div>
             </form>
             {cargando && <p role="status" className="text-sm text-[#6E6E6E]">Cargando boletas...</p>}
             <DataTable columns={columnas} rows={datos.items.map(b => ({ ...b, id: b.idTicket, tecnicoTexto: b.tecnico ?? b.estadoAsignacion ?? "Sin asignar", recepcionTexto: b.fechaRecepcionFisica ? "Confirmada" : "Pendiente", fechaTexto: fecha(b.fechaRecepcion) }))} onRowClick={abrir} pagination={false} showCount={false} showSearch={false} showEstadoFilter={false} hideInactiveToggle initialShowInactive emptyMessage="No se encontraron boletas con esos filtros." tableClassName="min-w-[1000px]" />
             <div className="flex flex-wrap justify-between items-center gap-3 text-sm text-[#6E6E6E]"><p role="status">{datos.total ? `Mostrando ${(pagina - 1) * tamanoPagina + 1}–${Math.min(pagina * tamanoPagina, datos.total)} de ${datos.total} boletas` : "0 boletas"}</p><label>Registros por página <select aria-label="Registros por página" className={inputClass} style={inputStyle} value={tamanoPagina} onChange={e => { setTamano(Number(e.target.value)); setPagina(1); }}>{[10, 25, 50].map(n => <option key={n}>{n}</option>)}</select></label><div className="flex gap-3 items-center"><Button disabled={pagina <= 1 || cargando} onClick={() => setPagina(p => p - 1)}>Anterior</Button><span>Página {pagina} de {totalPaginas}</span><Button disabled={pagina >= totalPaginas || cargando} onClick={() => setPagina(p => p + 1)}>Siguiente</Button></div></div>
-            <SeguimientoTickets />
         </> : <TicketsReportes key={tab} tab={tab} numeroInicial={numeroAuditoria} user={user} clientes={clientes} tecnicos={tecnicos} onChanged={actualizar} />}
         {creando && <EntradaTicketModal onClose={() => setCreando(false)} onSaved={guardado} />}
         {detalle && <DetalleTicketModal inicial={detalle} user={user} onClose={() => setDetalle(null)} onChanged={guardado} onVerAuditoria={() => { setNumeroAuditoria(detalle.numeroBoleta); setDetalle(null); setTab("auditoria"); }} />}
