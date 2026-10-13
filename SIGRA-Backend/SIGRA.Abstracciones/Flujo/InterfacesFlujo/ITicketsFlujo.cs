@@ -10,7 +10,7 @@ public interface ITicketsFlujo
     Task<TicketDetalleDto> ObtenerAsync(int idTicket, int idUsuario);
     Task<SeguimientoTicketDto> SeguimientoAsync(string codigo, int idUsuario);
     Task<List<SeguimientoTicketDto>> SeguimientoClienteAsync(string empresa, int idUsuario);
-    Task<List<ClienteDto>> ClientesAsync(string? texto, int idUsuario);
+    Task<List<ClienteTicketDto>> ClientesAsync(string? texto, int idUsuario);
     Task<List<TecnicoTicketDto>> TecnicosAsync(int idUsuario);
     Task<ConfiguracionTicketsDto> ConfiguracionAsync(int idUsuario);
     Task GuardarConfiguracionAsync(ConfiguracionTicketsDto dto, int idUsuario);

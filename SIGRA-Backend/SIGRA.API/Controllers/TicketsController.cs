@@ -16,7 +16,7 @@ public class TicketsController(ITicketsFlujo flujo) : ControllerBase
     [HttpGet("{id:int}")] public Task<TicketDetalleDto> Detalle(int id) => flujo.ObtenerAsync(id, Usuario);
     [HttpGet("seguimiento/{codigo}")] public Task<SeguimientoTicketDto> Seguimiento(string codigo) => flujo.SeguimientoAsync(codigo, Usuario);
     [HttpGet("seguimiento-cliente")] public Task<List<SeguimientoTicketDto>> SeguimientoCliente([FromQuery] string empresa) => flujo.SeguimientoClienteAsync(empresa, Usuario);
-    [HttpGet("clientes")] public Task<List<ClienteDto>> Clientes([FromQuery] string? texto) => flujo.ClientesAsync(texto, Usuario);
+    [HttpGet("clientes")] public Task<List<ClienteTicketDto>> Clientes([FromQuery] string? texto) => flujo.ClientesAsync(texto, Usuario);
     [HttpGet("tecnicos")] public Task<List<TecnicoTicketDto>> Tecnicos() => flujo.TecnicosAsync(Usuario);
     [HttpGet("configuracion")] public Task<ConfiguracionTicketsDto> Configuracion() => flujo.ConfiguracionAsync(Usuario);
     [HttpPut("configuracion")] public async Task<IActionResult> Configurar(ConfiguracionTicketsDto dto) { await flujo.GuardarConfiguracionAsync(dto, Usuario); return NoContent(); }

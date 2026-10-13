@@ -17,9 +17,19 @@ BEGIN
     ELSE IF @Operacion = 'Usuarios'
         SELECT IdUsuario,Nombre FROM Usuario WHERE IdCliente IS NULL ORDER BY Nombre,IdUsuario;
     ELSE IF @Operacion = 'Clientes'
-        SELECT IdCliente, Empresa, Contacto, Correo, Telefono FROM Cliente
-        WHERE Activo = 1 AND (NULLIF(@Texto,'') IS NULL OR Empresa LIKE '%' + @Texto + '%' OR Contacto LIKE '%' + @Texto + '%')
-        ORDER BY Empresa, IdCliente;
+        SELECT c.IdCliente, c.Empresa, COALESCE(ultimo.Contacto,c.Contacto) AS Contacto,
+               ultimo.Cargo, CASE WHEN ultimo.IdTicket IS NULL THEN c.Correo ELSE ultimo.Correo END AS Correo,
+               COALESCE(ultimo.Telefono,c.Telefono) AS Telefono
+        FROM Cliente c
+        OUTER APPLY (
+            SELECT TOP (1) g.IdTicket,g.Contacto,g.Cargo,g.Correo,g.Telefono
+            FROM TicketGestion g INNER JOIN Ticket t ON t.IdTicket=g.IdTicket
+            WHERE t.IdCliente=c.IdCliente AND t.Activo=1 AND t.Estado<>'Cancelada'
+            ORDER BY t.FechaRecepcion DESC,g.IdTicket DESC
+        ) ultimo
+        WHERE c.Activo = 1 AND (NULLIF(@Texto,'') IS NULL OR c.Empresa LIKE '%' + @Texto + '%'
+              OR COALESCE(ultimo.Contacto,c.Contacto) LIKE '%' + @Texto + '%')
+        ORDER BY c.Empresa, c.IdCliente;
     ELSE IF @Operacion = 'Tecnicos'
     BEGIN
         SELECT u.IdUsuario, u.Nombre, u.Correo,

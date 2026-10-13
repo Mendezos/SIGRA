@@ -26,6 +26,12 @@ public class ReglasTicketsTests
     public void CorreoSinEspaciosYValido(string valor,bool esperado)=>Assert.Equal(esperado,ReglasTickets.CorreoValido(valor));
     [Fact] public void SeriesNoSeRepitenEnLaMismaVisita()
     {var d=Entrada();d.Equipos.Add(new(){Marca="Kenwood",Modelo="TK",NumeroSerie=" serie-1 ",Problema="No enciende el radio"});Assert.Contains("No se puede registrar dos veces",Assert.Throws<ValidacionException>(()=>ReglasTickets.ValidarEntrada(d)).Errores[0]);}
+    [Fact] public void EquipoNuloSeRechazaComoDatoInvalido()
+    {
+        var d = Entrada(); d.Equipos = [null!];
+        var ex = Assert.Throws<ValidacionException>(() => ReglasTickets.ValidarEntrada(d));
+        Assert.Contains(ex.Errores, e => e.Contains("equipo") && e.Contains("válido"));
+    }
     [Fact] public void ObligatoriosEnumeranEtiquetas()
     {var d=Entrada();d.Contacto="";d.Telefono="";var ex=Assert.Throws<ValidacionException>(()=>ReglasTickets.ValidarEntrada(d));Assert.Contains(ex.Errores,x=>x.StartsWith("Nombre de contacto"));Assert.Contains(ex.Errores,x=>x.StartsWith("Teléfono de contacto"));}
     [Theory] [InlineData(false,true)] [InlineData(true,false)]

@@ -16,9 +16,10 @@ export default function EntradaTicketModal({ boleta, soloAccesorios = false, onC
     useEffect(() => { let vigente = true; api.clientes().then(c => vigente && setClientes(c)).catch(e => vigente && setError(e.message)); return () => { vigente = false; }; }, []);
     function campo(key, value) { setDatos(d => ({ ...d, [key]: value })); }
     function empresa(value) {
-        const cliente = clientes.find(c => c.empresa.toLowerCase() === value.toLowerCase());
+        const cliente = clientes.find(c => c.empresa.trim().toLowerCase() === value.trim().toLowerCase());
         setDatos(d => ({ ...d, empresa: value, idCliente: cliente?.idCliente ?? null,
-            ...(cliente ? { contacto: cliente.contacto ?? "", telefono: cliente.telefono ?? "", correo: cliente.correo ?? "" } : {}) }));
+            ...(cliente ? { contacto: cliente.contacto ?? "", telefono: cliente.telefono ?? "", correo: cliente.correo ?? "", cargo: cliente.cargo ?? "" }
+                : d.idCliente != null ? { contacto: "", telefono: "", correo: "", cargo: "" } : {}) }));
     }
     function equipo(indice, key, value) { setDatos(d => ({ ...d, equipos: d.equipos.map((e, i) => i === indice ? { ...e, [key]: value, ...(key === "tipo" ? { especialidad: value === "Repetidora" ? "Repetidoras" : "Radios" } : {}) } : e) })); }
     async function guardar(body) {

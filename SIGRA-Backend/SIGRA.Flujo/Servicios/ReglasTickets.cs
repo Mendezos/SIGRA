@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net.Mail;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
@@ -77,6 +77,7 @@ public static class ReglasTickets
         var series = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var equipo in dto.Equipos)
         {
+            if (equipo is null) { errores.Add("Debe ingresar un equipo válido."); continue; }
             equipo.Marca = (equipo.Marca ?? "").Trim(); equipo.Modelo = (equipo.Modelo ?? "").Trim();
             equipo.NumeroSerie = (equipo.NumeroSerie ?? "").Trim(); equipo.Problema = (equipo.Problema ?? "").Trim();
             Requerido(equipo.Marca, 100, "Marca del equipo", errores);

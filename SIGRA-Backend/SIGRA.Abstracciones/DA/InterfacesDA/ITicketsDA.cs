@@ -12,7 +12,7 @@ public interface ITicketsDA
     Task<TicketDetalleDto?> ObtenerAsync(int idTicket);
     Task<SeguimientoTicketDto?> SeguimientoAsync(string codigo);
     Task<List<SeguimientoTicketDto>> SeguimientoClienteAsync(string empresa);
-    Task<List<ClienteDto>> ClientesAsync(string? texto);
+    Task<List<ClienteTicketDto>> ClientesAsync(string? texto);
     Task<List<TecnicoTicketDto>> TecnicosAsync();
     Task<ConfiguracionTicketsDto> ConfiguracionAsync();
     Task GuardarConfiguracionAsync(ConfiguracionTicketsDto configuracion, int idUsuario);

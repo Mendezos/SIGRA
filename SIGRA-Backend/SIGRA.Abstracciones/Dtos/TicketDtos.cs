@@ -1,5 +1,15 @@
 namespace SIGRA.Abstracciones.Dtos;
 
+public class ClienteTicketDto
+{
+    public int IdCliente { get; set; }
+    public string Empresa { get; set; } = "";
+    public string? Contacto { get; set; }
+    public string? Cargo { get; set; }
+    public string? Correo { get; set; }
+    public string? Telefono { get; set; }
+}
+
 public class EquipoEntradaDto
 {
     public int? IdTicketEquipo { get; set; }

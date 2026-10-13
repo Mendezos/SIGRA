@@ -25,6 +25,11 @@ export default function DetalleTicketModal({ inicial, user, onClose, onChanged, 
             else setError(mensajeError(e));
         } finally { setOcupado(false); }
     }
+    function cerrarAccion() {
+        if (ocupado) return;
+        if (pendiente) setPendiente(null);
+        else setModo(null);
+    }
     async function abrirAsignacion() {
         setError(""); setIdTecnico(""); setFechaEstimada(""); setModo("asignar");
         try { setTecnicos(await api.tecnicos()); } catch (e) { setError(e.message); }
@@ -74,13 +79,13 @@ export default function DetalleTicketModal({ inicial, user, onClose, onChanged, 
         </Modal>
         {modo === "editar" && <EntradaTicketModal boleta={boleta} soloAccesorios={tecnico(user)} onClose={() => setModo(null)} onSaved={actualizado} />}
         {modo === "trabajo" && <TrabajoTicketModal boleta={boleta} onClose={() => setModo(null)} onSaved={actualizado} />}
-        <Modal open={modo === "asignar"} title="Asignar técnico" onClose={() => !ocupado && setModo(null)} footer={<><Button variant="ghost" onClick={() => setModo(null)}>Cancelar</Button><Button variant="primary" type="submit" form="asignar-ticket" disabled={ocupado}>Asignar</Button></>}>
+        <Modal open={modo === "asignar"} title="Asignar técnico" onClose={cerrarAccion} footer={<><Button variant="ghost" onClick={() => setModo(null)}>Cancelar</Button><Button variant="primary" type="submit" form="asignar-ticket" disabled={ocupado}>Asignar</Button></>}>
             {error && <Notice tone="error">{error}</Notice>}<form id="asignar-ticket" className="space-y-4" onSubmit={e => { e.preventDefault(); accion("asignacion", { idTecnico: Number(idTecnico), fechaEstimada: fechaEstimada || null }); }}><FieldLabel label="Técnico responsable *"><select className={inputClass + " w-full"} style={inputStyle} value={idTecnico} required onChange={e => setIdTecnico(e.target.value)}><option value="">Seleccionar...</option>{tecnicos.map(t => <option key={t.idUsuario} value={t.idUsuario}>{t.nombre} · {t.totalAbiertas} boletas abiertas</option>)}</select></FieldLabel><FieldLabel label="Fecha estimada (opcional)"><input type="date" className={inputClass + " w-full"} style={inputStyle} value={fechaEstimada} onChange={e => setFechaEstimada(e.target.value)} /></FieldLabel></form>
         </Modal>
-        <Modal open={["cancelar", "inactivar"].includes(modo)} title={modo === "cancelar" ? "Cancelar servicio" : "Inactivar boleta"} onClose={() => !ocupado && setModo(null)} footer={<><Button variant="ghost" onClick={() => setModo(null)}>Volver</Button><Button variant="danger" type="submit" form="motivo-ticket" disabled={ocupado}>Continuar</Button></>}>
+        <Modal open={["cancelar", "inactivar"].includes(modo)} title={modo === "cancelar" ? "Cancelar servicio" : "Inactivar boleta"} onClose={cerrarAccion} footer={<><Button variant="ghost" onClick={() => setModo(null)}>Volver</Button><Button variant="danger" type="submit" form="motivo-ticket" disabled={ocupado}>Continuar</Button></>}>
             <form id="motivo-ticket" onSubmit={e => { e.preventDefault(); setPendiente({ operacion: modo, datos: { motivo }, mensaje: `${modo === "cancelar" ? "Se cancelará el servicio" : "Se inactivará esta boleta"} conservando su historial. Motivo: ${motivo}` }); }}><FieldLabel label="Motivo *"><textarea className={inputClass + " w-full"} style={inputStyle} value={motivo} required maxLength={500} rows={4} onChange={e => setMotivo(e.target.value)} /></FieldLabel></form>
         </Modal>
-        <Modal open={modo === "correo"} title="Enviar comprobante original" onClose={() => !ocupado && setModo(null)} footer={<><Button variant="ghost" onClick={() => setModo(null)}>Cancelar</Button><Button variant="primary" type="submit" form="correo-ticket" disabled={ocupado || !correoConfirmado}>{ocupado ? "Enviando..." : "Enviar comprobante"}</Button></>}>
+        <Modal open={modo === "correo"} title="Enviar comprobante original" onClose={cerrarAccion} footer={<><Button variant="ghost" onClick={() => setModo(null)}>Cancelar</Button><Button variant="primary" type="submit" form="correo-ticket" disabled={ocupado || !correoConfirmado}>{ocupado ? "Enviando..." : "Enviar comprobante"}</Button></>}>
             {error && <Notice tone="error">{error}</Notice>}<form id="correo-ticket" className="space-y-4" onSubmit={enviar}><FieldLabel label="Correo del destinatario *"><input type="email" className={inputClass + " w-full"} style={inputStyle} required maxLength={150} value={correo} onChange={e => { setCorreo(e.target.value); setCorreoConfirmado(false); }} /></FieldLabel><label className="text-sm flex items-center gap-2"><input type="checkbox" checked={correoConfirmado} onChange={e => setCorreoConfirmado(e.target.checked)} />Confirmo que esta dirección es correcta</label><Button onClick={() => documento(true)} disabled={ocupado}>Vista previa / imprimir</Button></form>
         </Modal>
         <ConfirmModal open={!!pendiente} title="Confirmar operación" message={pendiente?.mensaje} variant={["cancelar", "inactivar"].includes(pendiente?.operacion) ? "danger" : "primary"} confirmLabel={ocupado ? "Guardando..." : "Confirmar"} onCancel={() => !ocupado && setPendiente(null)} onConfirm={() => !ocupado && accion(pendiente.operacion, pendiente.datos)} />

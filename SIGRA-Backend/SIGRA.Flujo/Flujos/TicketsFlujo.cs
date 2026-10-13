@@ -67,7 +67,7 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
         return await da.SeguimientoClienteAsync(empresa.Trim());
     }
 
-    public async Task<List<ClienteDto>> ClientesAsync(string? texto, int idUsuario)
+    public async Task<List<ClienteTicketDto>> ClientesAsync(string? texto, int idUsuario)
     { await Actor(idUsuario); return await da.ClientesAsync(ReglasTickets.Limpio(texto)); }
 
     public async Task<List<TecnicoTicketDto>> TecnicosAsync(int idUsuario)
@@ -125,6 +125,7 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
     public async Task<TicketDetalleDto> EditarAsync(int idTicket, EditarTicketDto dto, int idUsuario)
     {
         var a = await Actor(idUsuario, "Edicion"); var actual = await Ticket(idTicket); ReglasTickets.Editable(actual);
+        ReglasTickets.ValidarEntrada(dto);
         if (ReglasTickets.Tecnico(a))
         {
             Responsable(a, actual);
@@ -136,7 +137,6 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
             ReglasTickets.Exigir(generalesIguales && equiposIguales, "El técnico puede editar los accesorios y datos técnicos; los datos de empresa y contacto corresponden a recepción o coordinación.");
         }
         else ReglasTickets.Exigir(ReglasTickets.Recepcionista(a) || ReglasTickets.Gestion(a), "Tu rol no puede editar los datos generales.");
-        ReglasTickets.ValidarEntrada(dto);
         if (dto.TipoServicio != actual.TipoServicio && (actual.Estado != "Creada" || actual.IdTecnicoAsignado is not null))
             throw new ReglaNegocioException("El tipo de servicio solo puede corregirse en una boleta creada sin asignar.");
         await ValidarClienteEquipos(dto);

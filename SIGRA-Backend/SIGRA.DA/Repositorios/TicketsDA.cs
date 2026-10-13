@@ -80,8 +80,8 @@ public class TicketsDA(IConexionFactory conexionFactory) : ITicketsDA
     public Task<List<SeguimientoTicketDto>> SeguimientoClienteAsync(string empresa) =>
         ConsultarAsync<SeguimientoTicketDto>("sp_Ticket_Seguimiento", new { Empresa = empresa });
 
-    public Task<List<ClienteDto>> ClientesAsync(string? texto) =>
-        ConsultarAsync<ClienteDto>("sp_Ticket_Catalogos", new { Operacion = "Clientes", Texto = texto });
+    public Task<List<ClienteTicketDto>> ClientesAsync(string? texto) =>
+        ConsultarAsync<ClienteTicketDto>("sp_Ticket_Catalogos", new { Operacion = "Clientes", Texto = texto });
 
     public async Task<List<TecnicoTicketDto>> TecnicosAsync()
     {
