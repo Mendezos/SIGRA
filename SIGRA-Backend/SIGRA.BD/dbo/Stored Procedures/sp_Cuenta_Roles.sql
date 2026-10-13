@@ -1,10 +1,11 @@
-CREATE PROCEDURE dbo.sp_Cuenta_Roles
+﻿CREATE PROCEDURE dbo.sp_Cuenta_Roles
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT IdRol, Nombre
+    -- Devuelve todos los roles (activos e inactivos); la interfaz decide
+    -- cuáles se pueden asignar.
+    SELECT IdRol, Nombre, Activo
     FROM dbo.Rol
-    WHERE Activo = 1
     ORDER BY Nombre;
 END;

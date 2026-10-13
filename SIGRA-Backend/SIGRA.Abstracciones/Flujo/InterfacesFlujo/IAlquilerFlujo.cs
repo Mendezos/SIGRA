@@ -20,4 +20,14 @@ public interface IAlquilerFlujo
 
     Task<List<RadioDto>> ListarRadiosAsync(string? texto);
     Task<RadioDto> ObtenerRadioPorSerieAsync(string numeroSerie);
+
+    Task<List<RepetidoraDto>> ListarRepetidorasAsync(string? texto, bool? facturable);
+    Task<RepetidoraDto> ObtenerRepetidoraPorSerieAsync(string numeroSerie);
+    Task<ChecklistRepetidoraDto> ObtenerChecklistAsync(string numeroSerie);
+    Task<ChecklistRepetidoraDto> GuardarChecklistAsync(string numeroSerie, GuardarChecklistDto dto, int idUsuario);
+    Task<List<DocumentoRepetidoraDto>> ListarDocumentosAsync(string numeroSerie);
+    Task<DocumentoRepetidoraDto> AdjuntarDocumentoAsync(string numeroSerie, SubirDocumentoDto dto, int idUsuario);
+    Task<DocumentoArchivoDto> ObtenerDocumentoAsync(int idDocumento);
+    Task<List<BitacoraMantenimientoDto>> ObtenerBitacoraRepetidoraAsync(string numeroSerie);
+    Task<RepetidoraDto> GuardarFichaRepetidoraAsync(GuardarFichaRepetidoraDto dto, bool esEdicion, int idUsuario);
 }

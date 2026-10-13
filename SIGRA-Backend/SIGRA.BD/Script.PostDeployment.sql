@@ -1,4 +1,4 @@
-/*
+﻿/*
 Datos semilla para poder probar GUA-013 a GUA-017 de punta a punta.
 Idempotente: se puede volver a publicar el proyecto sin duplicar filas.
 */
@@ -84,7 +84,7 @@ VALUES
 
     -- Coordinador técnico
     (N'Coordinador técnico', 2, 1, 1, 1, 1),
-    (N'Coordinador técnico', 3, 1, 0, 0, 0),
+    (N'Coordinador técnico', 3, 1, 1, 1, 0),
     (N'Coordinador técnico', 4, 1, 1, 1, 0),
     (N'Coordinador técnico', 5, 1, 0, 0, 0),
     (N'Coordinador técnico', 8, 1, 1, 1, 1),
@@ -92,7 +92,7 @@ VALUES
 
     -- Técnico
     (N'Técnico', 2, 1, 1, 1, 0),
-    (N'Técnico', 3, 1, 0, 0, 0),
+    (N'Técnico', 3, 1, 1, 1, 0),
     (N'Técnico', 4, 1, 1, 1, 0),
     (N'Técnico', 5, 1, 0, 0, 0),
     (N'Técnico', 8, 1, 0, 0, 0),
@@ -324,3 +324,19 @@ BEGIN
     INSERT INTO ContactoHistorial (IdContacto, IdUsuario, IdVendedorAnterior, IdVendedorNuevo, Motivo)
     SELECT IdContacto, IdUsuarioRegistra, NULL, @IdVendedorCt, N'Asignación inicial' FROM ContactoInicial;
 END
+
+
+-- 9) Requisitos técnicos previos a la instalación de una repetidora (checklist, CARR-011)
+INSERT INTO RequisitoInstalacion (Nombre, Orden)
+SELECT v.Nombre, v.Orden
+FROM (VALUES
+    (N'Sitio de instalación accesible y autorizado por el cliente', 1),
+    (N'Energía eléctrica disponible y estable en el sitio', 2),
+    (N'Torre o mástil en condiciones de soportar la antena', 3),
+    (N'Sistema de puesta a tierra y protección contra descargas', 4),
+    (N'Antena y línea de transmisión (cable coaxial) verificadas', 5),
+    (N'Duplexor y accesorios completos según la ficha técnica', 6),
+    (N'Frecuencias de transmisión y recepción autorizadas', 7),
+    (N'Equipo probado en taller antes de salir al sitio', 8)
+) AS v(Nombre, Orden)
+WHERE NOT EXISTS (SELECT 1 FROM RequisitoInstalacion r WHERE r.Nombre = v.Nombre);

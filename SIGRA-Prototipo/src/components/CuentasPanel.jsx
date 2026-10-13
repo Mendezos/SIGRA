@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Lock, RefreshCw, ScrollText, UserCog, UserPlus, UserRound, X } from "lucide-react";
 import DataTable from "./DataTable";
 import RecordForm from "./RecordForm";
 import Modal from "./Modal";
@@ -8,6 +9,7 @@ import {
     DetailGrid,
     FieldLabel,
     Notice,
+    Pill,
     SubTabs,
 } from "./ui";
 import { COLORS, inputClass, inputStyle } from "./uiTheme";
@@ -15,6 +17,15 @@ import { MODULES } from "../data/modules";
 import { MODULE_KEY_TO_ID } from "../data/roleCapabilities";
 import * as api from "../services/cuentasService";
 import { desbloquearCuenta } from "../services/adminService";
+import {
+    ACCIONES_AUDITORIA,
+    ENTIDADES_AUDITORIA,
+    formatearColones,
+    formatearFechaCorta,
+    formatearFechaHora,
+    nombreAccion,
+    nombreEntidad,
+} from "../utils/format";
 
 const ESTADOS_CIVILES = ["Soltero/a", "Casado/a", "Unión libre", "Divorciado/a", "Viudo/a"];
 
@@ -29,73 +40,48 @@ const GRADOS_ACADEMICOS = [
     "Doctorado",
 ];
 
-const fecha = (value) => value
-    ? new Date(value).toLocaleString("es-CR", {
-        timeZone: "America/Costa_Rica",
-    })
-    : "Sin registro";
+const ACCIONES_FILTRO = [
+    "LOGIN_EXITOSO", "LOGIN_FALLIDO", "LOGIN_BLOQUEADO", "LOGIN_CUENTA_INACTIVA", "LOGOUT",
+    "CUENTA_BLOQUEADA", "CUENTA_DESBLOQUEADA", "CUENTA_CREADA", "CUENTA_EDITADA",
+    "CUENTA_DESACTIVADA", "CUENTA_REACTIVADA", "ROL_CAMBIADO",
+    "PASSWORD_CAMBIADA", "PASSWORD_RESTABLECIDA", "RECUPERACION_SOLICITADA", "PERFIL_ACTUALIZADO",
+    "ROL_CREADO", "ROL_EDITADO", "ROL_ACTIVADO", "ROL_DESACTIVADO", "PERMISOS_DEFINIDOS",
+    "POLITICA_ACTUALIZADA",
+].filter((codigo) => ACCIONES_AUDITORIA[codigo]);
 
-const fechaCorta = (value) => value
-    ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString("es-CR")
-    : "";
+const hoy = () => new Date().toISOString().slice(0, 10);
 
-const colones = (value) => value != null
-    ? new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC" }).format(value)
-    : "";
+// Convierte valores antiguos de la BD (texto libre) a una opción de la lista.
+function opcionDeLista(valor, opciones) {
+    const texto = String(valor ?? "").trim().toLowerCase();
+    if (!texto) return "";
+
+    const exacta = opciones.find((o) => o.toLowerCase() === texto);
+    if (exacta) return exacta;
+
+    // "Soltero" -> "Soltero/a", "Casado" -> "Casado/a", etc.
+    return opciones.find((o) => o.toLowerCase().split("/")[0] === texto) ?? "";
+}
 
 const campos = [
     { key: "nombre", label: "Nombre completo", required: true, maxLength: 150 },
     { key: "correo", label: "Correo corporativo", type: "email", required: true, maxLength: 150 },
-    { key: "fechaNacimiento", label: "Fecha de nacimiento", type: "date", required: true },
+    { key: "fechaNacimiento", label: "Fecha de nacimiento", type: "date", required: true, max: hoy() },
     { key: "telefono", label: "Teléfono", type: "tel", required: true, maxLength: 20 },
     { key: "direccion", label: "Dirección", type: "textarea", required: true, maxLength: 300 },
     { key: "estadoCivil", label: "Estado civil", type: "select", options: ESTADOS_CIVILES, required: true },
     { key: "gradoAcademico", label: "Grado académico", type: "select", options: GRADOS_ACADEMICOS, required: true },
-    { key: "salario", label: "Salario", type: "number", min: 0, step: "0.01", required: true },
-];
-
-const columnas = [
-    { key: "nombre", label: "Nombre" },
-    { key: "cedula", label: "Cédula" },
-    { key: "correo", label: "Correo" },
-    { key: "telefono", label: "Teléfono" },
-    { key: "rol", label: "Rol" },
-    { key: "estado", label: "Estado" },
-    { key: "bloqueo", label: "Bloqueo" },
-    { key: "ultimoAccesoTexto", label: "Último acceso" },
+    { key: "salario", label: "Salario (₡)", type: "number", min: 0, step: "0.01", required: true },
 ];
 
 const columnasAuditoria = [
-    { key: "fechaTexto", label: "Fecha" },
-    { key: "autor", label: "Responsable" },
+    { key: "fechaTexto", label: "Fecha y hora", nowrap: true },
+    { key: "autor", label: "Responsable", nowrap: true },
     { key: "accionTexto", label: "Acción" },
-    { key: "entidad", label: "Entidad" },
-    { key: "idEntidad", label: "Registro" },
+    { key: "entidadTexto", label: "Tipo", nowrap: true },
+    { key: "objetivo", label: "Afectado", nowrap: true },
     { key: "resumenTexto", label: "Detalle" },
 ];
-
-const ACCIONES_AUDITORIA = {
-    LOGIN_EXITOSO: "Inicio de sesión exitoso",
-    LOGIN_FALLIDO: "Intento de inicio de sesión fallido",
-    LOGIN_BLOQUEADO: "Intento con cuenta bloqueada",
-    LOGIN_CUENTA_INACTIVA: "Intento con cuenta inactiva",
-    CUENTA_BLOQUEADA: "Cuenta bloqueada",
-    CUENTA_DESBLOQUEADA: "Cuenta desbloqueada",
-    CUENTA_CREADA: "Cuenta creada",
-    CUENTA_EDITADA: "Cuenta editada",
-    CUENTA_DESACTIVADA: "Cuenta inactivada",
-    CUENTA_REACTIVADA: "Cuenta reactivada",
-    CUENTA_ROL_CAMBIADO: "Cambio de rol",
-    PASSWORD_CAMBIADA: "Contraseña cambiada",
-    PERFIL_ACTUALIZADO: "Perfil actualizado",
-    ROL_CREADO: "Rol creado",
-    ROL_EDITADO: "Rol editado",
-    ROL_ACTIVADO: "Rol activado",
-    ROL_DESACTIVADO: "Rol desactivado",
-    PERMISOS_DEFINIDOS: "Permisos actualizados",
-    CambioRol: "Cambio de rol",
-    Creacion: "Cuenta creada",
-};
 
 const ETIQUETAS_CAMPO = {
     nombre: "Nombre",
@@ -116,14 +102,6 @@ const ETIQUETAS_CAMPO = {
 
 const CAMPOS_OCULTOS = ["idUsuario", "idRol"];
 
-function nombreAccion(accion) {
-    if (!accion) return "";
-    if (ACCIONES_AUDITORIA[accion]) return ACCIONES_AUDITORIA[accion];
-
-    const texto = accion.replace(/_/g, " ").toLowerCase();
-    return texto.charAt(0).toUpperCase() + texto.slice(1);
-}
-
 function etiquetaCampo(key) {
     if (ETIQUETAS_CAMPO[key]) return ETIQUETAS_CAMPO[key];
 
@@ -135,9 +113,9 @@ function valorCampo(key, valor) {
     if (valor === null || valor === undefined || valor === "") return "Sin registro";
     if (key === "activo") return valor ? "Activo" : "Inactivo";
     if (key === "bloqueada") return valor ? "Bloqueada" : "Sin bloqueo";
-    if (key === "salario") return colones(valor);
-    if (key === "fechaNacimiento") return fechaCorta(valor);
-    if (key === "fechaCreacion" || key === "ultimoAcceso") return fecha(valor);
+    if (key === "salario") return formatearColones(valor);
+    if (key === "fechaNacimiento") return formatearFechaCorta(valor);
+    if (key === "fechaCreacion" || key === "ultimoAcceso") return formatearFechaHora(valor);
 
     return String(valor);
 }
@@ -190,21 +168,14 @@ function resumirDetalle(detalle) {
 
     if (!detalle) return "—";
 
-    return detalle.length > 60 ? `${detalle.slice(0, 60)}…` : detalle;
-}
-
-function conOpcionActual(campo, valorActual) {
-    if (!campo.options || !valorActual || campo.options.includes(valorActual)) {
-        return campo;
-    }
-
-    return { ...campo, options: [valorActual, ...campo.options] };
+    return detalle.length > 70 ? `${detalle.slice(0, 70)}…` : detalle;
 }
 
 function PermisosRol({ rol }) {
     if (!rol) return null;
 
     const acciones = ["lectura", "escritura", "edicion", "eliminacion"];
+    const nombres = { lectura: "lectura", escritura: "escritura", edicion: "edición", eliminacion: "eliminación" };
 
     return (
         <div
@@ -221,7 +192,7 @@ function PermisosRol({ rol }) {
                 const modulo = MODULES.find(
                     (m) => MODULE_KEY_TO_ID[m.id] === permiso.idModulo
                 );
-                const concedidos = acciones.filter((a) => permiso[a]);
+                const concedidos = acciones.filter((a) => permiso[a]).map((a) => nombres[a]);
 
                 return (
                     <p key={permiso.idModulo} className="text-sm py-0.5">
@@ -258,10 +229,10 @@ function DetalleAuditoria({ registro }) {
             <DetailGrid
                 items={[
                     { label: "Acción", value: nombreAccion(registro.accion) },
-                    { label: "Fecha y hora", value: fecha(registro.fecha) },
+                    { label: "Fecha y hora", value: formatearFechaHora(registro.fecha) },
                     { label: "Responsable", value: registro.autor },
-                    { label: "Entidad", value: registro.entidad },
-                    { label: "N.º de registro", value: registro.idEntidad != null ? String(registro.idEntidad) : "" },
+                    { label: "Tipo de registro", value: nombreEntidad(registro.entidad) },
+                    { label: "Afectado", value: registro.objetivo },
                     { label: "Módulo", value: registro.modulo },
                 ]}
             />
@@ -336,65 +307,258 @@ function DetalleAuditoria({ registro }) {
     );
 }
 
-export default function CuentasPanel({ user }) {
+function DetalleGeneral({ cuenta }) {
+    return (
+        <>
+            <DetailGrid
+                title="Datos personales"
+                items={[
+                    { label: "Nombre completo", value: cuenta.nombre },
+                    { label: "Cédula", value: cuenta.cedula },
+                    { label: "Fecha de nacimiento", value: formatearFechaCorta(cuenta.fechaNacimiento, "") },
+                    { label: "Estado civil", value: cuenta.estadoCivil },
+                    { label: "Grado académico", value: cuenta.gradoAcademico },
+                    { label: "Teléfono", value: cuenta.telefono },
+                    { label: "Correo corporativo", value: cuenta.correo },
+                    { label: "Dirección", value: cuenta.direccion, wide: true },
+                ]}
+            />
+            <DetailGrid
+                title="Cuenta y acceso"
+                items={[
+                    { label: "Rol", value: cuenta.rol },
+                    { label: "Salario", value: formatearColones(cuenta.salario, "") },
+                    { label: "Estado", value: cuenta.activo ? "Activo" : "Inactivo" },
+                    {
+                        label: "Bloqueo",
+                        value: cuenta.bloqueada
+                            ? `Bloqueada hasta ${formatearFechaHora(cuenta.bloqueadoHasta)}`
+                            : "Sin bloqueo",
+                    },
+                    { label: "Intentos fallidos de acceso", value: String(cuenta.intentosFallidos ?? 0) },
+                    { label: "Fecha de creación", value: formatearFechaHora(cuenta.fechaCreacion, "") },
+                    { label: "Último acceso", value: formatearFechaHora(cuenta.ultimoAcceso, "") },
+                ]}
+            />
+        </>
+    );
+}
+
+const columnasCuentas = [
+    {
+        key: "nombre",
+        label: "Nombre",
+        nowrap: true,
+        render: (c) => <span style={{ fontWeight: 600 }}>{c.nombre}</span>,
+    },
+    { key: "cedula", label: "Cédula", nowrap: true },
+    { key: "correo", label: "Correo", nowrap: true },
+    { key: "telefono", label: "Teléfono", nowrap: true },
+    { key: "rol", label: "Rol", nowrap: true },
+    {
+        key: "estadoTexto",
+        label: "Estado",
+        render: (c) => (
+            <Pill tone={c.activo ? "positive" : "negative"}>{c.activo ? "Activo" : "Inactivo"}</Pill>
+        ),
+    },
+    {
+        key: "bloqueoTexto",
+        label: "Bloqueo",
+        render: (c) => (
+            <span title={c.bloqueada ? `Hasta ${formatearFechaHora(c.bloqueadoHasta)}` : undefined}>
+                <Pill tone={c.bloqueada ? "warning" : "neutral"}>
+                    {c.bloqueada ? "Bloqueada" : "Sin bloqueo"}
+                </Pill>
+            </span>
+        ),
+    },
+    { key: "fechaNacimientoTexto", label: "Nacimiento", nowrap: true },
+    { key: "estadoCivil", label: "Estado civil", nowrap: true },
+    { key: "gradoAcademico", label: "Grado académico", nowrap: true },
+    {
+        key: "direccion",
+        label: "Dirección",
+        render: (c) => (
+            <span className="block max-w-[16rem] truncate" title={c.direccion ?? undefined}>
+                {c.direccion || "—"}
+            </span>
+        ),
+    },
+    { key: "salarioTexto", label: "Salario", nowrap: true, align: "right" },
+    { key: "fechaCreacionTexto", label: "Creación", nowrap: true },
+    { key: "ultimoAccesoTexto", label: "Último acceso", nowrap: true },
+];
+
+const FILTROS_INICIALES = { texto: "", idRol: "", activo: "", bloqueada: "" };
+
+const FILTROS_AUDITORIA_INICIALES = {
+    accion: "", entidad: "", idAutor: "", idUsuarioAfectado: "", desde: "", hasta: "",
+};
+
+export default function CuentasPanel({ user, onChanged }) {
     const [tab, setTab] = useState("cuentas");
-    const [cuentas, setCuentas] = useState([]);
     const [roles, setRoles] = useState([]);
-    const [auditoria, setAuditoria] = useState([]);
     const [seleccionada, setSeleccionada] = useState(null);
     const [registroAuditoria, setRegistroAuditoria] = useState(null);
     const [modo, setModo] = useState(null);
     const [idRol, setIdRol] = useState("");
     const [pendiente, setPendiente] = useState(null);
-    const [cargando, setCargando] = useState(true);
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState("");
     const [aviso, setAviso] = useState("");
+    const [version, setVersion] = useState(0);
 
-    const [filtros, setFiltros] = useState({
-        nombre: "", cedula: "", correo: "",
-        idRol: "", activo: "", bloqueada: "",
-    });
+    // Cuentas (paginadas en el servidor)
+    const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+    const [textoAplicado, setTextoAplicado] = useState("");
+    const [pagina, setPagina] = useState(1);
+    const [tamano, setTamano] = useState(10);
+    const [datos, setDatos] = useState({ items: [], total: 0 });
+    const [cargando, setCargando] = useState(true);
+    const [errorLista, setErrorLista] = useState("");
 
-    const [filtrosAuditoria, setFiltrosAuditoria] = useState({
-        entidad: "", idEntidad: "", idUsuarioAfectado: "",
-        idAutor: "", desde: "", hasta: "", accion: "",
-    });
+    // Bitácora (paginada en el servidor)
+    const [filtrosAuditoria, setFiltrosAuditoria] = useState(FILTROS_AUDITORIA_INICIALES);
+    const [paginaAuditoria, setPaginaAuditoria] = useState(1);
+    const [tamanoAuditoria, setTamanoAuditoria] = useState(10);
+    const [datosAuditoria, setDatosAuditoria] = useState({ items: [], total: 0 });
+    const [cargandoAuditoria, setCargandoAuditoria] = useState(false);
+    const [errorAuditoria, setErrorAuditoria] = useState("");
+    const [opcionesCuentas, setOpcionesCuentas] = useState([]);
 
     const administrador = user.role === "Administrador del sistema";
 
+    // Catálogo de roles
     useEffect(() => {
         if (!administrador) return;
 
         let vigente = true;
 
-        Promise.all([api.listarCuentas(), api.listarRoles()])
-            .then(([lista, catalogo]) => {
-                if (vigente) {
-                    setCuentas(lista);
-                    setRoles(catalogo);
-                }
+        api.listarRoles()
+            .then((catalogo) => {
+                if (vigente) setRoles(catalogo);
             })
             .catch((e) => {
-                if (vigente) {
-                    setError(e.message);
-                }
-            })
-            .finally(() => {
-                if (vigente) {
-                    setCargando(false);
-                }
+                if (vigente) setErrorLista(e.message);
             });
 
         return () => {
             vigente = false;
         };
-    }, [administrador]);
+    }, [administrador, version]);
+
+    // La búsqueda por texto espera a que se deje de escribir.
+    useEffect(() => {
+        const espera = setTimeout(() => {
+            setTextoAplicado(filtros.texto.trim());
+            setPagina(1);
+        }, 350);
+
+        return () => clearTimeout(espera);
+    }, [filtros.texto]);
+
+    // Listado de cuentas
+    useEffect(() => {
+        if (!administrador || tab !== "cuentas") return;
+
+        let vigente = true;
+
+        Promise.resolve()
+            .then(() => {
+                if (!vigente) return null;
+                setCargando(true);
+                setErrorLista("");
+
+                return api.listarCuentas({
+                    texto: textoAplicado,
+                    idRol: filtros.idRol,
+                    activo: filtros.activo,
+                    bloqueada: filtros.bloqueada,
+                    pagina,
+                    tamanoPagina: tamano,
+                });
+            })
+            .then((resultado) => {
+                if (!vigente || !resultado) return;
+
+                setDatos(resultado);
+                if (resultado.pagina !== pagina) setPagina(resultado.pagina);
+            })
+            .catch((e) => {
+                if (vigente) setErrorLista(e.message);
+            })
+            .finally(() => {
+                if (vigente) setCargando(false);
+            });
+
+        return () => {
+            vigente = false;
+        };
+    }, [administrador, tab, textoAplicado, filtros.idRol, filtros.activo, filtros.bloqueada, pagina, tamano, version]);
+
+    // Opciones de personas para filtrar la bitácora por nombre
+    useEffect(() => {
+        if (!administrador || tab !== "auditoria") return;
+
+        let vigente = true;
+
+        api.listarOpcionesCuentas()
+            .then((lista) => {
+                if (vigente) setOpcionesCuentas(lista);
+            })
+            .catch(() => {});
+
+        return () => {
+            vigente = false;
+        };
+    }, [administrador, tab, version]);
+
+    const rangoInvalido = !!filtrosAuditoria.desde
+        && !!filtrosAuditoria.hasta
+        && filtrosAuditoria.desde > filtrosAuditoria.hasta;
+
+    // Bitácora
+    useEffect(() => {
+        if (!administrador || tab !== "auditoria" || rangoInvalido) return;
+
+        let vigente = true;
+
+        Promise.resolve()
+            .then(() => {
+                if (!vigente) return null;
+                setCargandoAuditoria(true);
+                setErrorAuditoria("");
+
+                return api.listarAuditoria({
+                    ...filtrosAuditoria,
+                    pagina: paginaAuditoria,
+                    tamanoPagina: tamanoAuditoria,
+                });
+            })
+            .then((resultado) => {
+                if (!vigente || !resultado) return;
+
+                setDatosAuditoria(resultado);
+                if (resultado.pagina !== paginaAuditoria) setPaginaAuditoria(resultado.pagina);
+            })
+            .catch((e) => {
+                if (vigente) setErrorAuditoria(e.message);
+            })
+            .finally(() => {
+                if (vigente) setCargandoAuditoria(false);
+            });
+
+        return () => {
+            vigente = false;
+        };
+    }, [administrador, tab, rangoInvalido, filtrosAuditoria, paginaAuditoria, tamanoAuditoria, version]);
 
     if (!administrador) {
         return <p className="text-sm">La administración de cuentas está disponible para el administrador.</p>;
     }
 
+    const rolesActivos = roles.filter((r) => r.activo);
     const rolSeleccionado = roles.find((r) => r.idRol === Number(idRol));
 
     const rolField = {
@@ -402,12 +566,8 @@ export default function CuentasPanel({ user }) {
         label: "Rol",
         type: "select",
         required: true,
-        options: roles.map((r) => ({ value: r.idRol, label: r.nombre })),
+        options: rolesActivos.map((r) => ({ value: r.idRol, label: r.nombre })),
     };
-
-    const camposEdicion = campos.map((campo) =>
-        conOpcionActual(campo, seleccionada?.[campo.key])
-    );
 
     const camposFormulario = modo === "crear" ? [
         { key: "cedula", label: "Cédula", required: true, maxLength: 20 },
@@ -431,28 +591,26 @@ export default function CuentasPanel({ user }) {
             key: "motivo", label: "Motivo del desbloqueo",
             type: "textarea", required: true, maxLength: 500,
         },
-    ] : camposEdicion;
+    ] : campos;
 
-    const filas = cuentas.filter((cuenta) =>
-        ["nombre", "cedula", "correo"].every((key) =>
-            String(cuenta[key] ?? "").toLowerCase()
-                .includes(filtros[key].trim().toLowerCase())
-        )
-        && (!filtros.idRol || cuenta.idRol === Number(filtros.idRol))
-        && (!filtros.activo || cuenta.activo === (filtros.activo === "true"))
-        && (!filtros.bloqueada || cuenta.bloqueada === (filtros.bloqueada === "true"))
-    ).map((cuenta) => ({
+    const filas = datos.items.map((cuenta) => ({
         ...cuenta,
         id: cuenta.idUsuario,
-        estado: cuenta.activo ? "Activo" : "Inactivo",
-        bloqueo: cuenta.bloqueada ? "Bloqueada" : "Sin bloqueo",
-        ultimoAccesoTexto: fecha(cuenta.ultimoAcceso),
+        fechaNacimientoTexto: formatearFechaCorta(cuenta.fechaNacimiento, "—"),
+        salarioTexto: formatearColones(cuenta.salario, "—"),
+        fechaCreacionTexto: formatearFechaHora(cuenta.fechaCreacion, "—"),
+        ultimoAccesoTexto: formatearFechaHora(cuenta.ultimoAcceso, "Sin registro"),
     }));
 
-    const rolesFiltro = [...new Map([
-        ...cuentas.map((c) => ({ idRol: c.idRol, nombre: c.rol })),
-        ...roles,
-    ].map((r) => [r.idRol, r])).values()];
+    const filasAuditoria = datosAuditoria.items.map((a) => ({
+        ...a,
+        id: a.idAuditoria,
+        fechaTexto: formatearFechaHora(a.fecha),
+        accionTexto: nombreAccion(a.accion),
+        entidadTexto: nombreEntidad(a.entidad),
+        objetivo: a.objetivo || "—",
+        resumenTexto: resumirDetalle(a.detalle),
+    }));
 
     function abrir(tipo) {
         setError("");
@@ -462,55 +620,61 @@ export default function CuentasPanel({ user }) {
         setIdRol("");
     }
 
-    async function actualizarLista() {
-        setCargando(true);
-        setError("");
+    function cerrarFormulario() {
+        if (guardando) return;
 
-        try {
-            const [lista, catalogo] = await Promise.all([
-                api.listarCuentas(), api.listarRoles(),
-            ]);
-            setCuentas(lista);
-            setRoles(catalogo);
-        } catch (e) {
-            setError(e.message);
-        } finally {
-            setCargando(false);
-        }
+        setModo(null);
+        setPendiente(null);
+        setError("");
+    }
+
+    function valoresIniciales() {
+        if (modo === "crear") return { estado: "Activo", salario: "0" };
+
+        return {
+            ...seleccionada,
+            telefono: seleccionada?.telefono ?? "",
+            direccion: seleccionada?.direccion ?? "",
+            fechaNacimiento: seleccionada?.fechaNacimiento?.slice(0, 10) ?? "",
+            estadoCivil: opcionDeLista(seleccionada?.estadoCivil, ESTADOS_CIVILES),
+            gradoAcademico: opcionDeLista(seleccionada?.gradoAcademico, GRADOS_ACADEMICOS),
+            salario: seleccionada?.salario != null ? String(seleccionada.salario) : "",
+        };
     }
 
     function preparar(values) {
-        const datos = { ...values };
+        const datosForm = { ...values };
 
         if (modo === "crear" || modo === "editar") {
-            datos.salario = Number(datos.salario);
+            datosForm.salario = Number(datosForm.salario);
 
-            if (!Number.isFinite(datos.salario) || datos.salario < 0) {
+            if (!Number.isFinite(datosForm.salario) || datosForm.salario < 0) {
                 setError("El salario debe ser mayor o igual a cero.");
                 return;
             }
         }
 
         if (modo === "crear") {
-            datos.idRol = Number(datos.idRol);
-            datos.activo = datos.estado === "Activo";
-            delete datos.estado;
+            datosForm.idRol = Number(datosForm.idRol);
+            datosForm.activo = datosForm.estado === "Activo";
+            delete datosForm.estado;
         }
 
         if (modo === "rol" || modo === "reactivar") {
-            if (!rolSeleccionado) {
-                setError("Seleccioná un rol activo.");
+            if (!rolSeleccionado || !rolSeleccionado.activo) {
+                setError("Seleccione un rol activo.");
                 return;
             }
-            datos.idRol = rolSeleccionado.idRol;
+            datosForm.idRol = rolSeleccionado.idRol;
         }
 
-        if (modo === "rol" && datos.idRol === seleccionada.idRol) {
-            setError("Seleccioná un rol diferente al actual.");
+        if (modo === "rol" && datosForm.idRol === seleccionada.idRol) {
+            setError("Seleccione un rol diferente al actual.");
             return;
         }
 
-        setPendiente({ tipo: modo, datos });
+        setError("");
+        setPendiente({ tipo: modo, datos: datosForm });
     }
 
     async function guardar() {
@@ -520,16 +684,19 @@ export default function CuentasPanel({ user }) {
         setError("");
 
         try {
-            const { tipo, datos } = pendiente;
+            const { tipo, datos: cambios } = pendiente;
             const id = seleccionada?.idUsuario;
+            let mensaje = "Los cambios se guardaron correctamente.";
 
-            if (tipo === "crear") await api.crearCuenta(datos);
-            else if (tipo === "editar") await api.editarCuenta(id, datos);
-            else if (tipo === "rol") await api.cambiarRol(id, datos);
-            else if (tipo === "desbloquear") await desbloquearCuenta(id, datos.motivo);
-            else {
+            if (tipo === "crear") await api.crearCuenta(cambios);
+            else if (tipo === "editar") await api.editarCuenta(id, cambios);
+            else if (tipo === "rol") await api.cambiarRol(id, cambios);
+            else if (tipo === "desbloquear") {
+                const respuesta = await desbloquearCuenta(id, cambios.motivo);
+                mensaje = respuesta?.mensaje ?? "Cuenta desbloqueada correctamente.";
+            } else {
                 await api.cambiarEstado(id, {
-                    ...datos,
+                    ...cambios,
                     activo: tipo === "reactivar",
                 });
             }
@@ -537,17 +704,9 @@ export default function CuentasPanel({ user }) {
             setPendiente(null);
             setModo(null);
             setSeleccionada(null);
-            setAviso("Los cambios se guardaron correctamente.");
-
-            try {
-                const [lista, catalogo] = await Promise.all([
-                    api.listarCuentas(), api.listarRoles(),
-                ]);
-                setCuentas(lista);
-                setRoles(catalogo);
-            } catch {
-                setError("El cambio se guardó, pero el listado no se pudo actualizar.");
-            }
+            setAviso(mensaje);
+            setVersion((v) => v + 1);
+            onChanged?.();
         } catch (e) {
             setError([e.message, ...(e.errores ?? [])].join(" "));
             setPendiente(null);
@@ -556,43 +715,27 @@ export default function CuentasPanel({ user }) {
         }
     }
 
-    async function consultarAuditoria() {
-        setCargando(true);
-        setError("");
-        setRegistroAuditoria(null);
-
-        try {
-            setAuditoria(await api.listarAuditoria(filtrosAuditoria));
-        } catch (e) {
-            setError(e.message);
-        } finally {
-            setCargando(false);
-        }
+    function cambiarFiltro(key, value) {
+        setFiltros((f) => ({ ...f, [key]: value }));
+        if (key !== "texto") setPagina(1);
     }
 
-    function filtroTexto(key, label, type = "text", state = filtros, setState = setFiltros) {
-        return (
-            <FieldLabel key={key} label={label}>
-                <input
-                    type={type}
-                    min={type === "number" ? 1 : undefined}
-                    className={inputClass}
-                    style={inputStyle}
-                    value={state[key]}
-                    onChange={(e) => setState({ ...state, [key]: e.target.value })}
-                />
-            </FieldLabel>
-        );
+    function cambiarFiltroAuditoria(key, value) {
+        setFiltrosAuditoria((f) => ({ ...f, [key]: value }));
+        setPaginaAuditoria(1);
     }
 
-    function filtroSelect(key, label, opciones) {
+    const hayFiltros = Object.values(filtros).some(Boolean);
+    const hayFiltrosAuditoria = Object.values(filtrosAuditoria).some(Boolean);
+
+    function filtroSelect(key, label, opciones, state, onChange) {
         return (
             <FieldLabel key={key} label={label}>
                 <select
                     className={inputClass}
                     style={inputStyle}
-                    value={filtros[key]}
-                    onChange={(e) => setFiltros({ ...filtros, [key]: e.target.value })}
+                    value={state[key]}
+                    onChange={(e) => onChange(key, e.target.value)}
                 >
                     <option value="">Todos</option>
                     {opciones.map(([value, text]) => (
@@ -612,6 +755,22 @@ export default function CuentasPanel({ user }) {
         desbloquear: "Desbloquear cuenta",
     }[modo];
 
+    const iconoModo = {
+        crear: UserPlus,
+        editar: UserCog,
+        inactivar: UserCog,
+        reactivar: UserCog,
+        rol: UserCog,
+        desbloquear: Lock,
+    }[modo];
+
+    const confirmacion = {
+        rol: `Se asignará el rol ${rolSeleccionado?.nombre} a ${seleccionada?.nombre}. Se cerrarán sus sesiones anteriores.`,
+        reactivar: `Se reactivará la cuenta de ${seleccionada?.nombre} con el rol ${rolSeleccionado?.nombre}.`,
+        inactivar: `Se inactivará la cuenta de ${seleccionada?.nombre} y se cerrarán sus sesiones.`,
+        desbloquear: `Se desbloqueará la cuenta de ${seleccionada?.nombre}.`,
+    }[pendiente?.tipo] ?? "¿Confirmás que los datos son correctos?";
+
     return (
         <div>
             <SubTabs
@@ -620,38 +779,36 @@ export default function CuentasPanel({ user }) {
                     { key: "auditoria", label: "Bitácora" },
                 ]}
                 active={tab}
-                onSelect={(key) => {
-                    setTab(key);
-                    if (key === "auditoria") consultarAuditoria();
-                }}
+                onSelect={setTab}
             />
 
             {aviso && <Notice>{aviso}</Notice>}
-            {error && !modo && <Notice tone="error">{error}</Notice>}
-            {cargando && (
-                <p role="status" className="text-sm mb-3" style={{ color: COLORS.muted }}>
-                    Cargando...
-                </p>
-            )}
 
             {tab === "cuentas" ? (
                 <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                        {filtroTexto("nombre", "Nombre")}
-                        {filtroTexto("cedula", "Cédula")}
-                        {filtroTexto("correo", "Correo")}
-                        {filtroSelect(
-                            "idRol", "Rol",
-                            rolesFiltro.map((r) => [r.idRol, r.nombre])
-                        )}
-                        {filtroSelect("activo", "Estado", [["true", "Activas"], ["false", "Inactivas"]])}
-                        {filtroSelect("bloqueada", "Bloqueo", [["true", "Bloqueadas"], ["false", "Sin bloqueo"]])}
+                    {errorLista && <Notice tone="error">{errorLista}</Notice>}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                        <FieldLabel label="Buscar">
+                            <input
+                                type="search"
+                                className={inputClass}
+                                style={inputStyle}
+                                placeholder="Nombre, cédula, correo o teléfono"
+                                value={filtros.texto}
+                                maxLength={150}
+                                onChange={(e) => cambiarFiltro("texto", e.target.value)}
+                            />
+                        </FieldLabel>
+                        {filtroSelect("idRol", "Rol", roles.map((r) => [r.idRol, r.activo ? r.nombre : `${r.nombre} (inactivo)`]), filtros, cambiarFiltro)}
+                        {filtroSelect("activo", "Estado", [["true", "Activas"], ["false", "Inactivas"]], filtros, cambiarFiltro)}
+                        {filtroSelect("bloqueada", "Bloqueo", [["true", "Bloqueadas"], ["false", "Sin bloqueo"]], filtros, cambiarFiltro)}
                     </div>
 
-                    <div className="flex gap-2 mb-5">
+                    <div className="flex flex-wrap gap-2 mb-5">
                         <Button
                             variant="primary"
-                            disabled={cargando || roles.length === 0}
+                            disabled={rolesActivos.length === 0}
                             onClick={() => {
                                 setSeleccionada(null);
                                 abrir("crear");
@@ -659,61 +816,122 @@ export default function CuentasPanel({ user }) {
                         >
                             + Registrar cuenta
                         </Button>
-                        <Button disabled={cargando} onClick={actualizarLista}>
-                            Actualizar lista
+                        <Button onClick={() => setVersion((v) => v + 1)} disabled={cargando}>
+                            <span className="inline-flex items-center gap-2">
+                                <RefreshCw size={14} className={cargando ? "animate-spin" : ""} />
+                                Actualizar lista
+                            </span>
                         </Button>
+                        {hayFiltros && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setFiltros(FILTROS_INICIALES);
+                                    setTextoAplicado("");
+                                    setPagina(1);
+                                }}
+                            >
+                                <span className="inline-flex items-center gap-1.5">
+                                    <X size={14} /> Limpiar filtros
+                                </span>
+                            </Button>
+                        )}
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <DataTable
-                            columns={columnas}
-                            rows={filas}
-                            onRowClick={setSeleccionada}
-                            initialShowInactive
-                            hideInactiveToggle
-                        />
-                    </div>
+                    <DataTable
+                        columns={columnasCuentas}
+                        rows={filas}
+                        onRowClick={setSeleccionada}
+                        loading={cargando}
+                        stickyFirstColumn
+                        compact
+                        serverPagination={{
+                            page: pagina,
+                            pageSize: tamano,
+                            total: datos.total,
+                            onPageChange: setPagina,
+                            onPageSizeChange: (n) => {
+                                setTamano(n);
+                                setPagina(1);
+                            },
+                        }}
+                        emptyMessage="No hay cuentas que coincidan con los filtros."
+                    />
                 </>
             ) : (
                 <>
-                    <form
-                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5"
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            consultarAuditoria();
-                        }}
-                    >
-                        {[
-                            ["entidad", "Entidad", "text"],
-                            ["idEntidad", "N.º de registro", "number"],
-                            ["idUsuarioAfectado", "N.º usuario afectado", "number"],
-                            ["idAutor", "N.º responsable", "number"],
-                            ["accion", "Acción", "text"],
-                            ["desde", "Desde", "date"],
-                            ["hasta", "Hasta", "date"],
-                        ].map(([key, label, type]) =>
-                            filtroTexto(key, label, type, filtrosAuditoria, setFiltrosAuditoria)
-                        )}
-                        <div className="flex items-end">
-                            <Button variant="primary" type="submit" disabled={cargando}>
-                                Consultar
-                            </Button>
-                        </div>
-                    </form>
+                    {errorAuditoria && <Notice tone="error">{errorAuditoria}</Notice>}
+                    {rangoInvalido && (
+                        <Notice tone="error">La fecha inicial no puede ser posterior a la final.</Notice>
+                    )}
 
-                    <div className="overflow-x-auto">
-                        <DataTable
-                            columns={columnasAuditoria}
-                            rows={auditoria.map((a) => ({
-                                ...a,
-                                id: a.idAuditoria,
-                                fechaTexto: fecha(a.fecha),
-                                accionTexto: nombreAccion(a.accion),
-                                resumenTexto: resumirDetalle(a.detalle),
-                            }))}
-                            onRowClick={setRegistroAuditoria}
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        {filtroSelect("idAutor", "Responsable", opcionesCuentas.map((o) => [o.idUsuario, o.nombre]), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        {filtroSelect("idUsuarioAfectado", "Cuenta afectada", opcionesCuentas.map((o) => [o.idUsuario, o.nombre]), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        {filtroSelect("accion", "Acción", ACCIONES_FILTRO.map((a) => [a, nombreAccion(a)]), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        {filtroSelect("entidad", "Tipo de registro", Object.entries(ENTIDADES_AUDITORIA), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        <FieldLabel label="Desde">
+                            <input
+                                type="date"
+                                className={inputClass}
+                                style={inputStyle}
+                                value={filtrosAuditoria.desde}
+                                max={filtrosAuditoria.hasta || undefined}
+                                onChange={(e) => cambiarFiltroAuditoria("desde", e.target.value)}
+                            />
+                        </FieldLabel>
+                        <FieldLabel label="Hasta">
+                            <input
+                                type="date"
+                                className={inputClass}
+                                style={inputStyle}
+                                value={filtrosAuditoria.hasta}
+                                min={filtrosAuditoria.desde || undefined}
+                                onChange={(e) => cambiarFiltroAuditoria("hasta", e.target.value)}
+                            />
+                        </FieldLabel>
                     </div>
+
+                    <div className="flex flex-wrap gap-2 mb-5">
+                        <Button onClick={() => setVersion((v) => v + 1)} disabled={cargandoAuditoria}>
+                            <span className="inline-flex items-center gap-2">
+                                <RefreshCw size={14} className={cargandoAuditoria ? "animate-spin" : ""} />
+                                Actualizar
+                            </span>
+                        </Button>
+                        {hayFiltrosAuditoria && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setFiltrosAuditoria(FILTROS_AUDITORIA_INICIALES);
+                                    setPaginaAuditoria(1);
+                                }}
+                            >
+                                <span className="inline-flex items-center gap-1.5">
+                                    <X size={14} /> Limpiar filtros
+                                </span>
+                            </Button>
+                        )}
+                    </div>
+
+                    <DataTable
+                        columns={columnasAuditoria}
+                        rows={filasAuditoria}
+                        onRowClick={setRegistroAuditoria}
+                        loading={cargandoAuditoria}
+                        compact
+                        serverPagination={{
+                            page: paginaAuditoria,
+                            pageSize: tamanoAuditoria,
+                            total: datosAuditoria.total,
+                            onPageChange: setPaginaAuditoria,
+                            onPageSizeChange: (n) => {
+                                setTamanoAuditoria(n);
+                                setPaginaAuditoria(1);
+                            },
+                        }}
+                        emptyMessage="No hay movimientos que coincidan con los filtros."
+                    />
                 </>
             )}
 
@@ -721,6 +939,7 @@ export default function CuentasPanel({ user }) {
                 open={!!seleccionada && !modo}
                 title={seleccionada?.nombre}
                 subtitle={seleccionada ? `${seleccionada.rol} · ${seleccionada.correo}` : ""}
+                icon={UserRound}
                 onClose={() => setSeleccionada(null)}
                 width="max-w-3xl"
                 footer={seleccionada && (
@@ -741,23 +960,16 @@ export default function CuentasPanel({ user }) {
                     </>
                 )}
             >
-                {seleccionada && (
-                    <>
-                        <DetalleGeneral cuenta={seleccionada} />
-                    </>
-                )}
+                {seleccionada && <DetalleGeneral cuenta={seleccionada} />}
             </Modal>
 
             <Modal
                 open={!!modo}
                 title={tituloModo}
                 subtitle={modo && modo !== "crear" ? seleccionada?.nombre : undefined}
-                onClose={() => {
-                    if (!guardando) {
-                        setModo(null);
-                        setPendiente(null);
-                    }
-                }}
+                icon={iconoModo}
+                tone={modo === "inactivar" ? "danger" : "default"}
+                onClose={cerrarFormulario}
                 width="max-w-3xl"
             >
                 {error && <Notice tone="error">{error}</Notice>}
@@ -784,7 +996,11 @@ export default function CuentasPanel({ user }) {
                             >
                                 <option value="">Seleccionar...</option>
                                 {roles.map((r) => (
-                                    <option key={r.idRol} value={r.idRol}>{r.nombre}</option>
+                                    <option key={r.idRol} value={r.idRol} disabled={!r.activo}>
+                                        {r.nombre}
+                                        {!r.activo ? " (inactivo)" : ""}
+                                        {r.idRol === seleccionada?.idRol ? " (actual)" : ""}
+                                    </option>
                                 ))}
                             </select>
                         </FieldLabel>
@@ -792,7 +1008,7 @@ export default function CuentasPanel({ user }) {
                         <PermisosRol rol={rolSeleccionado} />
 
                         <div className="flex justify-end gap-3 mt-4">
-                            <Button variant="ghost" onClick={() => setModo(null)}>Cancelar</Button>
+                            <Button variant="ghost" onClick={cerrarFormulario}>Cancelar</Button>
                             <Button variant="primary" type="submit" disabled={guardando || !rolSeleccionado}>
                                 Continuar
                             </Button>
@@ -802,15 +1018,9 @@ export default function CuentasPanel({ user }) {
                     <RecordForm
                         key={`${modo}-${seleccionada?.idUsuario ?? "nueva"}`}
                         fields={camposFormulario}
-                        initialValues={modo === "crear"
-                            ? { estado: "Activo", salario: "0" }
-                            : {
-                                ...seleccionada,
-                                fechaNacimiento:
-                                    seleccionada?.fechaNacimiento?.slice(0, 10) ?? "",
-                            }}
+                        initialValues={valoresIniciales()}
                         onSubmit={preparar}
-                        onCancel={() => setModo(null)}
+                        onCancel={cerrarFormulario}
                         submitLabel="Continuar"
                         disabled={guardando}
                     />
@@ -820,16 +1030,10 @@ export default function CuentasPanel({ user }) {
             <ConfirmModal
                 open={!!pendiente}
                 title="Confirmar cambio"
+                tone={pendiente?.tipo === "inactivar" ? "danger" : "default"}
                 confirmLabel={guardando ? "Guardando..." : "Confirmar"}
-                message={
-                    pendiente?.tipo === "rol" || pendiente?.tipo === "reactivar"
-                        ? `Se asignará el rol ${rolSeleccionado?.nombre} a ${seleccionada?.nombre}. Se cerrarán sus sesiones anteriores.`
-                        : pendiente?.tipo === "inactivar"
-                            ? `Se inactivará la cuenta de ${seleccionada?.nombre} y se cerrarán sus sesiones.`
-                            : pendiente?.tipo === "desbloquear"
-                                ? `Se desbloqueará la cuenta de ${seleccionada?.nombre}.`
-                                : "¿Confirmás que los datos son correctos?"
-                }
+                busy={guardando}
+                message={confirmacion}
                 onConfirm={guardar}
                 onCancel={() => {
                     if (!guardando) setPendiente(null);
@@ -838,8 +1042,9 @@ export default function CuentasPanel({ user }) {
 
             <Modal
                 open={!!registroAuditoria}
-                title="Detalle de auditoría"
+                title="Detalle de la bitácora"
                 subtitle={registroAuditoria ? nombreAccion(registroAuditoria.accion) : ""}
+                icon={ScrollText}
                 onClose={() => setRegistroAuditoria(null)}
                 width="max-w-3xl"
             >
@@ -848,36 +1053,5 @@ export default function CuentasPanel({ user }) {
                 )}
             </Modal>
         </div>
-    );
-}
-
-function DetalleGeneral({ cuenta }) {
-    return (
-        <>
-            <DetailGrid
-                title="Datos personales"
-                items={[
-                    { label: "Nombre completo", value: cuenta.nombre },
-                    { label: "Cédula", value: cuenta.cedula },
-                    { label: "Fecha de nacimiento", value: fechaCorta(cuenta.fechaNacimiento) },
-                    { label: "Estado civil", value: cuenta.estadoCivil },
-                    { label: "Grado académico", value: cuenta.gradoAcademico },
-                    { label: "Teléfono", value: cuenta.telefono },
-                    { label: "Correo corporativo", value: cuenta.correo },
-                    { label: "Dirección", value: cuenta.direccion, wide: true },
-                ]}
-            />
-            <DetailGrid
-                title="Cuenta y acceso"
-                items={[
-                    { label: "Rol", value: cuenta.rol },
-                    { label: "Salario", value: colones(cuenta.salario) },
-                    { label: "Estado", value: cuenta.activo ? "Activo" : "Inactivo" },
-                    { label: "Bloqueo", value: cuenta.bloqueada ? "Bloqueada" : "Sin bloqueo" },
-                    { label: "Fecha de creación", value: cuenta.fechaCreacion ? fecha(cuenta.fechaCreacion) : "" },
-                    { label: "Último acceso", value: cuenta.ultimoAcceso ? fecha(cuenta.ultimoAcceso) : "" },
-                ]}
-            />
-        </>
     );
 }

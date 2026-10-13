@@ -1,3 +1,4 @@
+import { AlertTriangle, HelpCircle } from "lucide-react";
 import Modal from "./Modal";
 import { Button } from "./ui";
 import { COLORS } from "./uiTheme";
@@ -8,25 +9,41 @@ export default function ConfirmModal({
     message,
     confirmLabel = "Confirmar",
     cancelLabel = "Cancelar",
+    tone = "default",
+    busy = false,
     onConfirm,
     onCancel,
 }) {
     if (!open) return null;
 
+    const peligro = tone === "danger";
+
     return (
-        <Modal open={open} onClose={onCancel} title={title} width="max-w-sm">
-            <p className="text-sm mb-7" style={{ color: COLORS.charcoal }}>
+        <Modal
+            open={open}
+            onClose={onCancel}
+            title={title}
+            icon={peligro ? AlertTriangle : HelpCircle}
+            tone={tone}
+            width="max-w-md"
+            footer={(
+                <>
+                    <Button variant="ghost" onClick={onCancel} disabled={busy}>
+                        {cancelLabel}
+                    </Button>
+                    <Button
+                        variant={peligro ? "dangerSolid" : "primary"}
+                        onClick={onConfirm}
+                        disabled={busy}
+                    >
+                        {confirmLabel}
+                    </Button>
+                </>
+            )}
+        >
+            <p className="text-sm leading-relaxed" style={{ color: COLORS.charcoal }}>
                 {message}
             </p>
-
-            <div className="flex items-center justify-end gap-3">
-                <Button variant="ghost" onClick={onCancel}>
-                    {cancelLabel}
-                </Button>
-                <Button variant="primary" onClick={onConfirm}>
-                    {confirmLabel}
-                </Button>
-            </div>
         </Modal>
     );
 }

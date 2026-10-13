@@ -133,4 +133,67 @@ public class AlquilerDA : IAlquilerDA
 
     public Task<bool> TieneContratoActivoAsync(int idEquipo) =>
         EscalarAsync<bool>("sp_Radio_ContratoActivo", new { IdEquipo = idEquipo });
+
+    public Task<List<RepetidoraDto>> ListarRepetidorasAsync(string? texto, bool? facturable) =>
+        ConsultarAsync<RepetidoraDto>("sp_Repetidora_Listar", new { Texto = texto, Facturable = facturable });
+
+    public Task<RepetidoraDto?> ObtenerRepetidoraPorSerieAsync(string numeroSerie) =>
+        PrimeroAsync<RepetidoraDto>("sp_Repetidora_Obtener", new { NumeroSerie = numeroSerie });
+
+    public async Task<(List<RequisitoChecklistDto> Requisitos, VerificacionChecklistDto? Ultima, List<VerificacionChecklistDto> Historial)> ObtenerChecklistAsync(int idEquipo)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+        using var multiple = await conexion.QueryMultipleAsync("sp_Checklist_Obtener", new { IdEquipo = idEquipo }, commandType: CommandType.StoredProcedure);
+        var requisitos = (await multiple.ReadAsync<RequisitoChecklistDto>()).ToList();
+        var ultima = (await multiple.ReadAsync<VerificacionChecklistDto>()).FirstOrDefault();
+        var historial = (await multiple.ReadAsync<VerificacionChecklistDto>()).ToList();
+        return (requisitos, ultima, historial);
+    }
+
+    public Task GuardarChecklistAsync(int idEquipo, IEnumerable<int> idsCumplidos, string? observaciones, int idUsuario) =>
+        EjecutarAsync("sp_Checklist_Guardar", new
+        {
+            IdEquipo = idEquipo,
+            IdsCumplidos = string.Join(",", idsCumplidos),
+            Observaciones = observaciones,
+            IdUsuario = idUsuario
+        });
+
+    public Task<List<DocumentoRepetidoraDto>> ListarDocumentosAsync(int idEquipo) =>
+        ConsultarAsync<DocumentoRepetidoraDto>("sp_Documento_Listar", new { IdEquipo = idEquipo });
+
+    public Task<DocumentoArchivoDto?> ObtenerDocumentoAsync(int idDocumento) =>
+        PrimeroAsync<DocumentoArchivoDto>("sp_Documento_Obtener", new { IdDocumento = idDocumento });
+
+    public Task<int> InsertarDocumentoAsync(int idEquipo, string tipoDocumento, string nombreDocumento, string nombreArchivo,
+        string tipoContenido, byte[] contenido, int idUsuario) =>
+        EscalarAsync<int>("sp_Documento_Insertar", new
+        {
+            IdEquipo = idEquipo,
+            TipoDocumento = tipoDocumento,
+            NombreDocumento = nombreDocumento,
+            NombreArchivo = nombreArchivo,
+            TipoContenido = tipoContenido,
+            TamanoBytes = contenido.Length,
+            Contenido = contenido,
+            IdUsuario = idUsuario
+        });
+
+    public Task<List<BitacoraMantenimientoDto>> ListarBitacoraRepetidoraAsync(int idEquipo) =>
+        ConsultarAsync<BitacoraMantenimientoDto>("sp_Repetidora_Bitacora", new { IdEquipo = idEquipo });
+
+    public Task GuardarFichaRepetidoraAsync(int idEquipo, string frecuencia, string frecuenciaRecepcion, string potencia,
+        string? accesorios, string direccionInstalacion, string? coordenadasGps, string clasificacion, int idUsuario) =>
+        EjecutarAsync("sp_Repetidora_Guardar", new
+        {
+            IdEquipo = idEquipo,
+            Frecuencia = frecuencia,
+            FrecuenciaRecepcion = frecuenciaRecepcion,
+            Potencia = potencia,
+            Accesorios = accesorios,
+            DireccionInstalacion = direccionInstalacion,
+            CoordenadasGPS = coordenadasGps,
+            Clasificacion = clasificacion,
+            IdUsuario = idUsuario
+        });
 }

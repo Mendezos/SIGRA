@@ -4,8 +4,10 @@ namespace SIGRA.Abstracciones.Interfaces.InterfacesDA;
 
 public interface IGestionCuentasDA
 {
-    Task<List<CuentaDto>> ListarAsync(FiltroCuentasDto filtro);
+    Task<PaginaDto<CuentaDto>> ListarAsync(FiltroCuentasDto filtro);
     Task<int> GuardarAsync(CambioCuenta cambio);
     Task<List<RolCuentaDto>> RolesAsync();
-    Task<List<RegistroAuditoriaDto>> AuditoriaAsync(FiltroAuditoriaDto filtro);
+    Task<PaginaDto<RegistroAuditoriaDto>> AuditoriaAsync(FiltroAuditoriaDto filtro);
+    Task<ResumenCuentasDto> ResumenAsync();
+    Task<List<OpcionCuentaDto>> OpcionesAsync();
 }

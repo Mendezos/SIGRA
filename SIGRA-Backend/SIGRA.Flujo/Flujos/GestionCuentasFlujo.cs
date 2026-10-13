@@ -12,6 +12,15 @@ namespace SIGRA.Flujo.Flujos;
 
 public class GestionCuentasFlujo : IGestionCuentasFlujo
 {
+    public static readonly string[] EstadosCiviles =
+        { "Soltero/a", "Casado/a", "Unión libre", "Divorciado/a", "Viudo/a" };
+
+    public static readonly string[] GradosAcademicos =
+    {
+        "Primaria", "Secundaria", "Técnico", "Diplomado",
+        "Bachillerato universitario", "Licenciatura", "Maestría", "Doctorado"
+    };
+
     private readonly IGestionCuentasDA _cuentas;
     private readonly IPoliticaSeguridadDA _politicas;
     private readonly IRolPermisoDA _permisos;
@@ -29,22 +38,26 @@ public class GestionCuentasFlujo : IGestionCuentasFlujo
         _hasher = hasher;
     }
 
-    public async Task<List<CuentaDto>> ListarAsync(FiltroCuentasDto filtro)
+    public async Task<PaginaDto<CuentaDto>> ListarAsync(FiltroCuentasDto filtro)
     {
         filtro.Texto = Opcional(filtro.Texto);
 
         if (filtro.Texto?.Length > 150 || filtro.IdRol <= 0)
             throw new ReglaNegocioException("Revise los filtros de cuentas.");
 
-        var cuentas = await _cuentas.ListarAsync(filtro);
+        filtro.Pagina = Math.Max(1, filtro.Pagina);
+        filtro.TamanoPagina = Math.Clamp(filtro.TamanoPagina, 1, 100);
 
-        foreach (var cuenta in cuentas)
+        var pagina = await _cuentas.ListarAsync(filtro);
+
+        foreach (var cuenta in pagina.Items)
         {
             cuenta.FechaCreacion = Utc(cuenta.FechaCreacion);
             cuenta.UltimoAcceso = Utc(cuenta.UltimoAcceso);
+            cuenta.BloqueadoHasta = Utc(cuenta.BloqueadoHasta);
         }
 
-        return cuentas;
+        return pagina;
     }
 
     public async Task<int> CrearAsync(CrearCuentaDto dto, int idAutor)
@@ -143,7 +156,11 @@ public class GestionCuentasFlujo : IGestionCuentasFlujo
         return roles;
     }
 
-    public async Task<List<RegistroAuditoriaDto>> AuditoriaAsync(
+    public Task<ResumenCuentasDto> ResumenAsync() => _cuentas.ResumenAsync();
+
+    public Task<List<OpcionCuentaDto>> OpcionesAsync() => _cuentas.OpcionesAsync();
+
+    public async Task<PaginaDto<RegistroAuditoriaDto>> AuditoriaAsync(
         FiltroAuditoriaDto filtro)
     {
         filtro.Entidad = Opcional(filtro.Entidad);
@@ -165,13 +182,16 @@ public class GestionCuentasFlujo : IGestionCuentasFlujo
             throw new ReglaNegocioException(
                 "La fecha final está fuera del rango permitido.");
 
-        var registros = await _cuentas.AuditoriaAsync(filtro);
+        filtro.Pagina = Math.Max(1, filtro.Pagina);
+        filtro.TamanoPagina = Math.Clamp(filtro.TamanoPagina, 1, 100);
 
-        foreach (var registro in registros)
+        var pagina = await _cuentas.AuditoriaAsync(filtro);
+
+        foreach (var registro in pagina.Items)
             registro.Fecha = DateTime.SpecifyKind(
                 registro.Fecha, DateTimeKind.Utc);
 
-        return registros;
+        return pagina;
     }
 
     private static CambioCuenta Datos(DatosCuentaDto d, int autor) =>
@@ -204,6 +224,21 @@ public class GestionCuentasFlujo : IGestionCuentasFlujo
         RevisarTexto(dto.Direccion, 300, "La dirección", errores);
         RevisarTexto(dto.EstadoCivil, 50, "El estado civil", errores);
         RevisarTexto(dto.GradoAcademico, 100, "El grado académico", errores);
+
+        var estadoCivil = EstadosCiviles.FirstOrDefault(e =>
+            e.Equals(dto.EstadoCivil, StringComparison.OrdinalIgnoreCase));
+        var grado = GradosAcademicos.FirstOrDefault(g =>
+            g.Equals(dto.GradoAcademico, StringComparison.OrdinalIgnoreCase));
+
+        if (estadoCivil is null)
+            errores.Add("Seleccione un estado civil de la lista.");
+        else
+            dto.EstadoCivil = estadoCivil;
+
+        if (grado is null)
+            errores.Add("Seleccione un grado académico de la lista.");
+        else
+            dto.GradoAcademico = grado;
 
         if (!new EmailAddressAttribute().IsValid(dto.Correo))
             errores.Add("El correo no es válido.");

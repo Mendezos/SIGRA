@@ -10,7 +10,7 @@ export const COLORS = {
     white: "#FFFFFF",
 };
 
-export const inputClass = "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none";
+export const inputClass = "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none transition-shadow focus:shadow-[0_0_0_3px_#EAF6E8] disabled:bg-[#F7F7F7] disabled:text-[#9C9C9C]";
 
 export const inputStyle = {
     border: `1px solid ${COLORS.border}`,

@@ -4,12 +4,16 @@ public class CrearRolDto
 {
     public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
+    public bool? Activo { get; set; }
+    public List<PermisoModuloDto>? Permisos { get; set; }
 }
 
 public class EditarRolDto
 {
     public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
+    public bool? Activo { get; set; }
+    public List<PermisoModuloDto>? Permisos { get; set; }
 }
 
 public class CambiarEstadoRolDto
@@ -23,6 +27,8 @@ public class RolDto
     public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
     public bool Activo { get; set; }
+    public int Usuarios { get; set; }
+    public int ModulosConAcceso { get; set; }
 }
 
 public class ModuloDto

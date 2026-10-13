@@ -4,36 +4,24 @@ export async function listarRoles() {
     return apiRequest("/roles");
 }
 
-export async function crearRol(nombre, descripcion) {
+// Crea el rol junto con sus permisos en una sola operación.
+export async function crearRol({ nombre, descripcion, activo, permisos }) {
     return apiRequest("/roles", {
         method: "POST",
-        body: { nombre, descripcion: descripcion || null },
+        body: { nombre, descripcion: descripcion || null, activo, permisos },
     });
 }
 
-export async function editarRol(idRol, nombre, descripcion) {
+// Guarda nombre, descripción, estado y permisos del rol en una sola operación.
+export async function guardarRol(idRol, { nombre, descripcion, activo, permisos }) {
     return apiRequest(`/roles/${idRol}`, {
         method: "PUT",
-        body: { nombre, descripcion: descripcion || null },
-    });
-}
-
-export async function cambiarEstadoRol(idRol, activo) {
-    return apiRequest(`/roles/${idRol}/estado`, {
-        method: "PATCH",
-        body: { activo },
+        body: { nombre, descripcion: descripcion || null, activo, permisos },
     });
 }
 
 export async function obtenerPermisosRol(idRol) {
     return apiRequest(`/roles/${idRol}/permisos`);
-}
-
-export async function definirPermisosRol(idRol, permisos) {
-    return apiRequest(`/roles/${idRol}/permisos`, {
-        method: "PUT",
-        body: permisos,
-    });
 }
 
 export async function listarModulos() {

@@ -14,7 +14,7 @@ const COLORS = {
 };
 
 function inputClass() {
-    return "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none";
+    return "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none transition-shadow focus:border-[#5EB453] focus:shadow-[0_0_0_3px_#EAF6E8] disabled:bg-[#F7F7F7] disabled:text-[#9C9C9C]";
 }
 
 function parseSummary(summary) {

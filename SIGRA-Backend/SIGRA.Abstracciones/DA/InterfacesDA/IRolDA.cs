@@ -12,6 +12,7 @@ public interface IRolDA
     Task<bool> ExisteConNombreExcluyendoAsync(string nombre, int idRolExcluir);
     Task<RolModel> EditarAsync(int idRol, string nombre, string? descripcion);
     Task<RolModel> CambiarEstadoAsync(int idRol, bool activo);
+    Task<RolModel> GuardarAsync(int idAutor, int? idRol, string nombre, string? descripcion, bool? activo, string? permisosJson);
 }
 
 public interface IModuloDA

@@ -38,6 +38,32 @@ public class FiltroCuentasDto
     public int? IdRol { get; set; }
     public bool? Activo { get; set; }
     public bool? Bloqueada { get; set; }
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 10;
+}
+
+public class PaginaDto<T>
+{
+    public List<T> Items { get; set; } = new();
+    public int Total { get; set; }
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 10;
+}
+
+public class ResumenCuentasDto
+{
+    public int UsuariosActivos { get; set; }
+    public int UsuariosInactivos { get; set; }
+    public int CuentasBloqueadas { get; set; }
+    public int RolesDefinidos { get; set; }
+    public int RolesActivos { get; set; }
+    public int SesionesHoy { get; set; }
+}
+
+public class OpcionCuentaDto
+{
+    public int IdUsuario { get; set; }
+    public string Nombre { get; set; } = "";
 }
 
 public class CuentaDto
@@ -56,6 +82,8 @@ public class CuentaDto
     public string Rol { get; set; } = "";
     public bool Activo { get; set; }
     public bool Bloqueada { get; set; }
+    public int IntentosFallidos { get; set; }
+    public DateTime? BloqueadoHasta { get; set; }
     public DateTime? FechaCreacion { get; set; }
     public DateTime? UltimoAcceso { get; set; }
 }
@@ -64,6 +92,7 @@ public class RolCuentaDto
 {
     public int IdRol { get; set; }
     public string Nombre { get; set; } = "";
+    public bool Activo { get; set; }
     public List<PermisoModuloDto> Permisos { get; set; } = new();
 }
 
@@ -76,6 +105,8 @@ public class FiltroAuditoriaDto
     public DateTime? Desde { get; set; }
     public DateTime? Hasta { get; set; }
     public string? Accion { get; set; }
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 10;
 }
 
 public class RegistroAuditoriaDto
@@ -84,6 +115,7 @@ public class RegistroAuditoriaDto
     public int? IdAutor { get; set; }
     public string Autor { get; set; } = "";
     public int? IdUsuarioAfectado { get; set; }
+    public string? Objetivo { get; set; }
     public string Modulo { get; set; } = "";
     public string Entidad { get; set; } = "";
     public int? IdEntidad { get; set; }

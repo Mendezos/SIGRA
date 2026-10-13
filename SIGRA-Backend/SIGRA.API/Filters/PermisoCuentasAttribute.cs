@@ -28,7 +28,7 @@ public class PermisoCuentasAttribute(string accion)
 
         var roles = await cuentas.RolesAsync();
 
-        if (!roles.Any(r => r.IdRol == usuario.IdRol))
+        if (!roles.Any(r => r.IdRol == usuario.IdRol && r.Activo))
         {
             context.Result = new ForbidResult();
             return;

@@ -4,7 +4,7 @@ namespace SIGRA.Abstracciones.Flujo;
 
 public interface IGestionCuentasFlujo
 {
-    Task<List<CuentaDto>> ListarAsync(FiltroCuentasDto filtro);
+    Task<PaginaDto<CuentaDto>> ListarAsync(FiltroCuentasDto filtro);
 
     Task<int> CrearAsync(CrearCuentaDto cuenta, int idAutor);
 
@@ -25,6 +25,10 @@ public interface IGestionCuentasFlujo
 
     Task<List<RolCuentaDto>> RolesAsync();
 
-    Task<List<RegistroAuditoriaDto>> AuditoriaAsync(
+    Task<PaginaDto<RegistroAuditoriaDto>> AuditoriaAsync(
         FiltroAuditoriaDto filtro);
+
+    Task<ResumenCuentasDto> ResumenAsync();
+
+    Task<List<OpcionCuentaDto>> OpcionesAsync();
 }
