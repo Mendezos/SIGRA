@@ -1,3 +1,4 @@
+import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { COLORS } from "./uiTheme";
 
 const VARIANTS = {
@@ -16,6 +17,11 @@ const VARIANTS = {
         color: COLORS.red,
         border: `1px solid ${COLORS.redTint}`,
     },
+    dangerSolid: {
+        backgroundColor: COLORS.red,
+        color: COLORS.white,
+        border: `1px solid ${COLORS.red}`,
+    },
     ghost: {
         backgroundColor: "transparent",
         color: COLORS.muted,
@@ -27,7 +33,7 @@ export function Button({ variant = "secondary", className = "", style, children,
     return (
         <button
             type="button"
-            className={`px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${className}`}
+            className={`px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-[filter,box-shadow] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5EB453] ${className}`}
             style={{ ...VARIANTS[variant], ...style }}
             {...props}
         >
@@ -37,18 +43,23 @@ export function Button({ variant = "secondary", className = "", style, children,
 }
 
 export function Notice({ tone = "success", children }) {
-    const palette =
-        tone === "error"
-            ? { backgroundColor: COLORS.redTint, color: COLORS.red }
-            : { backgroundColor: COLORS.greenTint, color: COLORS.greenDark };
+    const error = tone === "error";
+    const warning = tone === "warning";
+    const palette = error
+        ? { backgroundColor: COLORS.redTint, color: COLORS.red }
+        : warning
+          ? { backgroundColor: "#FEF3C7", color: "#92400E" }
+          : { backgroundColor: COLORS.greenTint, color: COLORS.greenDark };
+    const Icono = error ? AlertCircle : warning ? AlertTriangle : CheckCircle2;
 
     return (
         <div
-            role={tone === "error" ? "alert" : "status"}
-            className="px-4 py-2.5 rounded-lg text-sm mb-4"
+            role={error || warning ? "alert" : "status"}
+            className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg text-sm mb-4"
             style={palette}
         >
-            {children}
+            <Icono size={16} className="shrink-0 mt-0.5" />
+            <div className="min-w-0">{children}</div>
         </div>
     );
 }
@@ -115,5 +126,23 @@ export function DetailGrid({ title, items }) {
                 ))}
             </dl>
         </section>
+    );
+}
+
+const PILL_TONES = {
+    positive: { backgroundColor: "#EAF6E8", color: "#4CA23D" },
+    negative: { backgroundColor: "#FCEBEB", color: "#C0392B" },
+    warning: { backgroundColor: "#FBF3DE", color: "#9C7A17" },
+    neutral: { backgroundColor: "#F1F1F1", color: "#6E6E6E" },
+};
+
+export function Pill({ tone = "neutral", children }) {
+    return (
+        <span
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs whitespace-nowrap"
+            style={{ ...PILL_TONES[tone], fontWeight: 600 }}
+        >
+            {children}
+        </span>
     );
 }

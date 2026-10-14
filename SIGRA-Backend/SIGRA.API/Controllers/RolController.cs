@@ -20,7 +20,15 @@ public class RolController : ControllerBase
     public async Task<ActionResult<List<RolDto>>> Listar()
     {
         var roles = await _flujo.ListarAsync();
-        return Ok(roles.Select(r => new RolDto { IdRol = r.IdRol, Nombre = r.Nombre, Descripcion = r.Descripcion, Activo = r.Activo }).ToList());
+        return Ok(roles.Select(r => new RolDto
+        {
+            IdRol = r.IdRol,
+            Nombre = r.Nombre,
+            Descripcion = r.Descripcion,
+            Activo = r.Activo,
+            Usuarios = r.Usuarios,
+            ModulosConAcceso = r.ModulosConAcceso
+        }).ToList());
     }
 
     [HttpPost]
@@ -29,7 +37,9 @@ public class RolController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             throw new ValidacionException("Debe completar todos los parámetros obligatorios.", new List<string> { "Nombre del rol" });
 
-        var nuevo = await _flujo.CrearAsync(dto.Nombre, dto.Descripcion, User.ObtenerIdUsuario());
+        var nuevo = await _flujo.GuardarAsync(
+            null, dto.Nombre, dto.Descripcion, dto.Activo ?? true,
+            dto.Permisos ?? new List<PermisoModuloDto>(), User.ObtenerIdUsuario());
 
         return Ok(new RolDto { IdRol = nuevo.IdRol, Nombre = nuevo.Nombre, Descripcion = nuevo.Descripcion, Activo = nuevo.Activo });
     }
@@ -40,7 +50,8 @@ public class RolController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             throw new ValidacionException("Debe completar todos los parámetros obligatorios.", new List<string> { "Nombre del rol" });
 
-        var actualizado = await _flujo.EditarAsync(idRol, dto.Nombre, dto.Descripcion, User.ObtenerIdUsuario());
+        var actualizado = await _flujo.GuardarAsync(
+            idRol, dto.Nombre, dto.Descripcion, dto.Activo, dto.Permisos, User.ObtenerIdUsuario());
 
         return Ok(new RolDto { IdRol = actualizado.IdRol, Nombre = actualizado.Nombre, Descripcion = actualizado.Descripcion, Activo = actualizado.Activo });
     }

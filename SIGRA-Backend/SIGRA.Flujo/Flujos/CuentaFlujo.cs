@@ -2,6 +2,7 @@ using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
+using SIGRA.Abstracciones.Modelos;
 using SIGRA.Abstracciones.Servicios;
 
 namespace SIGRA.Flujo.Flujos;
@@ -19,6 +20,17 @@ public class CuentaFlujo : ICuentaFlujo
         _email = email;
     }
 
+    private static DateTime? Utc(DateTime? fecha) =>
+        fecha.HasValue ? DateTime.SpecifyKind(fecha.Value, DateTimeKind.Utc) : null;
+
+    private static List<IntentoAuditoriaDto> ComoIntentos(IEnumerable<AuditoriaModel> intentos) =>
+        intentos.Select(i => new IntentoAuditoriaDto
+        {
+            Fecha = DateTime.SpecifyKind(i.Fecha, DateTimeKind.Utc),
+            Accion = i.Accion,
+            Detalle = i.Detalle
+        }).ToList();
+
     public async Task<EstadoCuentaDto> ObtenerEstadoAsync(int idUsuario)
     {
         var usuario = await _usuarioDA.ObtenerPorIdAsync(idUsuario)
@@ -34,14 +46,9 @@ public class CuentaFlujo : ICuentaFlujo
             Activo = usuario.Activo,
             Bloqueada = usuario.BloqueadoHasta.HasValue && usuario.BloqueadoHasta.Value > DateTime.UtcNow,
             IntentosFallidos = usuario.IntentosFallidos,
-            BloqueadoHasta = usuario.BloqueadoHasta,
-            FechaBloqueo = usuario.FechaBloqueo,
-            IntentosRecientes = intentos.Select(i => new IntentoAuditoriaDto
-            {
-                Fecha = i.Fecha,
-                Accion = i.Accion,
-                Detalle = i.Detalle
-            }).ToList()
+            BloqueadoHasta = Utc(usuario.BloqueadoHasta),
+            FechaBloqueo = Utc(usuario.FechaBloqueo),
+            IntentosRecientes = ComoIntentos(intentos)
         };
     }
 
@@ -62,21 +69,16 @@ public class CuentaFlujo : ICuentaFlujo
                 Activo = usuario.Activo,
                 Bloqueada = true,
                 IntentosFallidos = usuario.IntentosFallidos,
-                BloqueadoHasta = usuario.BloqueadoHasta,
-                FechaBloqueo = usuario.FechaBloqueo,
-                IntentosRecientes = intentos.Select(i => new IntentoAuditoriaDto
-                {
-                    Fecha = i.Fecha,
-                    Accion = i.Accion,
-                    Detalle = i.Detalle
-                }).ToList()
+                BloqueadoHasta = Utc(usuario.BloqueadoHasta),
+                FechaBloqueo = Utc(usuario.FechaBloqueo),
+                IntentosRecientes = ComoIntentos(intentos)
             });
         }
 
         return resultado;
     }
 
-    public async Task DesbloquearCuentaAsync(int idUsuario, int idUsuarioAdministrador, string motivo)
+    public async Task<bool> DesbloquearCuentaAsync(int idUsuario, int idUsuarioAdministrador, string motivo)
     {
         if (string.IsNullOrWhiteSpace(motivo))
             throw new ValidacionException("Debe indicar el motivo del desbloqueo.", new List<string> { "El motivo es obligatorio." });
@@ -99,10 +101,12 @@ public class CuentaFlujo : ICuentaFlujo
         {
             var cuerpo = $"<p>Hola {usuario.Nombre},</p><p>Tu cuenta de SIGRA fue desbloqueada por un administrador. Ya puedes iniciar sesión normalmente.</p>";
             await _email.EnviarAsync(usuario.Correo, usuario.Nombre, "Tu cuenta de SIGRA fue desbloqueada", cuerpo);
+            return true;
         }
         catch
         {
             await _auditoriaDA.RegistrarAsync(idUsuario, "Seguridad", "Usuario", idUsuario, "NOTIFICACION_DESBLOQUEO_FALLIDA");
+            return false;
         }
     }
 }

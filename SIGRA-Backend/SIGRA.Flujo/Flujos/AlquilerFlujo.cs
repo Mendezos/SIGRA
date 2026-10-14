@@ -13,6 +13,9 @@ public class AlquilerFlujo : IAlquilerFlujo
     private const string EstadoPorVencer90 = "Por vencer (90 días)";
     private const string EstadoPorVencer30 = "Por vencer (30 días)";
     private const string MensajeEquipoNoDisponible = "El equipo seleccionado no se encuentra disponible en el inventario.";
+    private const string CategoriaRepetidora = "Repetidora";
+    private const string ClasificacionAlquilada = "Alquilada por Radifax";
+    private static readonly string[] Clasificaciones = { ClasificacionAlquilada, "Propia del cliente" };
     private static readonly string[] CategoriasRadio = { "Radio portátil", "Radio móvil" };
     private static readonly Regex PatronCorreo = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
     private static readonly Regex PatronTelefono = new(@"^[0-9+\-\s()]{7,20}$", RegexOptions.Compiled);
@@ -495,6 +498,154 @@ public class AlquilerFlujo : IAlquilerFlujo
         return resultado;
     }
 
+    // ---------- CARR-009: ficha técnica de repetidoras ----------
+    private const string MensajeFichaIncompleta = "Debe completar los datos técnicos obligatorios de la repetidora";
+
+    public Task<List<RepetidoraDto>> ListarRepetidorasAsync(string? texto, bool? facturable) =>
+        _alquilerDA.ListarRepetidorasAsync(Normalizar(texto), facturable);
+
+    public async Task<RepetidoraDto> ObtenerRepetidoraPorSerieAsync(string numeroSerie)
+    {
+        var serie = Normalizar(numeroSerie)
+            ?? throw new ReglaNegocioException("Debe indicar el número de serie de la repetidora.");
+
+        var repetidora = await _alquilerDA.ObtenerRepetidoraPorSerieAsync(serie)
+            ?? throw new ReglaNegocioException("El número de serie ingresado no existe en el inventario.");
+
+        if (repetidora.Categoria != CategoriaRepetidora)
+            throw new ReglaNegocioException("El número de serie ingresado no corresponde a una repetidora.");
+
+        if (repetidora.IdContrato is null)
+            throw new ReglaNegocioException("La repetidora no está asignada a ningún contrato de alquiler.");
+
+        return repetidora;
+    }
+
+    public async Task<RepetidoraDto> GuardarFichaRepetidoraAsync(GuardarFichaRepetidoraDto dto, bool esEdicion, int idUsuario)
+    {
+        var serie = Normalizar(dto.NumeroSerie);
+        var modelo = Normalizar(dto.Modelo);
+        var frecuencia = Normalizar(dto.Frecuencia);
+        var frecuenciaRx = Normalizar(dto.FrecuenciaRecepcion);
+        var potencia = Normalizar(dto.Potencia);
+        var direccion = Normalizar(dto.DireccionInstalacion);
+        var accesorios = Normalizar(dto.Accesorios);
+        var gps = Normalizar(dto.CoordenadasGPS);
+
+        var faltantes = new List<string>();
+        if (modelo is null) faltantes.Add("Modelo");
+        if (serie is null) faltantes.Add("Número de serie");
+        if (frecuencia is null) faltantes.Add("Frecuencia de transmisión");
+        if (frecuenciaRx is null) faltantes.Add("Frecuencia de recepción");
+        if (potencia is null) faltantes.Add("Potencia");
+        if (direccion is null) faltantes.Add("Dirección de instalación");
+        if (faltantes.Count > 0)
+            throw new ValidacionException(MensajeFichaIncompleta, faltantes);
+
+        var clasificacion = Normalizar(dto.Clasificacion);
+        if (clasificacion is null)
+            throw new ReglaNegocioException("Debe indicar si la repetidora es alquilada por Radifax o propia del cliente");
+
+        clasificacion = Clasificaciones.FirstOrDefault(c => string.Equals(c, clasificacion, StringComparison.OrdinalIgnoreCase))
+            ?? throw new ReglaNegocioException("La clasificación debe ser \"Alquilada por Radifax\" o \"Propia del cliente\".");
+
+        if (frecuencia!.Length > 30 || frecuenciaRx!.Length > 30 || potencia!.Length > 30 || direccion!.Length > 200
+            || (accesorios?.Length ?? 0) > 500)
+            throw new ReglaNegocioException("Alguno de los datos excede la longitud permitida.");
+
+        if (!frecuencia.Any(char.IsDigit) || !frecuenciaRx.Any(char.IsDigit))
+            throw new ReglaNegocioException("Las frecuencias deben indicar un valor numérico (por ejemplo 450.125 MHz).");
+
+        if (!potencia.Any(char.IsDigit))
+            throw new ReglaNegocioException("La potencia debe indicar un valor numérico (por ejemplo 40 W).");
+
+        if (gps is not null)
+            gps = NormalizarCoordenadas(gps);
+
+        var repetidora = await ObtenerRepetidoraPorSerieAsync(serie!);
+
+        if (!string.Equals(modelo, repetidora.Modelo, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(modelo, $"{repetidora.Marca} {repetidora.Modelo}", StringComparison.OrdinalIgnoreCase))
+            throw new ReglaNegocioException($"El modelo ingresado no coincide con el registrado en el inventario ({repetidora.Marca} {repetidora.Modelo}).");
+
+        if (repetidora.EstadoContrato != "Activo")
+            throw new ReglaNegocioException("Solo se puede registrar la ficha de una repetidora con contrato de alquiler activo.");
+
+        if (repetidora.TieneFicha && !esEdicion)
+            throw new ReglaNegocioException("La repetidora ya tiene una ficha técnica registrada. Edítela desde la consulta de la ficha.");
+
+        if (!repetidora.TieneFicha && esEdicion)
+            throw new ReglaNegocioException("La repetidora todavía no tiene ficha técnica registrada.");
+
+        await _alquilerDA.GuardarFichaRepetidoraAsync(repetidora.IdEquipo, frecuencia, frecuenciaRx, potencia, accesorios, direccion, gps, clasificacion, idUsuario);
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Repetidora", repetidora.IdEquipo,
+            esEdicion ? "FICHA_REPETIDORA_ACTUALIZADA" : "FICHA_REPETIDORA_REGISTRADA",
+            $"{repetidora.NumeroSerie} ({repetidora.Marca} {repetidora.Modelo}), contrato CT-{repetidora.IdContrato:0000}, {repetidora.Empresa}. {clasificacion} ({(clasificacion == ClasificacionAlquilada ? "facturable" : "sin cobro")})");
+
+        return await ObtenerRepetidoraPorSerieAsync(repetidora.NumeroSerie);
+    }
+
+    // ---------- CARR-011: checklist previo a la instalación ----------
+    public async Task<ChecklistRepetidoraDto> ObtenerChecklistAsync(string numeroSerie) =>
+        await ArmarChecklistAsync(await ObtenerRepetidoraPorSerieAsync(numeroSerie));
+
+    private async Task<ChecklistRepetidoraDto> ArmarChecklistAsync(RepetidoraDto repetidora)
+    {
+        var (requisitos, ultima, historial) = await _alquilerDA.ObtenerChecklistAsync(repetidora.IdEquipo);
+
+        return new ChecklistRepetidoraDto
+        {
+            Repetidora = repetidora,
+            Requisitos = requisitos,
+            Ultima = ultima,
+            Historial = historial,
+            ListaParaInstalacion = ultima?.Completado == true,
+            Pendientes = ultima is null ? new List<string>() : requisitos.Where(r => !r.Cumplido).Select(r => r.Nombre).ToList()
+        };
+    }
+
+    public async Task<ChecklistRepetidoraDto> GuardarChecklistAsync(string numeroSerie, GuardarChecklistDto dto, int idUsuario)
+    {
+        var repetidora = await ObtenerRepetidoraPorSerieAsync(numeroSerie);
+
+        if (!repetidora.TieneFicha)
+            throw new ReglaNegocioException("Debe registrar la ficha técnica de la repetidora antes de completar el checklist.");
+
+        if (repetidora.EstadoContrato != "Activo")
+            throw new ReglaNegocioException("Solo se puede completar el checklist de una repetidora con contrato de alquiler activo.");
+
+        var observaciones = Normalizar(dto.Observaciones);
+        if ((observaciones?.Length ?? 0) > 1000)
+            throw new ReglaNegocioException("Las observaciones no pueden superar los 1000 caracteres.");
+
+        var (requisitos, _, _) = await _alquilerDA.ObtenerChecklistAsync(repetidora.IdEquipo);
+        var cumplidos = (dto.Cumplidos ?? new List<int>()).Distinct().ToList();
+        if (cumplidos.Any(id => requisitos.All(r => r.IdRequisito != id)))
+            throw new ReglaNegocioException("Alguno de los requisitos indicados no existe en el checklist.");
+
+        await _alquilerDA.GuardarChecklistAsync(repetidora.IdEquipo, cumplidos, observaciones, idUsuario);
+
+        var resultado = await ArmarChecklistAsync(await ObtenerRepetidoraPorSerieAsync(repetidora.NumeroSerie));
+
+        if (resultado.ListaParaInstalacion)
+        {
+            resultado.Mensaje = "El checklist se guardó completo. La repetidora está lista para instalación.";
+        }
+        else
+        {
+            resultado.Mensaje = "El checklist se guardó como incompleto.";
+            resultado.Advertencia = $"La repetidora no está lista para instalación hasta cumplir todos los requisitos. Pendientes: {string.Join("; ", resultado.Pendientes)}.";
+        }
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Repetidora", repetidora.IdEquipo,
+            resultado.ListaParaInstalacion ? "CHECKLIST_INSTALACION_COMPLETO" : "CHECKLIST_INSTALACION_INCOMPLETO",
+            $"{repetidora.NumeroSerie}, contrato CT-{repetidora.IdContrato:0000}: " +
+            (resultado.ListaParaInstalacion ? "todos los requisitos cumplidos" : $"{resultado.Pendientes.Count} requisito(s) pendiente(s)"));
+
+        return resultado;
+    }
+
     private static (string Asunto, string Cuerpo) ArmarAlerta(AlertaContratoDto alerta, string codigo)
     {
         var vence = alerta.FechaVencimiento.ToString("dd/MM/yyyy");
@@ -541,6 +692,105 @@ public class AlquilerFlujo : IAlquilerFlujo
             $"{radio.NumeroSerie}: nueva batería {serieBateria} instalada el {fecha:yyyy-MM-dd}");
 
         return (await _alquilerDA.ListarRadiosAsync(null, radio.NumeroSerie)).First();
+
+    }
+
+    // ---------- CARR-012: documentos técnicos de la repetidora ----------
+    private const int TamanoMaximoDocumentoBytes = 10 * 1024 * 1024;
+    private const string MensajeFormatoNoPermitido = "Formato de archivo no permitido, use PDF, JPG, PNG o XLSX";
+    private static readonly string[] TiposDocumento = { "Plano", "Acta de instalación", "Otro" };
+
+    // Extensión permitida -> tipo de contenido. Además se comprueba la firma del archivo para detectar
+    // ejecutables u otros formatos renombrados con una extensión permitida.
+    private static readonly Dictionary<string, string> ExtensionesDocumento = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".pdf"] = "application/pdf",
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".png"] = "image/png",
+        [".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    };
+
+    private static bool FirmaValida(string extension, byte[] datos) => extension.ToLowerInvariant() switch
+    {
+        ".pdf" => datos.Length >= 5 && datos[0] == 0x25 && datos[1] == 0x50 && datos[2] == 0x44 && datos[3] == 0x46 && datos[4] == 0x2D,
+        ".jpg" or ".jpeg" => datos.Length >= 3 && datos[0] == 0xFF && datos[1] == 0xD8 && datos[2] == 0xFF,
+        ".png" => datos.Length >= 8 && datos[0] == 0x89 && datos[1] == 0x50 && datos[2] == 0x4E && datos[3] == 0x47,
+        ".xlsx" => datos.Length >= 4 && datos[0] == 0x50 && datos[1] == 0x4B && datos[2] == 0x03 && datos[3] == 0x04,
+        _ => false
+    };
+
+    public async Task<List<DocumentoRepetidoraDto>> ListarDocumentosAsync(string numeroSerie)
+    {
+        var repetidora = await ObtenerRepetidoraPorSerieAsync(numeroSerie);
+        return await _alquilerDA.ListarDocumentosAsync(repetidora.IdEquipo);
+    }
+
+    public async Task<DocumentoRepetidoraDto> AdjuntarDocumentoAsync(string numeroSerie, SubirDocumentoDto dto, int idUsuario)
+    {
+        var repetidora = await ObtenerRepetidoraPorSerieAsync(numeroSerie);
+
+        if (!repetidora.TieneFicha)
+            throw new ReglaNegocioException("Debe registrar la ficha técnica de la repetidora antes de adjuntar documentos.");
+
+        var nombreArchivo = Path.GetFileName(Normalizar(dto.NombreArchivo) ?? string.Empty);
+        if (nombreArchivo.Length == 0 || dto.Contenido is null)
+            throw new ReglaNegocioException("Debe seleccionar el archivo que desea adjuntar.");
+
+        var extension = Path.GetExtension(nombreArchivo);
+        if (!ExtensionesDocumento.TryGetValue(extension, out var tipoContenido))
+            throw new ReglaNegocioException(MensajeFormatoNoPermitido);
+
+        if (dto.Contenido.Length > TamanoMaximoDocumentoBytes)
+            throw new ReglaNegocioException("El archivo supera el tamaño máximo permitido de 10 MB");
+
+        if (dto.Contenido.Length == 0)
+            throw new ReglaNegocioException("El archivo seleccionado está vacío.");
+
+        if (!FirmaValida(extension, dto.Contenido))
+            throw new ReglaNegocioException(MensajeFormatoNoPermitido);
+
+        var tipo = Normalizar(dto.TipoDocumento) ?? "Otro";
+        tipo = TiposDocumento.FirstOrDefault(t => string.Equals(t, tipo, StringComparison.OrdinalIgnoreCase))
+            ?? throw new ReglaNegocioException("El tipo de documento debe ser Plano, Acta de instalación u Otro.");
+
+        var nombreDocumento = Normalizar(dto.NombreDocumento) ?? Path.GetFileNameWithoutExtension(nombreArchivo);
+        if (nombreDocumento.Length > 150 || nombreArchivo.Length > 255)
+            throw new ReglaNegocioException("El nombre del documento excede la longitud permitida.");
+
+        var idDocumento = await _alquilerDA.InsertarDocumentoAsync(repetidora.IdEquipo, tipo, nombreDocumento, nombreArchivo,
+            tipoContenido, dto.Contenido, idUsuario);
+
+        await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Repetidora", repetidora.IdEquipo, "DOCUMENTO_REPETIDORA_ADJUNTADO",
+            $"{repetidora.NumeroSerie}: {tipo} \"{nombreArchivo}\" ({dto.Contenido.Length / 1024} KB)");
+
+        return (await _alquilerDA.ListarDocumentosAsync(repetidora.IdEquipo)).First(d => d.IdDocumento == idDocumento);
+    }
+
+    public async Task<DocumentoArchivoDto> ObtenerDocumentoAsync(int idDocumento) =>
+        await _alquilerDA.ObtenerDocumentoAsync(idDocumento)
+            ?? throw new ReglaNegocioException("El documento indicado no existe.");
+
+    // ---------- CARR-013: bitácora de mantenimiento (se alimenta sola al cerrar tickets) ----------
+    public async Task<List<BitacoraMantenimientoDto>> ObtenerBitacoraRepetidoraAsync(string numeroSerie)
+    {
+        var repetidora = await ObtenerRepetidoraPorSerieAsync(numeroSerie);
+        return await _alquilerDA.ListarBitacoraRepetidoraAsync(repetidora.IdEquipo);
+    }
+
+    // Acepta "latitud, longitud" en grados decimales y lo guarda con formato uniforme.
+    private static string NormalizarCoordenadas(string texto)
+    {
+        const string mensaje = "Las coordenadas GPS no son válidas. Use el formato latitud, longitud (por ejemplo 9.934100, -84.087700).";
+
+        var partes = texto.Split(new[] { ',', ';' }, StringSplitOptions.TrimEntries);
+        if (partes.Length != 2
+            || !double.TryParse(partes[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lat)
+            || !double.TryParse(partes[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lon)
+            || lat is < -90 or > 90 || lon is < -180 or > 180)
+            throw new ReglaNegocioException(mensaje);
+
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{lat:0.000000}, {lon:0.000000}");
     }
 
     private static string? Normalizar(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();

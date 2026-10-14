@@ -46,4 +46,17 @@ public interface IAlquilerDA
     // Baterías de radios (CARR-007, 008)
     Task<List<CambioBateriaDto>> ListarBateriasAsync(int idRadio);
     Task RegistrarBateriaAsync(int idRadio, string numeroSerieBateria, DateTime fechaCambio, int idUsuario);
+
+    // Fichas técnicas de repetidoras (CARR-009)
+    Task<List<RepetidoraDto>> ListarRepetidorasAsync(string? texto, bool? facturable);
+    Task<RepetidoraDto?> ObtenerRepetidoraPorSerieAsync(string numeroSerie);
+    Task<(List<RequisitoChecklistDto> Requisitos, VerificacionChecklistDto? Ultima, List<VerificacionChecklistDto> Historial)> ObtenerChecklistAsync(int idEquipo);
+    Task GuardarChecklistAsync(int idEquipo, IEnumerable<int> idsCumplidos, string? observaciones, int idUsuario);
+    Task<List<DocumentoRepetidoraDto>> ListarDocumentosAsync(int idEquipo);
+    Task<DocumentoArchivoDto?> ObtenerDocumentoAsync(int idDocumento);
+    Task<int> InsertarDocumentoAsync(int idEquipo, string tipoDocumento, string nombreDocumento, string nombreArchivo,
+        string tipoContenido, byte[] contenido, int idUsuario);
+    Task<List<BitacoraMantenimientoDto>> ListarBitacoraRepetidoraAsync(int idEquipo);
+    Task GuardarFichaRepetidoraAsync(int idEquipo, string frecuencia, string frecuenciaRecepcion, string potencia,
+        string? accesorios, string direccionInstalacion, string? coordenadasGps, string clasificacion, int idUsuario);
 }

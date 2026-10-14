@@ -22,7 +22,7 @@ public interface ICuentaFlujo
 {
     Task<EstadoCuentaDto> ObtenerEstadoAsync(int idUsuario);
     Task<List<EstadoCuentaDto>> ObtenerCuentasBloqueadasAsync();
-    Task DesbloquearCuentaAsync(int idUsuario, int idUsuarioAdministrador, string motivo);
+    Task<bool> DesbloquearCuentaAsync(int idUsuario, int idUsuarioAdministrador, string motivo);
 }
 
 public interface IRecuperacionPasswordFlujo

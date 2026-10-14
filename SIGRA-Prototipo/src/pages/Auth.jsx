@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Lock } from "lucide-react";
 import BrandLogo from "../components/BrandLogo";
 import { login, solicitarRecuperacion } from "../services/authService";
 
@@ -57,9 +58,34 @@ function LoginForm({
 }) {
     const [error, setError] = useState("");
     const [cargando, setCargando] = useState(false);
+    const [bloqueoHasta, setBloqueoHasta] = useState(null);
+    const [ahora, setAhora] = useState(() => Date.now());
+
+    // Cuenta regresiva mientras la cuenta esté bloqueada.
+    useEffect(() => {
+        if (!bloqueoHasta) return;
+
+        const id = setInterval(() => {
+            const actual = Date.now();
+            setAhora(actual);
+            if (actual >= bloqueoHasta) {
+                setBloqueoHasta(null);
+                setError("");
+            }
+        }, 1000);
+
+        return () => clearInterval(id);
+    }, [bloqueoHasta]);
+
+    const segundosRestantes = bloqueoHasta
+        ? Math.max(0, Math.ceil((bloqueoHasta - ahora) / 1000))
+        : 0;
+    const bloqueado = segundosRestantes > 0;
+    const cuentaRegresiva = `${Math.floor(segundosRestantes / 60)}:${String(segundosRestantes % 60).padStart(2, "0")}`;
 
     async function handleSubmit(event) {
         event.preventDefault();
+        if (bloqueado) return;
 
         const data = new FormData(event.target);
         const email = String(data.get("email") ?? "").trim();
@@ -73,6 +99,12 @@ function LoginForm({
             onAuthSuccess(resultado);
         } catch (err) {
             setError(err.message ?? "No se pudo iniciar sesión.");
+
+            if (err.status === 423) {
+                const ahoraMs = Date.now();
+                setAhora(ahoraMs);
+                setBloqueoHasta(ahoraMs + (err.minutosRestantes ?? 1) * 60000);
+            }
         } finally {
             setCargando(false);
         }
@@ -94,14 +126,22 @@ function LoginForm({
 
             {error && (
                 <div
-                    className="mb-5 px-3 py-2 rounded-lg text-xs"
+                    role="alert"
+                    className="mb-5 px-3 py-2.5 rounded-lg text-xs flex items-start gap-2"
                     style={{
-                        backgroundColor:
-                            COLORS.redTint,
-                        color: COLORS.red,
+                        backgroundColor: bloqueado ? "#FBF3DE" : COLORS.redTint,
+                        color: bloqueado ? "#9C7A17" : COLORS.red,
                     }}
                 >
-                    {error}
+                    {bloqueado && <Lock size={14} className="shrink-0 mt-0.5" />}
+                    <span>
+                        {error}
+                        {bloqueado && (
+                            <strong className="block mt-1">
+                                Podrá intentar de nuevo en {cuentaRegresiva}
+                            </strong>
+                        )}
+                    </span>
                 </div>
             )}
 
@@ -138,14 +178,18 @@ function LoginForm({
 
             <button
                 type="submit"
-                disabled={cargando}
-                className="rf-btn w-full py-3 rounded-lg text-sm font-medium"
+                disabled={cargando || bloqueado}
+                className="rf-btn w-full py-3 rounded-lg text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{
                     backgroundColor: COLORS.green,
                     color: COLORS.white,
                 }}
             >
-                {cargando ? "Ingresando..." : "Iniciar sesión"}
+                {cargando
+                    ? "Ingresando..."
+                    : bloqueado
+                        ? `Cuenta bloqueada · ${cuentaRegresiva}`
+                        : "Iniciar sesión"}
             </button>
         </form>
     );

@@ -465,38 +465,13 @@ export const MODULES = [
         id: "frecuencias",
         label: "Frecuencias de radio",
         subtitle: "Trámites y control de radiofrecuencias ante el gobierno",
-        metrics: [
-            { label: "Frecuencias vigentes", value: "22" },
-            { label: "Por renovar (6 meses)", value: "4" },
-            { label: "En trámite", value: "2" },
-        ],
-        columns: [
-            { key: "cliente", label: "Cliente" },
-            { key: "id", label: "Frecuencia" },
-            { key: "vence", label: "Vence" },
-            { key: "estado", label: "Estado" },
-        ],
-        fields: [
-            { key: "cliente", label: "Cliente", type: "text", required: true },
-            { key: "id", label: "Frecuencia (MHz)", type: "text", required: true },
-            { key: "fechaOtorgamiento", label: "Fecha de otorgamiento", type: "date" },
-            { key: "vence", label: "Fecha de vencimiento", type: "date" },
-            { key: "estado", label: "Estado", type: "select", options: ["Vigente", "Por renovar", "En trámite", "Vencida"] },
-        ],
-        seed: [
-            { id: "462.550 MHz", cliente: "Hotel Los Sueños", fechaOtorgamiento: "2021-12-01", vence: "2026-12-01", estado: "Vigente" },
-            { id: "154.100 MHz", cliente: "Bomberos de Costa Rica", fechaOtorgamiento: "2022-03-01", vence: "2027-03-01", estado: "Vigente" },
-            { id: "467.750 MHz", cliente: "ICT", fechaOtorgamiento: "2021-09-01", vence: "2026-09-01", estado: "Por renovar" },
-            { id: "451.200 MHz", cliente: "Marina Pez Vela", fechaOtorgamiento: "2020-06-01", vence: "2026-06-01", estado: "Vencida" },
-            { id: "470.325 MHz", cliente: "Refinadora Costarricense", fechaOtorgamiento: "2026-07-01", vence: "—", estado: "En trámite" },
-        ],
     },
 ];
 
 export const STATUS_STYLES = {
 
-    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
-    warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto", "En mantenimiento", "En reparación", "En garantía", "En espera", "Por vencer (90 días)", "Por vencer (30 días)", "Próxima a vencer"],
+    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Otorgada", "Renovada", "Atendida", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
+    warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "En solicitud", "Por renovar", "En renovación", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto", "En mantenimiento", "En reparación", "En garantía", "En espera", "Por vencer (90 días)", "Por vencer (30 días)", "Próxima a vencer"],
     negative: ["Vencido", "Vencida", "Cancelado", "Cancelada", "Inactivo", "Escalado", "Anulada", "Descartado", "Dado de baja"],
 };
 

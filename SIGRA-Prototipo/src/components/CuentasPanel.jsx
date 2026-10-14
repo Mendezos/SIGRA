@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import DataTable from "./DataTable";
-import { Plus, RefreshCw, Check, Minus, ShieldCheck } from "lucide-react";
+import { Plus, Check, Minus, ShieldCheck } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import RecordForm from "./RecordForm";
 import Modal from "./Modal";

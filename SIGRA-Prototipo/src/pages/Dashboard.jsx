@@ -18,7 +18,6 @@ import {
     FilePlus2,
     BarChart3,
     ArrowRight,
-    ShieldCheck,
     Unlock,
     UserCog,
 } from "lucide-react";
@@ -36,7 +35,6 @@ import BrandLogo from "../components/BrandLogo";
 import GenerateTicketModal from "../components/GenerateTicketModal";
 import GenerateReportModal from "../components/GenerateReportModal";
 import StatusBadge from "../components/StatusBadge";
-import PoliticaSeguridadModal from "../components/PoliticaSeguridadModal";
 import DesbloquearCuentaModal from "../components/DesbloquearCuentaModal";
 import PerfilModal from "../components/PerfilModal";
 import ConfirmModal from "../components/ConfirmModal";
@@ -91,7 +89,6 @@ function Sidebar({
     onSelect,
     user,
     onRequestLogout,
-    onOpenPolitica,
     onOpenDesbloqueo,
     onOpenPerfil,
 }) {
@@ -232,19 +229,6 @@ function Sidebar({
                         borderTop: `1px solid ${COLORS.border}`,
                     }}
                 >
-                    <button
-                        type="button"
-                        onClick={onOpenPolitica}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm"
-                        style={{ color: COLORS.charcoal }}
-                    >
-                        <ShieldCheck
-                            size={17}
-                            color={COLORS.muted}
-                        />
-                        Política de seguridad
-                    </button>
-
                     <button
                         type="button"
                         onClick={onOpenDesbloqueo}
@@ -699,8 +683,6 @@ export default function Dashboard({
     const [moduleData, setModuleData] = useState(
         createInitialModuleData
     );
-    const [politicaModalOpen, setPoliticaModalOpen] =
-        useState(false);
     const [desbloqueoModalOpen, setDesbloqueoModalOpen] =
         useState(false);
     const [logoutModalOpen, setLogoutModalOpen] =
@@ -773,7 +755,6 @@ export default function Dashboard({
                 }}
                 user={user}
                 onRequestLogout={() => setLogoutModalOpen(true)}
-                onOpenPolitica={() => setPoliticaModalOpen(true)}
                 onOpenDesbloqueo={() => setDesbloqueoModalOpen(true)}
                 onOpenPerfil={() => setPerfilModalOpen(true)}
             />
@@ -816,11 +797,6 @@ export default function Dashboard({
 
             <NotificationsBell role={user.role} />
             <IAChatPanel />
-
-            <PoliticaSeguridadModal
-                open={politicaModalOpen}
-                onClose={() => setPoliticaModalOpen(false)}
-            />
 
             <DesbloquearCuentaModal
                 open={desbloqueoModalOpen}

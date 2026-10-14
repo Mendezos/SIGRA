@@ -14,14 +14,3 @@ export async function desbloquearCuenta(idUsuario, motivo) {
         body: { motivo },
     });
 }
-
-export async function obtenerPoliticaActiva() {
-    return apiRequest("/politica-seguridad/activa");
-}
-
-export async function guardarPolitica(politica) {
-    return apiRequest("/politica-seguridad", {
-        method: "POST",
-        body: politica,
-    });
-}

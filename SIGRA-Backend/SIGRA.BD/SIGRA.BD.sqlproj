@@ -59,6 +59,8 @@
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="dbo\Views\" />
+    <Folder Include="dbo\Triggers\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Usuario.sql" />
@@ -131,17 +133,51 @@
     <Build Include="dbo\Stored Procedures\sp_Auditoria_ObtenerRecientesPorUsuario.sql" />
     <Build Include="dbo\Stored Procedures\sp_Usuario_ObtenerBloqueados.sql" />
   </ItemGroup>
-
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
   </ItemGroup>
-
   <ItemGroup>
     <Build Include="dbo\Views\vw_CuentaDetalle.sql" />
     <Build Include="dbo\Stored Procedures\sp_Cuenta_Listar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Cuenta_Roles.sql" />
     <Build Include="dbo\Stored Procedures\sp_Cuenta_Guardar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Auditoria_Consultar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Cuenta_Resumen.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Cuenta_Opciones.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Rol_Guardar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Repetidora_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Repetidora_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Repetidora_Guardar.sql" />
+    <Build Include="dbo\Tables\RequisitoInstalacion.sql" />
+    <Build Include="dbo\Tables\ChecklistInstalacionItem.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Checklist_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Checklist_Guardar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Documento_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Documento_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Documento_Obtener.sql" />
+    <Build Include="dbo\Views\vw_BitacoraTicketRepetidora.sql" />
+    <Build Include="dbo\Triggers\trg_Ticket_BitacoraRepetidora.sql" />
+    <Build Include="dbo\Triggers\trg_Reparacion_BitacoraRepetidora.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Repetidora_Bitacora.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Ticket_Cerrar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Frecuencia_RepetidorasCliente.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Solicitud_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Solicitud_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_SolicitudDocumento_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_SolicitudDocumento_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_SolicitudDocumento_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Solicitud_Otorgar.sql" />
+    <Build Include="dbo\Tables\AlertaFrecuencia.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Frecuencia_EvaluarAlertas.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Alerta_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Alerta_PorEnviar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Alerta_MarcarEnvio.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Alerta_Atender.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Frecuencia_ResumenDashboard.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Solicitud_Historial.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Solicitud_Cancelar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Frecuencia_Auditoria.sql" />
+    <Build Include="dbo\Triggers\trg_Auditoria_SoloLectura.sql" />
   </ItemGroup>
 
   <ItemGroup>

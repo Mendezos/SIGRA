@@ -1,4 +1,4 @@
-import { apiRequest } from "./apiClient";
+import { apiBlob, apiRequest } from "./apiClient";
 
 function query(params) {
     const usp = new URLSearchParams();
@@ -52,3 +52,35 @@ export const agregarRadio = (datos) => apiRequest("/alquiler/radios", { method: 
 export const listarBaterias = (idRadio) => apiRequest(`/alquiler/radios/${idRadio}/baterias`);
 export const registrarCambioBateria = (datos) => apiRequest("/alquiler/radios/bateria", { method: "POST", body: datos });
 export const bateriasPorCambiar = () => apiRequest("/alquiler/baterias/alertas");
+
+// Fichas técnicas de repetidoras
+export const listarRepetidoras = ({ texto, facturable } = {}) => apiRequest(`/alquiler/repetidoras${query({ texto, facturable })}`);
+export const obtenerRepetidoraPorSerie = (serie) => apiRequest(`/alquiler/repetidoras/serie/${encodeURIComponent(serie)}`);
+export const registrarFichaRepetidora = (datos) => apiRequest("/alquiler/repetidoras/ficha", { method: "POST", body: datos });
+export const actualizarFichaRepetidora = (datos) => apiRequest("/alquiler/repetidoras/ficha", { method: "PUT", body: datos });
+
+// Checklist previo a la instalación de repetidoras
+export const obtenerChecklist = (serie) => apiRequest(`/alquiler/repetidoras/${encodeURIComponent(serie)}/checklist`);
+export const guardarChecklist = (serie, datos) =>
+    apiRequest(`/alquiler/repetidoras/${encodeURIComponent(serie)}/checklist`, { method: "POST", body: datos });
+
+// Documentos técnicos de la repetidora
+export const TIPOS_DOCUMENTO = ["Plano", "Acta de instalación", "Otro"];
+export const EXTENSIONES_DOCUMENTO = [".pdf", ".jpg", ".jpeg", ".png", ".xlsx"];
+export const TAMANO_MAXIMO_DOCUMENTO = 10 * 1024 * 1024;
+export const MENSAJE_FORMATO_DOCUMENTO = "Formato de archivo no permitido, use PDF, JPG, PNG o XLSX";
+export const MENSAJE_TAMANO_DOCUMENTO = "El archivo supera el tamaño máximo permitido de 10 MB";
+
+export const listarDocumentos = (serie) => apiRequest(`/alquiler/repetidoras/${encodeURIComponent(serie)}/documentos`);
+export const adjuntarDocumento = (serie, { archivo, tipoDocumento, nombreDocumento }) => {
+    const form = new FormData();
+    form.append("archivo", archivo);
+    form.append("tipoDocumento", tipoDocumento);
+    if (nombreDocumento) form.append("nombreDocumento", nombreDocumento);
+    return apiRequest(`/alquiler/repetidoras/${encodeURIComponent(serie)}/documentos`, { method: "POST", body: form });
+};
+export const descargarDocumento = (id, descargar = true) =>
+    apiBlob(`/alquiler/repetidoras/documentos/${id}/archivo?descargar=${descargar}`);
+
+// Bitácora de mantenimiento de la repetidora (se alimenta sola al cerrar tickets)
+export const obtenerBitacoraRepetidora = (serie) => apiRequest(`/alquiler/repetidoras/${encodeURIComponent(serie)}/bitacora`);

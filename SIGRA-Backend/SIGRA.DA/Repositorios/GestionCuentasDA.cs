@@ -24,14 +24,59 @@ public class GestionCuentasDA : IGestionCuentasDA
         return filas.ToList();
     }
 
-    public Task<List<CuentaDto>> ListarAsync(FiltroCuentasDto filtro) =>
-        Consultar<CuentaDto>("dbo.sp_Cuenta_Listar", filtro);
+    // Los SP paginados devuelven dos conjuntos: los datos de paginación y la página pedida.
+    private async Task<PaginaDto<T>> ConsultarPagina<T>(string sp, object parametros)
+    {
+        using var cn = _conexion.CrearConexion();
+
+        try
+        {
+            using var multiple = await cn.QueryMultipleAsync(
+                sp, parametros, commandType: CommandType.StoredProcedure);
+
+            var datos = await multiple.ReadSingleAsync<DatosPagina>();
+            var items = (await multiple.ReadAsync<T>()).ToList();
+
+            return new PaginaDto<T>
+            {
+                Items = items,
+                Total = datos.Total,
+                Pagina = datos.Pagina,
+                TamanoPagina = datos.TamanoPagina
+            };
+        }
+        catch (SqlException ex) when (ex.Number == 50001)
+        {
+            throw new ReglaNegocioException(ex.Message);
+        }
+    }
+
+    private sealed class DatosPagina
+    {
+        public int Total { get; set; }
+        public int Pagina { get; set; }
+        public int TamanoPagina { get; set; }
+    }
+
+    public Task<PaginaDto<CuentaDto>> ListarAsync(FiltroCuentasDto filtro) =>
+        ConsultarPagina<CuentaDto>("dbo.sp_Cuenta_Listar", filtro);
 
     public Task<List<RolCuentaDto>> RolesAsync() =>
         Consultar<RolCuentaDto>("dbo.sp_Cuenta_Roles");
 
-    public Task<List<RegistroAuditoriaDto>> AuditoriaAsync(FiltroAuditoriaDto filtro) =>
-        Consultar<RegistroAuditoriaDto>("dbo.sp_Auditoria_Consultar", filtro);
+    public Task<PaginaDto<RegistroAuditoriaDto>> AuditoriaAsync(FiltroAuditoriaDto filtro) =>
+        ConsultarPagina<RegistroAuditoriaDto>("dbo.sp_Auditoria_Consultar", filtro);
+
+    public async Task<ResumenCuentasDto> ResumenAsync()
+    {
+        using var cn = _conexion.CrearConexion();
+
+        return await cn.QuerySingleAsync<ResumenCuentasDto>(
+            "dbo.sp_Cuenta_Resumen", commandType: CommandType.StoredProcedure);
+    }
+
+    public Task<List<OpcionCuentaDto>> OpcionesAsync() =>
+        Consultar<OpcionCuentaDto>("dbo.sp_Cuenta_Opciones");
 
     public async Task<int> GuardarAsync(CambioCuenta cambio)
     {

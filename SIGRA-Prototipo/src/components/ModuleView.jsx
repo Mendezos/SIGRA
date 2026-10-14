@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     List,
     Calendar as CalendarIcon,
@@ -18,6 +18,10 @@ import CuentasPanel from "./CuentasPanel";
 import InventarioPanel from "./inventario/InventarioPanel";
 import AlquilerPanel from "./alquiler/AlquilerPanel";
 import TicketsPanel from "./tickets/TicketsPanel";
+import FrecuenciasPanel from "./frecuencias/FrecuenciasPanel";
+import FrecuenciasDashboardWidget from "./frecuencias/FrecuenciasDashboardWidget";
+import { puedeVerResumenFrecuencias } from "./frecuencias/helpers";
+import { obtenerResumen } from "../services/cuentasService";
 
 const COLORS = {
     green: "#5EB453",
@@ -347,6 +351,33 @@ export default function ModuleView({
         useState("lista");
     const [calendarGira, setCalendarGira] =
         useState(null);
+    const [resumenUsuarios, setResumenUsuarios] =
+        useState(null);
+    const [resumenVersion, setResumenVersion] =
+        useState(0);
+
+    const esAdminUsuarios =
+        module.id === "usuarios" &&
+        user.role === "Administrador del sistema";
+
+    // Métricas reales del módulo Usuarios y accesos (desde la BD).
+    useEffect(() => {
+        if (!esAdminUsuarios) return;
+
+        let vigente = true;
+
+        obtenerResumen()
+            .then((resumen) => {
+                if (vigente) setResumenUsuarios(resumen);
+            })
+            .catch(() => {
+                if (vigente) setResumenUsuarios(null);
+            });
+
+        return () => {
+            vigente = false;
+        };
+    }, [esAdminUsuarios, resumenVersion]);
 
     const permissions = getModulePermissions(
         user.role,
@@ -432,10 +463,32 @@ export default function ModuleView({
         module.id !== "usuarios" &&
         module.id !== "inventario" &&
         module.id !== "alquiler" &&
+        module.id !== "frecuencias" &&
+        (module.id !== "usuarios" || !!resumenUsuarios) &&
         (!module.metricsRoles ||
             module.metricsRoles.includes(user.role));
 
     let displayMetrics = module.metrics;
+
+    if (module.id === "usuarios" && resumenUsuarios) {
+        displayMetrics = [
+            {
+                label: "Usuarios activos",
+                value: String(resumenUsuarios.usuariosActivos),
+                hint: `${resumenUsuarios.usuariosInactivos} inactivos · ${resumenUsuarios.cuentasBloqueadas} bloqueadas`,
+            },
+            {
+                label: "Roles definidos",
+                value: String(resumenUsuarios.rolesDefinidos),
+                hint: `${resumenUsuarios.rolesActivos} activos`,
+            },
+            {
+                label: "Sesiones hoy",
+                value: String(resumenUsuarios.sesionesHoy),
+                hint: "Inicios de sesión de hoy",
+            },
+        ];
+    }
     let rowFilter;
 
     if (
@@ -600,10 +653,15 @@ export default function ModuleView({
 
     if (module.id === "dashboard") {
         extraContent = (
-            <GenerateReportWidget
-                role={user.role}
-                onGenerate={handleGenerateReport}
-            />
+            <>
+                {puedeVerResumenFrecuencias(user.role) && (
+                    <FrecuenciasDashboardWidget />
+                )}
+                <GenerateReportWidget
+                    role={user.role}
+                    onGenerate={handleGenerateReport}
+                />
+            </>
         );
     }
 
@@ -681,6 +739,15 @@ export default function ModuleView({
                             >
                                 {metric.value}
                             </p>
+
+                            {metric.hint && (
+                                <p
+                                    className="text-xs mt-1"
+                                    style={{ color: COLORS.muted }}
+                                >
+                                    {metric.hint}
+                                </p>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -757,7 +824,10 @@ export default function ModuleView({
                     )}
                 />
             ) : module.id === "usuarios" ? (
-                <CuentasPanel user={user} />
+                <CuentasPanel
+                    user={user}
+                    onChanged={() => setResumenVersion((v) => v + 1)}
+                />
             ) : module.id === "tickets" ? (
                 <TicketsPanel user={user} />
             ) : hasTabs ? (
@@ -807,6 +877,8 @@ export default function ModuleView({
                 <InventarioPanel user={user} />
             ) : module.id === "alquiler" ? (
                 <AlquilerPanel user={user} />
+            ) : module.id === "frecuencias" ? (
+                <FrecuenciasPanel user={user} />
             ) : (
                 <EntityPanel
                     idPrefix={idPrefixFor(module.id)}

@@ -3,6 +3,7 @@ using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
 using SIGRA.Abstracciones.Modelos;
+using System.Text.Json;
 
 namespace SIGRA.Flujo.Flujos;
 
@@ -34,6 +35,37 @@ public class RolFlujo : IRolFlujo
         await _auditoriaDA.RegistrarAsync(idUsuarioAdministrador, "Seguridad", "Rol", nuevo.IdRol, "ROL_CREADO", nombreNormalizado);
 
         return nuevo;
+    }
+
+    public async Task<RolModel> GuardarAsync(
+        int? idRol, string nombre, string? descripcion, bool? activo,
+        List<PermisoModuloDto>? permisos, int idUsuarioAdministrador)
+    {
+        var nombreNormalizado = ValidarNombre(nombre);
+        var descripcionNormalizada = ValidarDescripcion(descripcion);
+
+        if (idRol is <= 0)
+            throw new ReglaNegocioException("El identificador indicado no es válido.");
+
+        string? permisosJson = null;
+
+        if (permisos is not null)
+        {
+            var modulosValidos = (await _moduloDA.ListarAsync()).Select(m => m.IdModulo).ToHashSet();
+            var invalidos = permisos.Where(p => !modulosValidos.Contains(p.IdModulo)).Select(p => p.IdModulo).Distinct().ToList();
+
+            if (invalidos.Count > 0)
+                throw new ValidacionException(
+                    "Uno o más valores están fuera del rango permitido.",
+                    invalidos.Select(m => $"El módulo {m} no es válido.").ToList());
+
+            permisosJson = JsonSerializer.Serialize(
+                permisos,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        }
+
+        return await _rolDA.GuardarAsync(
+            idUsuarioAdministrador, idRol, nombreNormalizado, descripcionNormalizada, activo, permisosJson);
     }
 
     public async Task<List<RolModel>> ListarAsync()

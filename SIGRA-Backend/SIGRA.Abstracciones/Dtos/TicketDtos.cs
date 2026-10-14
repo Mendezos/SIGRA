@@ -170,13 +170,7 @@ public class FiltroTicketsDto
     public int TamanoPagina { get; set; } = 10;
 }
 
-public class PaginaDto<T>
-{
-    public List<T> Items { get; set; } = new();
-    public int Total { get; set; }
-    public int Pagina { get; set; }
-    public int TamanoPagina { get; set; }
-}
+// PaginaDto<T> se define en GestionCuentasDtos.cs y es compartido por cuentas y tickets.
 
 public class ResumenTicketsDto
 {

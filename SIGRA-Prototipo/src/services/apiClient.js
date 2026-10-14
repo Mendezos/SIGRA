@@ -31,7 +31,8 @@ export function setOnSesionInvalida(callback) {
 }
 
 export async function apiRequest(path, { method = "GET", body, auth = true } = {}) {
-    const headers = { "Content-Type": "application/json" };
+    const esFormulario = typeof FormData !== "undefined" && body instanceof FormData;
+    const headers = esFormulario ? {} : { "Content-Type": "application/json" };
     if (auth) {
         const token = getToken();
         if (token) headers.Authorization = `Bearer ${token}`;
@@ -42,7 +43,7 @@ export async function apiRequest(path, { method = "GET", body, auth = true } = {
         response = await fetch(`${BASE_URL}${path}`, {
             method,
             headers,
-            body: body !== undefined ? JSON.stringify(body) : undefined,
+            body: body === undefined ? undefined : esFormulario ? body : JSON.stringify(body),
         });
     } catch {
         throw new ApiError("No se pudo conectar con el servidor. Verificá tu conexión.", { status: 0 });
@@ -85,5 +86,28 @@ export async function apiDownload(path) {
         if (response.status === 401) { clearToken(); onSesionInvalida?.(data?.mensaje); }
         throw new ApiError(data?.mensaje ?? "No se pudo generar el documento.", { status: response.status, codigo: data?.codigo });
     }
+    return response.blob();
+}
+
+// Descarga un archivo protegido (requiere el token) y devuelve el Blob para verlo o guardarlo.
+export async function apiBlob(path) {
+    const token = getToken();
+    let response;
+    try {
+        response = await fetch(`${BASE_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    } catch {
+        throw new ApiError("No se pudo conectar con el servidor. Verifica tu conexión.", { status: 0 });
+    }
+
+    if (response.status === 401) {
+        clearToken();
+        if (onSesionInvalida) onSesionInvalida();
+    }
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new ApiError(data?.mensaje ?? "No se pudo obtener el archivo.", { status: response.status });
+    }
+
     return response.blob();
 }

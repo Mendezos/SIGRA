@@ -36,8 +36,14 @@ public class CuentasController : ControllerBase
     [HttpPost("{idUsuario:int}/desbloquear")]
     public async Task<IActionResult> Desbloquear(int idUsuario, [FromBody] DesbloquearCuentaDto dto)
     {
-        await _flujo.DesbloquearCuentaAsync(idUsuario, User.ObtenerIdUsuario(), dto.Motivo);
-        return Ok(new RespuestaMensajeDto { Mensaje = "Cuenta desbloqueada correctamente." });
+        var notificado = await _flujo.DesbloquearCuentaAsync(idUsuario, User.ObtenerIdUsuario(), dto.Motivo);
+
+        return Ok(new RespuestaMensajeDto
+        {
+            Mensaje = notificado
+                ? "Cuenta desbloqueada correctamente. Se notificó al usuario por correo."
+                : "Cuenta desbloqueada correctamente. No se pudo enviar el correo de aviso al usuario."
+        });
     }
 
     [HttpGet]
@@ -88,6 +94,16 @@ public class CuentasController : ControllerBase
             Mensaje = "Rol actualizado correctamente."
         });
     }
+
+    [HttpGet("resumen")]
+    [PermisoCuentas("Lectura")]
+    public async Task<IActionResult> Resumen() =>
+        Ok(await _gestion.ResumenAsync());
+
+    [HttpGet("opciones")]
+    [PermisoCuentas("Lectura")]
+    public async Task<IActionResult> Opciones() =>
+        Ok(await _gestion.OpcionesAsync());
 
     [HttpGet("roles")]
     [PermisoCuentas("Lectura")]

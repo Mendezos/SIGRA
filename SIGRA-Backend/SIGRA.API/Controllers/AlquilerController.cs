@@ -16,6 +16,8 @@ public class AlquilerController : ControllerBase
     private const string RolesContactos = RolAdministrador + "," + RolVendedor;
     private const string RolesLectura = RolAdministrador + ",Gerente,Coordinador tecnico,Tecnico," + RolVendedor;
     private const string RolesRadios = RolAdministrador + ",Coordinador tecnico,Tecnico";
+    // Margen sobre los 10 MB permitidos para que la validación del sistema (y su mensaje) responda antes que el servidor.
+    private const long LimiteSolicitudBytes = 50 * 1024 * 1024;
 
     private readonly IAlquilerFlujo _flujo;
 
@@ -146,4 +148,90 @@ public class AlquilerController : ControllerBase
     [Authorize(Roles = RolesRadios)]
     public async Task<ActionResult<DetalleContratoDto>> AgregarRadio([FromBody] AgregarRadioDto dto) =>
         Ok(await _flujo.AgregarRadioAContratoAsync(dto, User.ObtenerIdUsuario()));
+
+    // ---------- Fichas técnicas de repetidoras (CARR-009) ----------
+    [HttpGet("repetidoras")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<List<RepetidoraDto>>> Repetidoras([FromQuery] string? texto, [FromQuery] bool? facturable) =>
+        Ok(await _flujo.ListarRepetidorasAsync(texto, facturable));
+
+    [HttpGet("repetidoras/serie/{numeroSerie}")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<RepetidoraDto>> RepetidoraPorSerie(string numeroSerie) =>
+        Ok(await _flujo.ObtenerRepetidoraPorSerieAsync(numeroSerie));
+
+    [HttpPost("repetidoras/ficha")]
+    [Authorize(Roles = RolesRadios)]
+    public async Task<ActionResult<RepetidoraDto>> RegistrarFichaRepetidora([FromBody] GuardarFichaRepetidoraDto dto) =>
+        Ok(await _flujo.GuardarFichaRepetidoraAsync(dto, false, User.ObtenerIdUsuario()));
+
+    [HttpPut("repetidoras/ficha")]
+    [Authorize(Roles = RolesRadios)]
+    public async Task<ActionResult<RepetidoraDto>> ActualizarFichaRepetidora([FromBody] GuardarFichaRepetidoraDto dto) =>
+        Ok(await _flujo.GuardarFichaRepetidoraAsync(dto, true, User.ObtenerIdUsuario()));
+
+    // ---------- Checklist previo a la instalación (CARR-011) ----------
+    [HttpGet("repetidoras/{numeroSerie}/checklist")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<ChecklistRepetidoraDto>> Checklist(string numeroSerie) =>
+        Ok(await _flujo.ObtenerChecklistAsync(numeroSerie));
+
+    [HttpPost("repetidoras/{numeroSerie}/checklist")]
+    [Authorize(Roles = RolesRadios)]
+    public async Task<ActionResult<ChecklistRepetidoraDto>> GuardarChecklist(string numeroSerie, [FromBody] GuardarChecklistDto dto) =>
+        Ok(await _flujo.GuardarChecklistAsync(numeroSerie, dto, User.ObtenerIdUsuario()));
+
+    // ---------- Documentos técnicos de la repetidora (CARR-012) ----------
+    [HttpGet("repetidoras/{numeroSerie}/documentos")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<List<DocumentoRepetidoraDto>>> Documentos(string numeroSerie) =>
+        Ok(await _flujo.ListarDocumentosAsync(numeroSerie));
+
+    [HttpPost("repetidoras/{numeroSerie}/documentos")]
+    [Authorize(Roles = RolesRadios)]
+    [RequestSizeLimit(LimiteSolicitudBytes)]
+    public async Task<ActionResult<DocumentoRepetidoraDto>> AdjuntarDocumento(string numeroSerie, [FromForm] SubirDocumentoFormulario formulario)
+    {
+        byte[]? contenido = null;
+        if (formulario.Archivo is not null)
+        {
+            using var memoria = new MemoryStream();
+            await formulario.Archivo.CopyToAsync(memoria);
+            contenido = memoria.ToArray();
+        }
+
+        var dto = new SubirDocumentoDto
+        {
+            NombreArchivo = formulario.Archivo?.FileName,
+            Contenido = contenido,
+            TipoDocumento = formulario.TipoDocumento,
+            NombreDocumento = formulario.NombreDocumento
+        };
+        return Ok(await _flujo.AdjuntarDocumentoAsync(numeroSerie, dto, User.ObtenerIdUsuario()));
+    }
+
+    [HttpGet("repetidoras/documentos/{idDocumento:int}/archivo")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<IActionResult> DescargarDocumento(int idDocumento, [FromQuery] bool descargar = true)
+    {
+        var documento = await _flujo.ObtenerDocumentoAsync(idDocumento);
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return descargar
+            ? File(documento.Contenido, documento.TipoContenido, documento.NombreArchivo)
+            : File(documento.Contenido, documento.TipoContenido);
+    }
+
+    // ---------- Bitácora de mantenimiento de la repetidora (CARR-013) ----------
+    [HttpGet("repetidoras/{numeroSerie}/bitacora")]
+    [Authorize(Roles = RolesLectura)]
+    public async Task<ActionResult<List<BitacoraMantenimientoDto>>> BitacoraRepetidora(string numeroSerie) =>
+        Ok(await _flujo.ObtenerBitacoraRepetidoraAsync(numeroSerie));
+}
+
+// Formulario multipart de la carga de documentos (clase propia para que Swagger pueda describir el archivo).
+public class SubirDocumentoFormulario
+{
+    public IFormFile? Archivo { get; set; }
+    public string? TipoDocumento { get; set; }
+    public string? NombreDocumento { get; set; }
 }

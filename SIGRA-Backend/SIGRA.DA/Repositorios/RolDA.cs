@@ -1,6 +1,8 @@
 using Dapper;
 using SIGRA.Abstracciones.Conexion;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
+using Microsoft.Data.SqlClient;
+using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Modelos;
 using System.Data;
 
@@ -55,6 +57,27 @@ public class RolDA : IRolDA
         using var conexion = _conexionFactory.CrearConexion();
         return await conexion.QuerySingleAsync<RolModel>(
             "sp_Rol_Editar", new { IdRol = idRol, Nombre = nombre, Descripcion = descripcion }, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<RolModel> GuardarAsync(int idAutor, int? idRol, string nombre, string? descripcion, bool? activo, string? permisosJson)
+    {
+        using var conexion = _conexionFactory.CrearConexion();
+
+        try
+        {
+            return await conexion.QuerySingleAsync<RolModel>(
+                "dbo.sp_Rol_Guardar",
+                new { IdAutor = idAutor, IdRol = idRol, Nombre = nombre, Descripcion = descripcion, Activo = activo, Permisos = permisosJson },
+                commandType: CommandType.StoredProcedure);
+        }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627)
+        {
+            throw new ReglaNegocioException("Ya existe un rol con ese nombre.");
+        }
+        catch (SqlException ex) when (ex.Number == 50001)
+        {
+            throw new ReglaNegocioException(ex.Message);
+        }
     }
 
     public async Task<RolModel> CambiarEstadoAsync(int idRol, bool activo)
