@@ -14,6 +14,7 @@ import {
     getModulePermissions,
     getReportTypes,
 } from "../data/roleCapabilities";
+import RolesPanel from "./RolesPanel";
 import CuentasPanel from "./CuentasPanel";
 import InventarioPanel from "./inventario/InventarioPanel";
 import AlquilerPanel from "./alquiler/AlquilerPanel";
@@ -823,11 +824,6 @@ export default function ModuleView({
                         user.role
                     )}
                 />
-            ) : module.id === "usuarios" ? (
-                <CuentasPanel
-                    user={user}
-                    onChanged={() => setResumenVersion((v) => v + 1)}
-                />
             ) : module.id === "tickets" ? (
                 <TicketsPanel user={user} />
             ) : hasTabs ? (
@@ -838,6 +834,19 @@ export default function ModuleView({
                         onSelect={setActiveTab}
                     />
 
+                    {module.id === "usuarios" &&
+                    currentTab.key === "roles" ? (
+                        <RolesPanel
+                            user={user}
+                            onChanged={() => setResumenVersion((v) => v + 1)}
+                        />
+                    ) : module.id === "usuarios" &&
+                      currentTab.key === "cuentas" ? (
+                        <CuentasPanel
+                            user={user}
+                            onChanged={() => setResumenVersion((v) => v + 1)}
+                        />
+                    ) : (
                     <EntityPanel
                         key={currentTab.key}
                         idPrefix={idPrefixFor(
@@ -872,6 +881,7 @@ export default function ModuleView({
                                 : undefined
                         }
                     />
+                    )}
                 </>
             ) : module.id === "inventario" ? (
                 <InventarioPanel user={user} />

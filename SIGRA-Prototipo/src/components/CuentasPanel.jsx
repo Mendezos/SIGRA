@@ -1,11 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Lock, RefreshCw, ScrollText, UserCog, UserPlus, UserRound, X } from "lucide-react";
 import DataTable from "./DataTable";
-import { Plus, Check, Minus, ShieldCheck } from "lucide-react";
-import StatusBadge from "./StatusBadge";
 import RecordForm from "./RecordForm";
 import Modal from "./Modal";
 import ConfirmModal from "./ConfirmModal";
-import RolesPanel from "./RolesPanel";
+import {
+    Button,
+    DetailGrid,
+    FieldLabel,
+    Notice,
+    Pill,
+    SubTabs,
+} from "./ui";
+import { COLORS, inputClass, inputStyle } from "./uiTheme";
 import { MODULES } from "../data/modules";
 import { MODULE_KEY_TO_ID } from "../data/roleCapabilities";
 import * as api from "../services/cuentasService";
@@ -13,300 +20,553 @@ import { desbloquearCuenta } from "../services/adminService";
 import {
     ACCIONES_AUDITORIA,
     ENTIDADES_AUDITORIA,
-    camposDetalle,
-    etiquetaCampo,
-    formatearAccion,
-    formatearEntidad,
-    formatearValor,
-    leerDetalle,
-    resumirDetalle,
-} from "../utils/auditoria";
+    formatearColones,
+    formatearFechaCorta,
+    formatearFechaHora,
+    nombreAccion,
+    nombreEntidad,
+} from "../utils/format";
 
-const control = "border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm bg-white text-[#323232]";
-const button = "inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-const primaryButton = `${button} bg-[#5EB453] text-white hover:bg-[#4CA23D]`;
-const secondaryButton = `${button} border border-[#E3E3E3] text-[#6E6E6E] hover:bg-[#FAFAFA]`;
-const roleButton = `${button} border border-[#5EB453] bg-[#EAF6E8] text-[#4CA23D] hover:bg-[#DFF0DC]`;
-const dangerButton = `${button} border border-[#E3E3E3] text-[#C0392B] hover:bg-[#FCEBEB]`;
-const estadoOptions = ["Activo", "Inactivo"];
+const ESTADOS_CIVILES = ["Soltero/a", "Casado/a", "Unión libre", "Divorciado/a", "Viudo/a"];
 
-const esEstadoCivilRetirado = (valor) => String(valor ?? "").trim()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "union libre";
+const GRADOS_ACADEMICOS = [
+    "Primaria",
+    "Secundaria",
+    "Técnico",
+    "Diplomado",
+    "Bachillerato universitario",
+    "Licenciatura",
+    "Maestría",
+    "Doctorado",
+];
 
-const fecha = (value) => value
-    ? new Date(value).toLocaleString("es-CR", {
-        timeZone: "America/Costa_Rica",
-    })
-    : "Sin registro";
+const ACCIONES_FILTRO = [
+    "LOGIN_EXITOSO", "LOGIN_FALLIDO", "LOGIN_BLOQUEADO", "LOGIN_CUENTA_INACTIVA", "LOGOUT",
+    "CUENTA_BLOQUEADA", "CUENTA_DESBLOQUEADA", "CUENTA_CREADA", "CUENTA_EDITADA",
+    "CUENTA_DESACTIVADA", "CUENTA_REACTIVADA", "ROL_CAMBIADO",
+    "PASSWORD_CAMBIADA", "PASSWORD_RESTABLECIDA", "RECUPERACION_SOLICITADA", "PERFIL_ACTUALIZADO",
+    "ROL_CREADO", "ROL_EDITADO", "ROL_ACTIVADO", "ROL_DESACTIVADO", "PERMISOS_DEFINIDOS",
+    "POLITICA_ACTUALIZADA",
+].filter((codigo) => ACCIONES_AUDITORIA[codigo]);
+
+const hoy = () => new Date().toISOString().slice(0, 10);
+
+// Convierte valores antiguos de la BD (texto libre) a una opción de la lista.
+function opcionDeLista(valor, opciones) {
+    const texto = String(valor ?? "").trim().toLowerCase();
+    if (!texto) return "";
+
+    const exacta = opciones.find((o) => o.toLowerCase() === texto);
+    if (exacta) return exacta;
+
+    // "Soltero" -> "Soltero/a", "Casado" -> "Casado/a", etc.
+    return opciones.find((o) => o.toLowerCase().split("/")[0] === texto) ?? "";
+}
 
 const campos = [
     { key: "nombre", label: "Nombre completo", required: true, maxLength: 150 },
     { key: "correo", label: "Correo corporativo", type: "email", required: true, maxLength: 150 },
-    { key: "fechaNacimiento", label: "Fecha de nacimiento", type: "date", required: true },
+    { key: "fechaNacimiento", label: "Fecha de nacimiento", type: "date", required: true, max: hoy() },
     { key: "telefono", label: "Teléfono", type: "tel", required: true, maxLength: 20 },
     { key: "direccion", label: "Dirección", type: "textarea", required: true, maxLength: 300 },
-    {
-        key: "estadoCivil", label: "Estado civil", type: "select", required: true,
-        options: ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a", "Separado/a"],
-    },
-    {
-        key: "gradoAcademico", label: "Grado académico", type: "select", required: true,
-        options: [
-            "Sin estudios formales", "Primaria completa", "Secundaria completa",
-            "Técnico", "Diplomado", "Bachillerato universitario",
-            "Licenciatura", "Maestría", "Doctorado",
-        ],
-    },
-    { key: "salario", label: "Salario", type: "number", min: 0, step: "0.01", required: true },
-];
-
-const columnas = [
-    { key: "nombre", label: "Nombre" },
-    { key: "cedula", label: "Cédula" },
-    { key: "correo", label: "Correo" },
-    { key: "telefono", label: "Teléfono" },
-    { key: "rol", label: "Rol" },
-    { key: "estado", label: "Estado" },
-    { key: "bloqueo", label: "Bloqueo" },
-    { key: "ultimoAccesoTexto", label: "Último acceso" },
+    { key: "estadoCivil", label: "Estado civil", type: "select", options: ESTADOS_CIVILES, required: true },
+    { key: "gradoAcademico", label: "Grado académico", type: "select", options: GRADOS_ACADEMICOS, required: true },
+    { key: "salario", label: "Salario (₡)", type: "number", min: 0, step: "0.01", required: true },
 ];
 
 const columnasAuditoria = [
-    { key: "fechaTexto", label: "Fecha" },
-    { key: "autor", label: "Responsable" },
-    { key: "entidadTexto", label: "Entidad" },
-    { key: "cuentaTexto", label: "Cuenta afectada" },
+    { key: "fechaTexto", label: "Fecha y hora", nowrap: true },
+    { key: "autor", label: "Responsable", nowrap: true },
     { key: "accionTexto", label: "Acción" },
-    {
-        key: "antesTexto", label: "Anterior",
-        cellClassName: "whitespace-pre-wrap min-w-[24rem] max-w-[32rem] break-words align-top",
-    },
-    {
-        key: "despuesTexto", label: "Nuevo",
-        cellClassName: "whitespace-pre-wrap min-w-[24rem] max-w-[32rem] break-words align-top",
-    },
+    { key: "entidadTexto", label: "Tipo", nowrap: true },
+    { key: "objetivo", label: "Afectado", nowrap: true },
+    { key: "resumenTexto", label: "Detalle" },
 ];
+
+const ETIQUETAS_CAMPO = {
+    nombre: "Nombre",
+    correo: "Correo",
+    cedula: "Cédula",
+    fechaNacimiento: "Fecha de nacimiento",
+    telefono: "Teléfono",
+    direccion: "Dirección",
+    estadoCivil: "Estado civil",
+    gradoAcademico: "Grado académico",
+    salario: "Salario",
+    rol: "Rol",
+    activo: "Estado",
+    bloqueada: "Bloqueo",
+    fechaCreacion: "Fecha de creación",
+    ultimoAcceso: "Último acceso",
+};
+
+const CAMPOS_OCULTOS = ["idUsuario", "idRol"];
+
+function etiquetaCampo(key) {
+    if (ETIQUETAS_CAMPO[key]) return ETIQUETAS_CAMPO[key];
+
+    const texto = key.replace(/([A-Z])/g, " $1").toLowerCase();
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function valorCampo(key, valor) {
+    if (valor === null || valor === undefined || valor === "") return "Sin registro";
+    if (key === "activo") return valor ? "Activo" : "Inactivo";
+    if (key === "bloqueada") return valor ? "Bloqueada" : "Sin bloqueo";
+    if (key === "salario") return formatearColones(valor);
+    if (key === "fechaNacimiento") return formatearFechaCorta(valor);
+    if (key === "fechaCreacion" || key === "ultimoAcceso") return formatearFechaHora(valor);
+
+    return String(valor);
+}
+
+function leerDetalle(detalle) {
+    try {
+        return JSON.parse(detalle);
+    } catch {
+        return null;
+    }
+}
+
+function camelCase(objeto) {
+    return Object.fromEntries(
+        Object.entries(objeto ?? {}).map(([key, valor]) => [
+            key.charAt(0).toLowerCase() + key.slice(1),
+            valor,
+        ])
+    );
+}
+
+function cambiosDe(detalle) {
+    const datos = leerDetalle(detalle);
+
+    if (!datos || typeof datos !== "object" || (!datos.antes && !datos.despues)) return null;
+
+    const antes = camelCase(datos.antes);
+    const despues = camelCase(datos.despues);
+    const claves = [...new Set([...Object.keys(antes), ...Object.keys(despues)])]
+        .filter((key) => !CAMPOS_OCULTOS.includes(key));
+
+    const cambios = claves
+        .filter((key) => JSON.stringify(antes[key] ?? null) !== JSON.stringify(despues[key] ?? null))
+        .map((key) => ({ key, antes: antes[key], despues: despues[key] }));
+
+    return { cambios, motivo: datos.motivo, esCreacion: !datos.antes };
+}
+
+function resumirDetalle(detalle) {
+    const info = cambiosDe(detalle);
+
+    if (info) {
+        if (info.motivo) return `Motivo: ${info.motivo}`;
+        if (info.esCreacion) return "Cuenta nueva con todos sus datos";
+
+        return info.cambios.length === 0
+            ? "Sin cambios en los datos"
+            : `${info.cambios.length} campo(s) modificado(s)`;
+    }
+
+    if (!detalle) return "—";
+
+    return detalle.length > 70 ? `${detalle.slice(0, 70)}…` : detalle;
+}
 
 function PermisosRol({ rol }) {
     if (!rol) return null;
 
-    const acciones = [
-        ["lectura", "Consultar"], ["escritura", "Crear"],
-        ["edicion", "Editar"], ["eliminacion", "Eliminar"],
-    ];
-    const permisos = rol.permisos ?? [];
-    const disponibles = permisos.filter((permiso) => acciones.some(([key]) => permiso[key])).length;
+    const acciones = ["lectura", "escritura", "edicion", "eliminacion"];
+    const nombres = { lectura: "lectura", escritura: "escritura", edicion: "edición", eliminacion: "eliminación" };
 
     return (
-        <section className="my-5 p-4 border border-[#E3E3E3] rounded-xl bg-[#FAFAFA]"
-            aria-label="Accesos del rol seleccionado">
-            <div className="flex items-start gap-3 mb-4">
-                <span className="p-2 rounded-lg bg-[#EAF6E8] text-[#4CA23D] shrink-0">
-                    <ShieldCheck size={18} aria-hidden="true" />
-                </span>
-                <div>
-                    <h3 className="text-sm font-semibold text-[#323232]">Qué podrá hacer esta cuenta</h3>
-                    <p className="text-xs text-[#6E6E6E] mt-1">
-                        El rol {rol.nombre} da acceso a {disponibles} {disponibles === 1 ? "sección" : "secciones"}.
+        <div
+            className="my-5 rounded-xl p-4"
+            style={{ backgroundColor: COLORS.greenTint }}
+        >
+            <p className="text-sm font-semibold mb-2" style={{ color: COLORS.charcoal }}>
+                Permisos del rol seleccionado
+            </p>
+            {(rol.permisos ?? []).length === 0 && (
+                <p className="text-sm">Este rol no tiene permisos asignados.</p>
+            )}
+            {(rol.permisos ?? []).map((permiso) => {
+                const modulo = MODULES.find(
+                    (m) => MODULE_KEY_TO_ID[m.id] === permiso.idModulo
+                );
+                const concedidos = acciones.filter((a) => permiso[a]).map((a) => nombres[a]);
+
+                return (
+                    <p key={permiso.idModulo} className="text-sm py-0.5">
+                        <span style={{ fontWeight: 600 }}>
+                            {modulo?.label ?? `Módulo ${permiso.idModulo}`}:
+                        </span>
+                        {" "}{concedidos.join(", ") || "Sin acceso"}
                     </p>
-                </div>
-            </div>
-            {permisos.length === 0 ? (
-                <p className="text-sm text-[#6E6E6E]">Este rol no tiene permisos asignados.</p>
-            ) : (
-                <>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs mb-3">
-                        <span className="inline-flex items-center gap-1.5 text-[#4CA23D]">
-                            <Check size={13} aria-hidden="true" /> Permitido
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-[#6E6E6E]">
-                            <Minus size={13} aria-hidden="true" /> No permitido
-                        </span>
-                    </div>
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[40vh] overflow-y-auto pr-1">
-                        {permisos.map((permiso) => {
-                            const modulo = MODULES.find((m) => MODULE_KEY_TO_ID[m.id] === permiso.idModulo);
-                            const tieneAcceso = acciones.some(([key]) => permiso[key]);
-                            return (
-                                <li key={permiso.idModulo} className="p-3 border border-[#E3E3E3] rounded-lg bg-white">
-                                    <p className="text-sm font-medium text-[#323232] mb-3">
-                                        {modulo?.label ?? "Sección no disponible"}
-                                    </p>
-                                    {tieneAcceso ? (
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {acciones.map(([key, label]) => (
-                                                <span key={key}
-                                                    aria-label={`${label}: ${permiso[key] ? "permitido" : "no permitido"}`}
-                                                    className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs ${permiso[key] ? "bg-[#EAF6E8] text-[#4CA23D]" : "bg-[#F1F1F1] text-[#6E6E6E]"}`}>
-                                                    {permiso[key] ? <Check size={13} aria-hidden="true" /> : <Minus size={13} aria-hidden="true" />}
-                                                    {label}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-xs text-[#6E6E6E]">Sin acceso a esta sección</p>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </>
-            )}
-        </section>
-    );
-}
-
-function DetalleAuditoria({ detalle }) {
-    const datos = leerDetalle(detalle);
-
-    if (!datos || (!datos.antes && !datos.despues)) {
-        const texto = typeof datos === "string" ? datos
-            : datos && typeof datos === "object" ? resumirDetalle(datos)
-                : detalle;
-        return <p className="whitespace-pre-wrap break-words text-sm text-[#6E6E6E] bg-[#FAFAFA] border border-[#E3E3E3] rounded-xl p-4">{
-            texto && texto !== "Sin registro" ? texto
-                : "Este registro no contiene valores anteriores y nuevos."
-        }</p>;
-    }
-
-    const antes = datos.antes ?? {};
-    const despues = datos.despues ?? {};
-    const claves = [...new Set([...camposDetalle(antes), ...camposDetalle(despues)])];
-
-    return (
-        <div className="space-y-4">
-            {datos.motivo && (
-                <div className="rounded-lg bg-[#EAF6E8] px-4 py-3">
-                    <p className="text-xs text-[#6E6E6E] mb-1">Motivo</p>
-                    <p className="text-sm text-[#323232] break-words">{datos.motivo}</p>
-                </div>
-            )}
-            {claves.length === 0 ? <p>No hay cambios de datos para mostrar.</p> : (
-                <div className="overflow-auto rounded-xl border border-[#E3E3E3] max-h-[45vh]"
-                    tabIndex={0} role="region" aria-label="Detalle de cambios con desplazamiento horizontal">
-                    <table className="w-full min-w-[700px] text-sm text-[#323232]">
-                        <thead className="sticky top-0 bg-[#EAF6E8]">
-                            <tr>
-                                {["Campo", "Anterior", "Nuevo"].map((label) => (
-                                    <th key={label} className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#6E6E6E] font-semibold">{label}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {claves.map((key) => {
-                                const anterior = formatearValor(key, antes[key]);
-                                const nuevo = formatearValor(key, despues[key]);
-                                return (
-                                    <tr key={key} className="border-t border-[#E3E3E3]">
-                                        <td className="px-4 py-3 align-top text-xs text-[#6E6E6E]">{etiquetaCampo(key)}</td>
-                                        <td className="px-4 py-3 whitespace-pre-wrap break-words align-top">{anterior}</td>
-                                        <td className={`px-4 py-3 whitespace-pre-wrap break-words align-top ${anterior !== nuevo ? "bg-[#EAF6E8] text-[#4CA23D] font-medium" : ""}`}>{nuevo}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                );
+            })}
         </div>
     );
 }
 
-export default function CuentasPanel({ user }) {
+const thClass = "text-left px-4 py-2.5 text-xs uppercase tracking-wide";
+
+function Chip({ tone, children }) {
+    const palette = tone === "old"
+        ? { backgroundColor: COLORS.redTint, color: COLORS.red }
+        : { backgroundColor: COLORS.greenTint, color: COLORS.greenDark };
+
+    return (
+        <span className="px-2 py-0.5 rounded-md text-xs" style={palette}>
+            {children}
+        </span>
+    );
+}
+
+function DetalleAuditoria({ registro }) {
+    const info = cambiosDe(registro.detalle);
+
+    return (
+        <>
+            <DetailGrid
+                items={[
+                    { label: "Acción", value: nombreAccion(registro.accion) },
+                    { label: "Fecha y hora", value: formatearFechaHora(registro.fecha) },
+                    { label: "Responsable", value: registro.autor },
+                    { label: "Tipo de registro", value: nombreEntidad(registro.entidad) },
+                    { label: "Afectado", value: registro.objetivo },
+                    { label: "Módulo", value: registro.modulo },
+                ]}
+            />
+
+            {info?.motivo && (
+                <div
+                    className="rounded-xl p-4 mb-5 text-sm"
+                    style={{ backgroundColor: "#FBF3DE", color: "#9C7A17" }}
+                >
+                    <b>Motivo:</b> {info.motivo}
+                </div>
+            )}
+
+            <section>
+                <h3
+                    className="text-xs uppercase tracking-wide mb-3"
+                    style={{ color: COLORS.muted, fontWeight: 600 }}
+                >
+                    {!info ? "Detalle" : info.esCreacion ? "Datos registrados" : "Cambios realizados"}
+                </h3>
+
+                {!info && (
+                    <p
+                        className="text-sm rounded-xl p-4"
+                        style={{ backgroundColor: "#F7F7F7", color: COLORS.charcoal }}
+                    >
+                        {registro.detalle || "Esta acción no tiene información adicional."}
+                    </p>
+                )}
+
+                {info && info.cambios.length === 0 && (
+                    <p className="text-sm" style={{ color: COLORS.muted }}>
+                        Esta acción no modificó ningún dato de la cuenta.
+                    </p>
+                )}
+
+                {info && info.cambios.length > 0 && (
+                    <div
+                        className="rounded-xl overflow-hidden"
+                        style={{ border: `1px solid ${COLORS.border}` }}
+                    >
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr style={{ backgroundColor: COLORS.greenTint, color: COLORS.muted }}>
+                                    <th className={thClass}>Campo</th>
+                                    {!info.esCreacion && <th className={thClass}>Antes</th>}
+                                    <th className={thClass}>{info.esCreacion ? "Valor" : "Después"}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {info.cambios.map((c) => (
+                                    <tr key={c.key} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                                        <td className="px-4 py-2.5" style={{ fontWeight: 600 }}>
+                                            {etiquetaCampo(c.key)}
+                                        </td>
+                                        {!info.esCreacion && (
+                                            <td className="px-4 py-2.5">
+                                                <Chip tone="old">{valorCampo(c.key, c.antes)}</Chip>
+                                            </td>
+                                        )}
+                                        <td className="px-4 py-2.5">
+                                            <Chip tone="new">{valorCampo(c.key, c.despues)}</Chip>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </section>
+        </>
+    );
+}
+
+function DetalleGeneral({ cuenta }) {
+    return (
+        <>
+            <DetailGrid
+                title="Datos personales"
+                items={[
+                    { label: "Nombre completo", value: cuenta.nombre },
+                    { label: "Cédula", value: cuenta.cedula },
+                    { label: "Fecha de nacimiento", value: formatearFechaCorta(cuenta.fechaNacimiento, "") },
+                    { label: "Estado civil", value: cuenta.estadoCivil },
+                    { label: "Grado académico", value: cuenta.gradoAcademico },
+                    { label: "Teléfono", value: cuenta.telefono },
+                    { label: "Correo corporativo", value: cuenta.correo },
+                    { label: "Dirección", value: cuenta.direccion, wide: true },
+                ]}
+            />
+            <DetailGrid
+                title="Cuenta y acceso"
+                items={[
+                    { label: "Rol", value: cuenta.rol },
+                    { label: "Salario", value: formatearColones(cuenta.salario, "") },
+                    { label: "Estado", value: cuenta.activo ? "Activo" : "Inactivo" },
+                    {
+                        label: "Bloqueo",
+                        value: cuenta.bloqueada
+                            ? `Bloqueada hasta ${formatearFechaHora(cuenta.bloqueadoHasta)}`
+                            : "Sin bloqueo",
+                    },
+                    { label: "Intentos fallidos de acceso", value: String(cuenta.intentosFallidos ?? 0) },
+                    { label: "Fecha de creación", value: formatearFechaHora(cuenta.fechaCreacion, "") },
+                    { label: "Último acceso", value: formatearFechaHora(cuenta.ultimoAcceso, "") },
+                ]}
+            />
+        </>
+    );
+}
+
+const columnasCuentas = [
+    {
+        key: "nombre",
+        label: "Nombre",
+        nowrap: true,
+        render: (c) => <span style={{ fontWeight: 600 }}>{c.nombre}</span>,
+    },
+    { key: "cedula", label: "Cédula", nowrap: true },
+    { key: "correo", label: "Correo", nowrap: true },
+    { key: "telefono", label: "Teléfono", nowrap: true },
+    { key: "rol", label: "Rol", nowrap: true },
+    {
+        key: "estadoTexto",
+        label: "Estado",
+        render: (c) => (
+            <Pill tone={c.activo ? "positive" : "negative"}>{c.activo ? "Activo" : "Inactivo"}</Pill>
+        ),
+    },
+    {
+        key: "bloqueoTexto",
+        label: "Bloqueo",
+        render: (c) => (
+            <span title={c.bloqueada ? `Hasta ${formatearFechaHora(c.bloqueadoHasta)}` : undefined}>
+                <Pill tone={c.bloqueada ? "warning" : "neutral"}>
+                    {c.bloqueada ? "Bloqueada" : "Sin bloqueo"}
+                </Pill>
+            </span>
+        ),
+    },
+    { key: "fechaNacimientoTexto", label: "Nacimiento", nowrap: true },
+    { key: "estadoCivil", label: "Estado civil", nowrap: true },
+    { key: "gradoAcademico", label: "Grado académico", nowrap: true },
+    {
+        key: "direccion",
+        label: "Dirección",
+        render: (c) => (
+            <span className="block max-w-[16rem] truncate" title={c.direccion ?? undefined}>
+                {c.direccion || "—"}
+            </span>
+        ),
+    },
+    { key: "salarioTexto", label: "Salario", nowrap: true, align: "right" },
+    { key: "fechaCreacionTexto", label: "Creación", nowrap: true },
+    { key: "ultimoAccesoTexto", label: "Último acceso", nowrap: true },
+];
+
+const FILTROS_INICIALES = { texto: "", idRol: "", activo: "", bloqueada: "" };
+
+const FILTROS_AUDITORIA_INICIALES = {
+    accion: "", entidad: "", idAutor: "", idUsuarioAfectado: "", desde: "", hasta: "",
+};
+
+export default function CuentasPanel({ user, onChanged }) {
     const [tab, setTab] = useState("cuentas");
-    const [cuentas, setCuentas] = useState([]);
     const [roles, setRoles] = useState([]);
-    const [auditoria, setAuditoria] = useState([]);
     const [seleccionada, setSeleccionada] = useState(null);
     const [registroAuditoria, setRegistroAuditoria] = useState(null);
     const [modo, setModo] = useState(null);
     const [idRol, setIdRol] = useState("");
     const [pendiente, setPendiente] = useState(null);
-    const [cargando, setCargando] = useState(true);
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState("");
     const [aviso, setAviso] = useState("");
+    const [version, setVersion] = useState(0);
 
-    const [filtros, setFiltros] = useState({
-        idRol: "", bloqueada: "",
-    });
+    // Cuentas (paginadas en el servidor)
+    const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+    const [textoAplicado, setTextoAplicado] = useState("");
+    const [pagina, setPagina] = useState(1);
+    const [tamano, setTamano] = useState(10);
+    const [datos, setDatos] = useState({ items: [], total: 0 });
+    const [cargando, setCargando] = useState(true);
+    const [errorLista, setErrorLista] = useState("");
 
-    const [filtrosAuditoria, setFiltrosAuditoria] = useState({
-        entidad: "", idUsuarioAfectado: "",
-        idAutor: "", desde: "", hasta: "", accion: "",
-    });
-    const [consultaAuditoria, setConsultaAuditoria] = useState(0);
+    // Bitácora (paginada en el servidor)
+    const [filtrosAuditoria, setFiltrosAuditoria] = useState(FILTROS_AUDITORIA_INICIALES);
+    const [paginaAuditoria, setPaginaAuditoria] = useState(1);
+    const [tamanoAuditoria, setTamanoAuditoria] = useState(10);
+    const [datosAuditoria, setDatosAuditoria] = useState({ items: [], total: 0 });
+    const [cargandoAuditoria, setCargandoAuditoria] = useState(false);
+    const [errorAuditoria, setErrorAuditoria] = useState("");
+    const [opcionesCuentas, setOpcionesCuentas] = useState([]);
 
     const administrador = user.role === "Administrador del sistema";
 
-    const actualizarLista = useCallback(async () => {
-        setCargando(true);
-        setError("");
-        try {
-            const [lista, catalogo] = await Promise.all([
-                api.listarCuentas(), api.listarRoles(),
-            ]);
-            setCuentas(lista);
-            setRoles(catalogo);
-        } catch (e) {
-            setError(e.message);
-        } finally {
-            setCargando(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!aviso) return;
-
-        const temporizador = window.setTimeout(() => setAviso(""), 3000);
-        return () => window.clearTimeout(temporizador);
-    }, [aviso]);
-
+    // Catálogo de roles
     useEffect(() => {
         if (!administrador) return;
 
         let vigente = true;
 
-        Promise.all([api.listarCuentas(), api.listarRoles()])
-            .then(([lista, catalogo]) => {
-                if (vigente) {
-                    setCuentas(lista);
-                    setRoles(catalogo);
-                }
+        api.listarRoles()
+            .then((catalogo) => {
+                if (vigente) setRoles(catalogo);
             })
             .catch((e) => {
-                if (vigente) {
-                    setError(e.message);
-                }
-            })
-            .finally(() => {
-                if (vigente) {
-                    setCargando(false);
-                }
+                if (vigente) setErrorLista(e.message);
             });
 
         return () => {
             vigente = false;
         };
-    }, [administrador]);
+    }, [administrador, version]);
+
+    // La búsqueda por texto espera a que se deje de escribir.
+    useEffect(() => {
+        const espera = setTimeout(() => {
+            setTextoAplicado(filtros.texto.trim());
+            setPagina(1);
+        }, 350);
+
+        return () => clearTimeout(espera);
+    }, [filtros.texto]);
+
+    // Listado de cuentas
+    useEffect(() => {
+        if (!administrador || tab !== "cuentas") return;
+
+        let vigente = true;
+
+        Promise.resolve()
+            .then(() => {
+                if (!vigente) return null;
+                setCargando(true);
+                setErrorLista("");
+
+                return api.listarCuentas({
+                    texto: textoAplicado,
+                    idRol: filtros.idRol,
+                    activo: filtros.activo,
+                    bloqueada: filtros.bloqueada,
+                    pagina,
+                    tamanoPagina: tamano,
+                });
+            })
+            .then((resultado) => {
+                if (!vigente || !resultado) return;
+
+                setDatos(resultado);
+                if (resultado.pagina !== pagina) setPagina(resultado.pagina);
+            })
+            .catch((e) => {
+                if (vigente) setErrorLista(e.message);
+            })
+            .finally(() => {
+                if (vigente) setCargando(false);
+            });
+
+        return () => {
+            vigente = false;
+        };
+    }, [administrador, tab, textoAplicado, filtros.idRol, filtros.activo, filtros.bloqueada, pagina, tamano, version]);
+
+    // Opciones de personas para filtrar la bitácora por nombre
+    useEffect(() => {
+        if (!administrador || tab !== "auditoria") return;
+
+        let vigente = true;
+
+        api.listarOpcionesCuentas()
+            .then((lista) => {
+                if (vigente) setOpcionesCuentas(lista);
+            })
+            .catch(() => {});
+
+        return () => {
+            vigente = false;
+        };
+    }, [administrador, tab, version]);
+
+    const rangoInvalido = !!filtrosAuditoria.desde
+        && !!filtrosAuditoria.hasta
+        && filtrosAuditoria.desde > filtrosAuditoria.hasta;
+
+    // Bitácora
+    useEffect(() => {
+        if (!administrador || tab !== "auditoria" || rangoInvalido) return;
+
+        let vigente = true;
+
+        Promise.resolve()
+            .then(() => {
+                if (!vigente) return null;
+                setCargandoAuditoria(true);
+                setErrorAuditoria("");
+
+                return api.listarAuditoria({
+                    ...filtrosAuditoria,
+                    pagina: paginaAuditoria,
+                    tamanoPagina: tamanoAuditoria,
+                });
+            })
+            .then((resultado) => {
+                if (!vigente || !resultado) return;
+
+                setDatosAuditoria(resultado);
+                if (resultado.pagina !== paginaAuditoria) setPaginaAuditoria(resultado.pagina);
+            })
+            .catch((e) => {
+                if (vigente) setErrorAuditoria(e.message);
+            })
+            .finally(() => {
+                if (vigente) setCargandoAuditoria(false);
+            });
+
+        return () => {
+            vigente = false;
+        };
+    }, [administrador, tab, rangoInvalido, filtrosAuditoria, paginaAuditoria, tamanoAuditoria, version]);
 
     if (!administrador) {
-        return <p>La administración de cuentas está disponible para el administrador.</p>;
+        return <p className="text-sm">La administración de cuentas está disponible para el administrador.</p>;
     }
 
+    const rolesActivos = roles.filter((r) => r.activo);
     const rolSeleccionado = roles.find((r) => r.idRol === Number(idRol));
-    const resumen = [
-        { label: "Total de cuentas", value: cuentas.length },
-        { label: "Cuentas activas", value: cuentas.filter((cuenta) => cuenta.activo).length },
-        { label: "Cuentas bloqueadas", value: cuentas.filter((cuenta) => cuenta.bloqueada).length },
-    ];
 
     const rolField = {
         key: "idRol",
         label: "Rol",
         type: "select",
         required: true,
-        options: roles.map((r) => ({ value: r.idRol, label: r.nombre })),
+        options: rolesActivos.map((r) => ({ value: r.idRol, label: r.nombre })),
     };
 
     const camposFormulario = modo === "crear" ? [
@@ -331,61 +591,26 @@ export default function CuentasPanel({ user }) {
             key: "motivo", label: "Motivo del desbloqueo",
             type: "textarea", required: true, maxLength: 500,
         },
-    ] : campos.map((campo) => {
-        const valorAnterior = seleccionada?.[campo.key];
-        if (campo.key === "estadoCivil" && esEstadoCivilRetirado(valorAnterior)) return campo;
-        // Conserva los valores de cuentas creadas antes de incorporar los catálogos.
-        return campo.type === "select" && valorAnterior && !campo.options.includes(valorAnterior)
-            ? { ...campo, options: [...campo.options, valorAnterior] }
-            : campo;
-    });
+    ] : campos;
 
-    const filas = cuentas.filter((cuenta) =>
-        (!filtros.idRol || cuenta.idRol === Number(filtros.idRol))
-        && (!filtros.bloqueada || cuenta.bloqueada === (filtros.bloqueada === "true"))
-    ).map((cuenta) => ({
+    const filas = datos.items.map((cuenta) => ({
         ...cuenta,
         id: cuenta.idUsuario,
-        estado: cuenta.activo ? "Activo" : "Inactivo",
-        bloqueo: cuenta.bloqueada ? "Bloqueada" : "Sin bloqueo",
-        ultimoAccesoTexto: fecha(cuenta.ultimoAcceso),
+        fechaNacimientoTexto: formatearFechaCorta(cuenta.fechaNacimiento, "—"),
+        salarioTexto: formatearColones(cuenta.salario, "—"),
+        fechaCreacionTexto: formatearFechaHora(cuenta.fechaCreacion, "—"),
+        ultimoAccesoTexto: formatearFechaHora(cuenta.ultimoAcceso, "Sin registro"),
     }));
 
-    const rolesFiltro = [...new Map([
-        ...cuentas.map((c) => ({ idRol: c.idRol, nombre: c.rol })),
-        ...roles,
-    ].map((r) => [r.idRol, r])).values()];
-
-    const filasAuditoria = auditoria.map((registro) => {
-        const detalle = leerDetalle(registro.detalle);
-        const cuenta = cuentas.find((c) => c.idUsuario === registro.idUsuarioAfectado);
-        return {
-            ...registro,
-            id: registro.idAuditoria,
-            fechaTexto: fecha(registro.fecha),
-            entidadTexto: formatearEntidad(registro.entidad),
-            cuentaTexto: detalle?.despues?.Nombre ?? detalle?.despues?.nombre
-                ?? detalle?.antes?.Nombre ?? detalle?.antes?.nombre
-                ?? cuenta?.nombre ?? "Sin cuenta asociada",
-            accionTexto: formatearAccion(registro.accion),
-            antesTexto: resumirDetalle(detalle?.antes),
-            despuesTexto: resumirDetalle(detalle?.despues),
-        };
-    });
-
-    const responsables = [...new Map([
-        ...cuentas.map((c) => ({ id: c.idUsuario, nombre: c.nombre })),
-        ...auditoria.filter((a) => a.idAutor != null)
-            .map((a) => ({ id: a.idAutor, nombre: a.autor })),
-    ].map((responsable) => [responsable.id, responsable])).values()]
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
-
-    const entidadesFiltro = [...new Set([
-        ...Object.keys(ENTIDADES_AUDITORIA), ...auditoria.map((a) => a.entidad),
-    ])].filter(Boolean);
-    const accionesFiltro = [...new Set([
-        ...Object.keys(ACCIONES_AUDITORIA), ...auditoria.map((a) => a.accion),
-    ])].filter(Boolean).sort((a, b) => formatearAccion(a).localeCompare(formatearAccion(b), "es"));
+    const filasAuditoria = datosAuditoria.items.map((a) => ({
+        ...a,
+        id: a.idAuditoria,
+        fechaTexto: formatearFechaHora(a.fecha),
+        accionTexto: nombreAccion(a.accion),
+        entidadTexto: nombreEntidad(a.entidad),
+        objetivo: a.objetivo || "—",
+        resumenTexto: resumirDetalle(a.detalle),
+    }));
 
     function abrir(tipo) {
         setError("");
@@ -395,38 +620,61 @@ export default function CuentasPanel({ user }) {
         setIdRol("");
     }
 
+    function cerrarFormulario() {
+        if (guardando) return;
+
+        setModo(null);
+        setPendiente(null);
+        setError("");
+    }
+
+    function valoresIniciales() {
+        if (modo === "crear") return { estado: "Activo", salario: "0" };
+
+        return {
+            ...seleccionada,
+            telefono: seleccionada?.telefono ?? "",
+            direccion: seleccionada?.direccion ?? "",
+            fechaNacimiento: seleccionada?.fechaNacimiento?.slice(0, 10) ?? "",
+            estadoCivil: opcionDeLista(seleccionada?.estadoCivil, ESTADOS_CIVILES),
+            gradoAcademico: opcionDeLista(seleccionada?.gradoAcademico, GRADOS_ACADEMICOS),
+            salario: seleccionada?.salario != null ? String(seleccionada.salario) : "",
+        };
+    }
+
     function preparar(values) {
-        const datos = { ...values };
+        const datosForm = { ...values };
 
         if (modo === "crear" || modo === "editar") {
-            datos.salario = Number(datos.salario);
+            datosForm.salario = Number(datosForm.salario);
 
-            if (!Number.isFinite(datos.salario) || datos.salario < 0) {
+            if (!Number.isFinite(datosForm.salario) || datosForm.salario < 0) {
                 setError("El salario debe ser mayor o igual a cero.");
                 return;
             }
         }
 
         if (modo === "crear") {
-            datos.idRol = Number(datos.idRol);
-            datos.activo = datos.estado === "Activo";
-            delete datos.estado;
+            datosForm.idRol = Number(datosForm.idRol);
+            datosForm.activo = datosForm.estado === "Activo";
+            delete datosForm.estado;
         }
 
         if (modo === "rol" || modo === "reactivar") {
-            if (!rolSeleccionado) {
-                setError("Seleccioná un rol activo.");
+            if (!rolSeleccionado || !rolSeleccionado.activo) {
+                setError("Seleccione un rol activo.");
                 return;
             }
-            datos.idRol = rolSeleccionado.idRol;
+            datosForm.idRol = rolSeleccionado.idRol;
         }
 
-        if (modo === "rol" && datos.idRol === seleccionada.idRol) {
-            setError("Seleccioná un rol diferente al actual.");
+        if (modo === "rol" && datosForm.idRol === seleccionada.idRol) {
+            setError("Seleccione un rol diferente al actual.");
             return;
         }
 
-        setPendiente({ tipo: modo, datos });
+        setError("");
+        setPendiente({ tipo: modo, datos: datosForm });
     }
 
     async function guardar() {
@@ -436,16 +684,19 @@ export default function CuentasPanel({ user }) {
         setError("");
 
         try {
-            const { tipo, datos } = pendiente;
+            const { tipo, datos: cambios } = pendiente;
             const id = seleccionada?.idUsuario;
+            let mensaje = "Los cambios se guardaron correctamente.";
 
-            if (tipo === "crear") await api.crearCuenta(datos);
-            else if (tipo === "editar") await api.editarCuenta(id, datos);
-            else if (tipo === "rol") await api.cambiarRol(id, datos);
-            else if (tipo === "desbloquear") await desbloquearCuenta(id, datos.motivo);
-            else {
+            if (tipo === "crear") await api.crearCuenta(cambios);
+            else if (tipo === "editar") await api.editarCuenta(id, cambios);
+            else if (tipo === "rol") await api.cambiarRol(id, cambios);
+            else if (tipo === "desbloquear") {
+                const respuesta = await desbloquearCuenta(id, cambios.motivo);
+                mensaje = respuesta?.mensaje ?? "Cuenta desbloqueada correctamente.";
+            } else {
                 await api.cambiarEstado(id, {
-                    ...datos,
+                    ...cambios,
                     activo: tipo === "reactivar",
                 });
             }
@@ -453,17 +704,9 @@ export default function CuentasPanel({ user }) {
             setPendiente(null);
             setModo(null);
             setSeleccionada(null);
-            setAviso("Los cambios se guardaron correctamente.");
-
-            try {
-                const [lista, catalogo] = await Promise.all([
-                    api.listarCuentas(), api.listarRoles(),
-                ]);
-                setCuentas(lista);
-                setRoles(catalogo);
-            } catch {
-                setError("El cambio se guardó, pero el listado no se pudo actualizar.");
-            }
+            setAviso(mensaje);
+            setVersion((v) => v + 1);
+            onChanged?.();
         } catch (e) {
             setError([e.message, ...(e.errores ?? [])].join(" "));
             setPendiente(null);
@@ -472,239 +715,267 @@ export default function CuentasPanel({ user }) {
         }
     }
 
-    async function consultarAuditoria() {
-        setCargando(true);
-        setError("");
-        setRegistroAuditoria(null);
-
-        try {
-            setAuditoria(await api.listarAuditoria(filtrosAuditoria));
-            setConsultaAuditoria((consulta) => consulta + 1);
-        } catch (e) {
-            setError(e.message);
-        } finally {
-            setCargando(false);
-        }
+    function cambiarFiltro(key, value) {
+        setFiltros((f) => ({ ...f, [key]: value }));
+        if (key !== "texto") setPagina(1);
     }
 
-    return (
-        <div className="space-y-4 min-w-0">
-            <section aria-label="Resumen de cuentas" className="mb-8">
-                <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {resumen.map((indicador) => (
-                        <div key={indicador.label} className="rounded-lg p-4 bg-[#EAF6E8]">
-                            <dt className="text-xs mb-1 text-[#6E6E6E]">{indicador.label}</dt>
-                            <dd className="text-2xl font-semibold text-[#323232]">{indicador.value}</dd>
-                        </div>
-                    ))}
-                </dl>
-            </section>
-            <nav className="flex items-center gap-1 mb-6 border-b border-[#E3E3E3]" aria-label="Secciones de usuarios y accesos">
-                <button className={`px-4 py-2.5 text-sm border-b-2 -mb-px ${tab === "cuentas" ? "border-[#5EB453] text-[#5EB453] font-semibold" : "border-transparent text-[#6E6E6E] font-normal"}`}
-                    aria-pressed={tab === "cuentas"} onClick={() => setTab("cuentas")}>
-                    Cuentas
-                </button>
-                <button className={`px-4 py-2.5 text-sm border-b-2 -mb-px ${tab === "auditoria" ? "border-[#5EB453] text-[#5EB453] font-semibold" : "border-transparent text-[#6E6E6E] font-normal"}`}
-                    aria-pressed={tab === "auditoria"} onClick={() => {
-                    setTab("auditoria");
-                    consultarAuditoria();
-                }}>
-                    Bitácora
-                </button>
-                <button className={`px-4 py-2.5 text-sm border-b-2 -mb-px ${tab === "roles" ? "border-[#5EB453] text-[#5EB453] font-semibold" : "border-transparent text-[#6E6E6E] font-normal"}`}
-                    aria-pressed={tab === "roles"} onClick={() => {
-                        setTab("roles");
-                        setAviso("");
-                        setError("");
-                    }}>
-                    Roles y permisos
-                </button>
-            </nav>
+    function cambiarFiltroAuditoria(key, value) {
+        setFiltrosAuditoria((f) => ({ ...f, [key]: value }));
+        setPaginaAuditoria(1);
+    }
 
-            {aviso && <p role="status" className="text-green-700">{aviso}</p>}
-            {error && !modo && <p role="alert" className="text-red-700">{error}</p>}
-            {cargando && <p role="status">Cargando...</p>}
+    const hayFiltros = Object.values(filtros).some(Boolean);
+    const hayFiltrosAuditoria = Object.values(filtrosAuditoria).some(Boolean);
+
+    function filtroSelect(key, label, opciones, state, onChange) {
+        return (
+            <FieldLabel key={key} label={label}>
+                <select
+                    className={inputClass}
+                    style={inputStyle}
+                    value={state[key]}
+                    onChange={(e) => onChange(key, e.target.value)}
+                >
+                    <option value="">Todos</option>
+                    {opciones.map(([value, text]) => (
+                        <option key={value} value={value}>{text}</option>
+                    ))}
+                </select>
+            </FieldLabel>
+        );
+    }
+
+    const tituloModo = {
+        crear: "Registrar cuenta",
+        editar: "Editar datos",
+        inactivar: "Inactivar cuenta",
+        reactivar: "Reactivar cuenta",
+        rol: "Cambiar rol",
+        desbloquear: "Desbloquear cuenta",
+    }[modo];
+
+    const iconoModo = {
+        crear: UserPlus,
+        editar: UserCog,
+        inactivar: UserCog,
+        reactivar: UserCog,
+        rol: UserCog,
+        desbloquear: Lock,
+    }[modo];
+
+    const confirmacion = {
+        rol: `Se asignará el rol ${rolSeleccionado?.nombre} a ${seleccionada?.nombre}. Se cerrarán sus sesiones anteriores.`,
+        reactivar: `Se reactivará la cuenta de ${seleccionada?.nombre} con el rol ${rolSeleccionado?.nombre}.`,
+        inactivar: `Se inactivará la cuenta de ${seleccionada?.nombre} y se cerrarán sus sesiones.`,
+        desbloquear: `Se desbloqueará la cuenta de ${seleccionada?.nombre}.`,
+    }[pendiente?.tipo] ?? "¿Confirmás que los datos son correctos?";
+
+    return (
+        <div>
+            <SubTabs
+                tabs={[
+                    { key: "cuentas", label: "Listado de cuentas" },
+                    { key: "auditoria", label: "Bitácora" },
+                ]}
+                active={tab}
+                onSelect={setTab}
+            />
+
+            {aviso && <Notice>{aviso}</Notice>}
 
             {tab === "cuentas" ? (
                 <>
-                    <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
-                        <button className={primaryButton}
-                            disabled={cargando || roles.length === 0}
+                    {errorLista && <Notice tone="error">{errorLista}</Notice>}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                        <FieldLabel label="Buscar">
+                            <input
+                                type="search"
+                                className={inputClass}
+                                style={inputStyle}
+                                placeholder="Nombre, cédula, correo o teléfono"
+                                value={filtros.texto}
+                                maxLength={150}
+                                onChange={(e) => cambiarFiltro("texto", e.target.value)}
+                            />
+                        </FieldLabel>
+                        {filtroSelect("idRol", "Rol", roles.map((r) => [r.idRol, r.activo ? r.nombre : `${r.nombre} (inactivo)`]), filtros, cambiarFiltro)}
+                        {filtroSelect("activo", "Estado", [["true", "Activas"], ["false", "Inactivas"]], filtros, cambiarFiltro)}
+                        {filtroSelect("bloqueada", "Bloqueo", [["true", "Bloqueadas"], ["false", "Sin bloqueo"]], filtros, cambiarFiltro)}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-5">
+                        <Button
+                            variant="primary"
+                            disabled={rolesActivos.length === 0}
                             onClick={() => {
                                 setSeleccionada(null);
                                 abrir("crear");
                             }}
                         >
-                            <Plus size={16} />
-                            Registrar cuenta
-                        </button>
+                            + Registrar cuenta
+                        </Button>
+                        <Button onClick={() => setVersion((v) => v + 1)} disabled={cargando}>
+                            <span className="inline-flex items-center gap-2">
+                                <RefreshCw size={14} className={cargando ? "animate-spin" : ""} />
+                                Actualizar lista
+                            </span>
+                        </Button>
+                        {hayFiltros && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setFiltros(FILTROS_INICIALES);
+                                    setTextoAplicado("");
+                                    setPagina(1);
+                                }}
+                            >
+                                <span className="inline-flex items-center gap-1.5">
+                                    <X size={14} /> Limpiar filtros
+                                </span>
+                            </Button>
+                        )}
                     </div>
 
-                    <DataTable key="cuentas" columns={columnas} rows={filas}
-                        onRowClick={setSeleccionada} initialShowInactive initialEstadoFilter="Activo"
-                        pagination paginationResetKey={filtros} searchVisibleColumns
-                        searchPlaceholder="Buscar cuentas por nombre, cédula o correo..."
-                        showInactiveToggle={false} statusOptions={estadoOptions}
-                        tableClassName="min-w-[1000px]"
-                        toolbarContent={<>
-                            <select className={control} aria-label="Filtrar por rol"
-                                value={filtros.idRol}
-                                onChange={(e) => setFiltros({ ...filtros, idRol: e.target.value })}>
-                                <option value="">Todos los roles</option>
-                                {rolesFiltro.map((r) => (
-                                    <option key={r.idRol} value={r.idRol}>{r.nombre}</option>
-                                ))}
-                            </select>
-                            <select className={control} aria-label="Filtrar por bloqueo"
-                                value={filtros.bloqueada}
-                                onChange={(e) => setFiltros({ ...filtros, bloqueada: e.target.value })}>
-                                <option value="">Todos los bloqueos</option>
-                                <option value="true">Bloqueadas</option>
-                                <option value="false">Sin bloqueo</option>
-                            </select>
-                        </>} />
+                    <DataTable
+                        columns={columnasCuentas}
+                        rows={filas}
+                        onRowClick={setSeleccionada}
+                        loading={cargando}
+                        stickyFirstColumn
+                        compact
+                        serverPagination={{
+                            page: pagina,
+                            pageSize: tamano,
+                            total: datos.total,
+                            onPageChange: setPagina,
+                            onPageSizeChange: (n) => {
+                                setTamano(n);
+                                setPagina(1);
+                            },
+                        }}
+                        emptyMessage="No hay cuentas que coincidan con los filtros."
+                    />
                 </>
-            ) : tab === "roles" ? (
-                <RolesPanel user={user} onRolesChange={actualizarLista} />
             ) : (
                 <>
-                    <form className="flex flex-wrap items-end gap-3 mb-4" onSubmit={(e) => {
-                        e.preventDefault();
-                        consultarAuditoria();
-                    }}>
-                        {[
-                            ["entidad", "Entidad", entidadesFiltro.map((entidad) => ({
-                                value: entidad, label: formatearEntidad(entidad),
-                            }))],
-                            ["idUsuarioAfectado", "Cuenta afectada", cuentas.map((cuenta) => ({
-                                value: cuenta.idUsuario, label: `${cuenta.nombre} (${cuenta.correo})`,
-                            }))],
-                            ["idAutor", "Responsable", responsables.map((responsable) => ({
-                                value: responsable.id, label: responsable.nombre,
-                            }))],
-                            ["accion", "Acción", accionesFiltro.map((accion) => ({
-                                value: accion, label: formatearAccion(accion),
-                            }))],
-                        ].map(([key, label, options]) => (
-                            <label key={key} className="text-xs text-[#6E6E6E] space-y-1.5 min-w-0">
-                                {label}
-                                <select className={`${control} block max-w-full`}
-                                    value={filtrosAuditoria[key]}
-                                    onChange={(e) => setFiltrosAuditoria({
-                                        ...filtrosAuditoria, [key]: e.target.value,
-                                    })}
-                                >
-                                    <option value="">Todos</option>
-                                    {options.map((option) => (
-                                        <option key={option.value} value={option.value}>{option.label}</option>
-                                    ))}
-                                </select>
-                            </label>
-                        ))}
-                        {[
-                            ["desde", "Desde", "date"],
-                            ["hasta", "Hasta", "date"],
-                        ].map(([key, label, type]) => (
-                            <label key={key} className="text-xs text-[#6E6E6E] space-y-1.5">
-                                {label}
-                                <input className={`${control} block`} type={type}
-                                    value={filtrosAuditoria[key]}
-                                    onChange={(e) => setFiltrosAuditoria({
-                                        ...filtrosAuditoria, [key]: e.target.value,
-                                    })}
-                                />
-                            </label>
-                        ))}
-                        <button className={primaryButton} disabled={cargando}>Consultar</button>
-                    </form>
+                    {errorAuditoria && <Notice tone="error">{errorAuditoria}</Notice>}
+                    {rangoInvalido && (
+                        <Notice tone="error">La fecha inicial no puede ser posterior a la final.</Notice>
+                    )}
 
-                    <DataTable key="auditoria" columns={columnasAuditoria}
-                        rows={filasAuditoria} onRowClick={setRegistroAuditoria}
-                        pagination paginationResetKey={consultaAuditoria} searchVisibleColumns
-                        searchPlaceholder="Buscar en la bitácora..."
-                        tableClassName="min-w-[1400px]" tableContainerClassName="max-h-[60vh]" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        {filtroSelect("idAutor", "Responsable", opcionesCuentas.map((o) => [o.idUsuario, o.nombre]), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        {filtroSelect("idUsuarioAfectado", "Cuenta afectada", opcionesCuentas.map((o) => [o.idUsuario, o.nombre]), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        {filtroSelect("accion", "Acción", ACCIONES_FILTRO.map((a) => [a, nombreAccion(a)]), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        {filtroSelect("entidad", "Tipo de registro", Object.entries(ENTIDADES_AUDITORIA), filtrosAuditoria, cambiarFiltroAuditoria)}
+                        <FieldLabel label="Desde">
+                            <input
+                                type="date"
+                                className={inputClass}
+                                style={inputStyle}
+                                value={filtrosAuditoria.desde}
+                                max={filtrosAuditoria.hasta || undefined}
+                                onChange={(e) => cambiarFiltroAuditoria("desde", e.target.value)}
+                            />
+                        </FieldLabel>
+                        <FieldLabel label="Hasta">
+                            <input
+                                type="date"
+                                className={inputClass}
+                                style={inputStyle}
+                                value={filtrosAuditoria.hasta}
+                                min={filtrosAuditoria.desde || undefined}
+                                onChange={(e) => cambiarFiltroAuditoria("hasta", e.target.value)}
+                            />
+                        </FieldLabel>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-5">
+                        <Button onClick={() => setVersion((v) => v + 1)} disabled={cargandoAuditoria}>
+                            <span className="inline-flex items-center gap-2">
+                                <RefreshCw size={14} className={cargandoAuditoria ? "animate-spin" : ""} />
+                                Actualizar
+                            </span>
+                        </Button>
+                        {hayFiltrosAuditoria && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setFiltrosAuditoria(FILTROS_AUDITORIA_INICIALES);
+                                    setPaginaAuditoria(1);
+                                }}
+                            >
+                                <span className="inline-flex items-center gap-1.5">
+                                    <X size={14} /> Limpiar filtros
+                                </span>
+                            </Button>
+                        )}
+                    </div>
+
+                    <DataTable
+                        columns={columnasAuditoria}
+                        rows={filasAuditoria}
+                        onRowClick={setRegistroAuditoria}
+                        loading={cargandoAuditoria}
+                        compact
+                        serverPagination={{
+                            page: paginaAuditoria,
+                            pageSize: tamanoAuditoria,
+                            total: datosAuditoria.total,
+                            onPageChange: setPaginaAuditoria,
+                            onPageSizeChange: (n) => {
+                                setTamanoAuditoria(n);
+                                setPaginaAuditoria(1);
+                            },
+                        }}
+                        emptyMessage="No hay movimientos que coincidan con los filtros."
+                    />
                 </>
             )}
 
-            <Modal open={!!seleccionada && !modo}
+            <Modal
+                open={!!seleccionada && !modo}
                 title={seleccionada?.nombre}
-                subtitle="Detalle de cuenta"
+                subtitle={seleccionada ? `${seleccionada.rol} · ${seleccionada.correo}` : ""}
+                icon={UserRound}
                 onClose={() => setSeleccionada(null)}
-                width="max-w-2xl"
-            >
-                {seleccionada && (
+                width="max-w-3xl"
+                footer={seleccionada && (
                     <>
-                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            {[
-                                { key: "cedula", label: "Cédula" },
-                                ...campos,
-                                { key: "rol", label: "Rol" },
-                                { key: "estado", label: "Estado" },
-                                { key: "bloqueo", label: "Bloqueo" },
-                                { key: "ultimoAccesoTexto", label: "Último acceso" },
-                            ].map((f) => (
-                                <div key={f.key} className={f.type === "textarea" ? "sm:col-span-2" : "min-w-0"}>
-                                    <dt className="text-xs mb-1 text-[#6E6E6E]">{f.label}</dt>
-                                    <dd className="text-sm text-[#323232] break-words">
-                                        {f.key === "estado" ? <StatusBadge value={seleccionada.estado} />
-                                            : formatearValor(f.key, seleccionada[f.key])}
-                                    </dd>
-                                </div>
-                            ))}
-                        </dl>
-
-                        <div className="flex flex-wrap items-center justify-end gap-3 mt-7 pt-5 border-t border-[#E3E3E3]">
-                            <button className={`${button} text-[#6E6E6E]`} onClick={() => setSeleccionada(null)}>
-                                Cerrar
-                            </button>
-                            <button className={seleccionada.activo ? dangerButton : roleButton}
-                                onClick={() => abrir(
-                                    seleccionada.activo ? "inactivar" : "reactivar"
-                                )}
-                            >
-                                {seleccionada.activo ? "Inactivar" : "Reactivar"}
-                            </button>
-                            <button className={roleButton} disabled={!seleccionada.activo}
-                                onClick={() => abrir("rol")}
-                            >
-                                Cambiar rol
-                            </button>
-                            {seleccionada.bloqueada && (
-                                <button className={roleButton} onClick={() => abrir("desbloquear")}>
-                                    Desbloquear
-                                </button>
-                            )}
-                            <button className={primaryButton} onClick={() => abrir("editar")}>
-                                Editar datos
-                            </button>
-                        </div>
+                        <Button onClick={() => abrir("editar")}>Editar datos</Button>
+                        <Button disabled={!seleccionada.activo} onClick={() => abrir("rol")}>
+                            Cambiar rol
+                        </Button>
+                        {seleccionada.bloqueada && (
+                            <Button onClick={() => abrir("desbloquear")}>Desbloquear</Button>
+                        )}
+                        <Button
+                            variant={seleccionada.activo ? "danger" : "primary"}
+                            onClick={() => abrir(seleccionada.activo ? "inactivar" : "reactivar")}
+                        >
+                            {seleccionada.activo ? "Inactivar" : "Reactivar"}
+                        </Button>
                     </>
                 )}
+            >
+                {seleccionada && <DetalleGeneral cuenta={seleccionada} />}
             </Modal>
 
-            <Modal open={!!modo}
-                title={{
-                    crear: "Registrar cuenta",
-                    editar: "Editar datos",
-                    inactivar: "Inactivar cuenta",
-                    reactivar: "Reactivar cuenta",
-                    rol: "Cambiar rol",
-                    desbloquear: "Desbloquear cuenta",
-                }[modo]}
-                subtitle={modo === "crear" ? "Completá los datos y seleccioná el rol de la nueva cuenta." : seleccionada?.nombre}
-                onClose={() => {
-                    if (!guardando) {
-                        setModo(null);
-                        setPendiente(null);
-                    }
-                }}
+            <Modal
+                open={!!modo}
+                title={tituloModo}
+                subtitle={modo && modo !== "crear" ? seleccionada?.nombre : undefined}
+                icon={iconoModo}
+                tone={modo === "inactivar" ? "danger" : "default"}
+                onClose={cerrarFormulario}
                 width="max-w-3xl"
             >
-                {error && <p role="alert" className="text-red-700 mb-3">{error}</p>}
-                {guardando && <p role="status">Guardando...</p>}
-                {modo === "editar" && esEstadoCivilRetirado(seleccionada?.estadoCivil) && (
-                    <p className="text-sm text-[#6E6E6E] mb-4">
-                        El estado civil registrado ya no está disponible. Seleccioná una opción del listado.
+                {error && <Notice tone="error">{error}</Notice>}
+                {guardando && (
+                    <p role="status" className="text-sm mb-3" style={{ color: COLORS.muted }}>
+                        Guardando...
                     </p>
                 )}
 
@@ -713,108 +984,72 @@ export default function CuentasPanel({ user }) {
                         e.preventDefault();
                         preparar({});
                     }}>
-                        <div className="bg-[#FAFAFA] rounded-lg border border-[#E3E3E3] p-4 mb-5">
-                            <p className="text-xs text-[#6E6E6E] mb-1">Rol actual</p>
-                            <p className="text-sm text-[#323232]">{seleccionada?.rol}</p>
-                        </div>
-                        <label className="block text-xs text-[#6E6E6E] space-y-1.5">
-                            Nuevo rol <span className="text-[#C0392B]">*</span>
-                            <select className={`${control} block w-full`}
+                        <p className="text-sm mb-4" style={{ color: COLORS.muted }}>
+                            Rol anterior: <b style={{ color: COLORS.charcoal }}>{seleccionada?.rol}</b>
+                        </p>
+                        <FieldLabel label="Nuevo rol">
+                            <select
+                                className={inputClass}
+                                style={inputStyle}
                                 required value={idRol} disabled={guardando}
                                 onChange={(e) => setIdRol(e.target.value)}
                             >
                                 <option value="">Seleccionar...</option>
                                 {roles.map((r) => (
-                                    <option key={r.idRol} value={r.idRol}>{r.nombre}</option>
+                                    <option key={r.idRol} value={r.idRol} disabled={!r.activo}>
+                                        {r.nombre}
+                                        {!r.activo ? " (inactivo)" : ""}
+                                        {r.idRol === seleccionada?.idRol ? " (actual)" : ""}
+                                    </option>
                                 ))}
                             </select>
-                        </label>
+                        </FieldLabel>
 
                         <PermisosRol rol={rolSeleccionado} />
 
-                        <div className="flex items-center justify-end gap-3 mt-7 pt-5 border-t border-[#E3E3E3]">
-                            <button type="button" className={`${button} text-[#6E6E6E]`}
-                                disabled={guardando} onClick={() => setModo(null)}>
-                                Cancelar
-                            </button>
-                            <button className={primaryButton}
-                                disabled={guardando || !rolSeleccionado}
-                            >
+                        <div className="flex justify-end gap-3 mt-4">
+                            <Button variant="ghost" onClick={cerrarFormulario}>Cancelar</Button>
+                            <Button variant="primary" type="submit" disabled={guardando || !rolSeleccionado}>
                                 Continuar
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 ) : modo && (
                     <RecordForm
                         key={`${modo}-${seleccionada?.idUsuario ?? "nueva"}`}
                         fields={camposFormulario}
-                        initialValues={modo === "crear"
-                            ? { estado: "Activo", salario: "0" }
-                            : {
-                                ...seleccionada,
-                                fechaNacimiento:
-                                    seleccionada?.fechaNacimiento?.slice(0, 10) ?? "",
-                                estadoCivil: esEstadoCivilRetirado(seleccionada?.estadoCivil)
-                                    ? "" : seleccionada?.estadoCivil ?? "",
-                            }}
+                        initialValues={valoresIniciales()}
                         onSubmit={preparar}
-                        onCancel={() => setModo(null)}
+                        onCancel={cerrarFormulario}
                         submitLabel="Continuar"
                         disabled={guardando}
                     />
                 )}
             </Modal>
 
-            <ConfirmModal open={!!pendiente}
+            <ConfirmModal
+                open={!!pendiente}
                 title="Confirmar cambio"
-                variant={pendiente?.tipo === "inactivar" ? "danger" : "primary"}
+                tone={pendiente?.tipo === "inactivar" ? "danger" : "default"}
                 confirmLabel={guardando ? "Guardando..." : "Confirmar"}
-                message={
-                    pendiente?.tipo === "rol" || pendiente?.tipo === "reactivar"
-                        ? `Se asignará el rol ${rolSeleccionado?.nombre} a ${seleccionada?.nombre}. Se cerrarán sus sesiones anteriores.`
-                        : pendiente?.tipo === "inactivar"
-                            ? `Se inactivará la cuenta de ${seleccionada?.nombre} y se cerrarán sus sesiones.`
-                            : pendiente?.tipo === "desbloquear"
-                                ? `Se desbloqueará la cuenta de ${seleccionada?.nombre}.`
-                            : "¿Confirmás que los datos son correctos?"
-                }
+                busy={guardando}
+                message={confirmacion}
                 onConfirm={guardar}
                 onCancel={() => {
                     if (!guardando) setPendiente(null);
                 }}
             />
 
-            <Modal open={!!registroAuditoria}
-                title={formatearAccion(registroAuditoria?.accion)}
-                subtitle="Detalle de bitácora"
+            <Modal
+                open={!!registroAuditoria}
+                title="Detalle de la bitácora"
+                subtitle={registroAuditoria ? nombreAccion(registroAuditoria.accion) : ""}
+                icon={ScrollText}
                 onClose={() => setRegistroAuditoria(null)}
                 width="max-w-3xl"
             >
                 {registroAuditoria && (
-                    <>
-                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            {[
-                                ["Responsable", registroAuditoria.autor],
-                                ["Fecha", fecha(registroAuditoria.fecha)],
-                                ["Entidad", registroAuditoria.entidadTexto],
-                                ["Cuenta afectada", registroAuditoria.cuentaTexto],
-                            ].map(([label, value]) => (
-                                <div key={label} className="min-w-0">
-                                    <dt className="text-xs mb-1 text-[#6E6E6E]">{label}</dt>
-                                    <dd className="text-sm text-[#323232] break-words">{value}</dd>
-                                </div>
-                            ))}
-                        </dl>
-                        <div className="mt-6 pt-5 border-t border-[#E3E3E3]">
-                            <h3 className="text-sm font-medium text-[#323232] mb-4">Cambios del registro</h3>
-                            <DetalleAuditoria detalle={registroAuditoria.detalle} />
-                        </div>
-                        <div className="flex justify-end mt-7 pt-5 border-t border-[#E3E3E3]">
-                            <button className={secondaryButton} onClick={() => setRegistroAuditoria(null)}>
-                                Cerrar
-                            </button>
-                        </div>
-                    </>
+                    <DetalleAuditoria registro={registroAuditoria} />
                 )}
             </Modal>
         </div>

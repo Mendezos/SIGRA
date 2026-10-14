@@ -1,26 +1,43 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import DataTable from "./DataTable";
 import Modal from "./Modal";
-import {
-    Button,
-    FieldLabel,
-    Notice,
-} from "./ui";
+import ConfirmModal from "./ConfirmModal";
+import { Button, FieldLabel, Notice, Pill } from "./ui";
 import { COLORS, inputClass, inputStyle } from "./uiTheme";
 import * as api from "../services/rolesService";
 import { ApiError } from "../services/apiClient";
 
-const columnas = [
-    { key: "nombre", label: "Nombre" },
-    { key: "descripcion", label: "Descripción" },
-    { key: "estado", label: "Estado" },
-];
+const NOMBRE_ADMIN = "Administrador del sistema";
+const ID_MODULO_USUARIOS = 1;
 
 const ACCIONES = [
     { key: "lectura", label: "Lectura" },
     { key: "escritura", label: "Escritura" },
     { key: "edicion", label: "Edición" },
     { key: "eliminacion", label: "Eliminación" },
+];
+
+const columnas = [
+    {
+        key: "nombre",
+        label: "Nombre",
+        nowrap: true,
+        render: (r) => <span style={{ fontWeight: 600 }}>{r.nombre}</span>,
+    },
+    {
+        key: "descripcion",
+        label: "Descripción",
+        render: (r) => r.descripcion || <span style={{ color: COLORS.muted }}>Sin descripción</span>,
+    },
+    { key: "usuarios", label: "Cuentas", nowrap: true, align: "center", render: (r) => String(r.usuarios ?? 0) },
+    { key: "accesoTexto", label: "Módulos con acceso", nowrap: true, align: "center" },
+    {
+        key: "estado",
+        label: "Estado",
+        nowrap: true,
+        render: (r) => <Pill tone={r.activo ? "positive" : "negative"}>{r.estado}</Pill>,
+    },
 ];
 
 function permisosVacios(modulos) {
@@ -33,51 +50,54 @@ function permisosVacios(modulos) {
     }));
 }
 
-export default function RolesPanel({ user, onRolesChange }) {
+function combinarPermisos(modulos, actuales) {
+    return permisosVacios(modulos).map((base) => {
+        const existente = actuales.find((p) => p.idModulo === base.idModulo);
+        return existente ? { ...base, ...existente } : base;
+    });
+}
+
+const instantanea = (form) => JSON.stringify(form);
+
+export default function RolesPanel({ user, onChanged }) {
     const [roles, setRoles] = useState([]);
     const [modulos, setModulos] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState("");
     const [aviso, setAviso] = useState("");
 
-    const [modoCreacion, setModoCreacion] = useState(false);
-    const [nombreNuevo, setNombreNuevo] = useState("");
-    const [descripcionNueva, setDescripcionNueva] = useState("");
-
-    const [seleccionado, setSeleccionado] = useState(null);
-    const [nombreEdicion, setNombreEdicion] = useState("");
-    const [descripcionEdicion, setDescripcionEdicion] = useState("");
-    const [permisos, setPermisos] = useState([]);
-    const [cargandoPermisos, setCargandoPermisos] = useState(false);
+    // Formulario único para crear y editar: { idRol|null, nombre, descripcion, activo, permisos }
+    const [form, setForm] = useState(null);
+    const [formInicial, setFormInicial] = useState("");
+    const [cargandoForm, setCargandoForm] = useState(false);
     const [guardando, setGuardando] = useState(false);
+    const [errorForm, setErrorForm] = useState("");
+    const [confirmarDescartar, setConfirmarDescartar] = useState(false);
 
-    const esAdministrador = user.role === "Administrador del sistema";
+    const esAdministrador = user.role === NOMBRE_ADMIN;
 
-    useEffect(() => {
-        if (!aviso) return;
-        const temporizador = window.setTimeout(() => setAviso(""), 3000);
-        return () => window.clearTimeout(temporizador);
-    }, [aviso]);
-
-    const cargarRoles = useCallback(async (notificarCambio = false) => {
+    async function cargarRoles() {
         setCargando(true);
         setError("");
+
         try {
             const [data, modulosData] = await Promise.all([api.listarRoles(), api.listarModulos()]);
+
             setRoles(
                 data.map((r) => ({
                     ...r,
+                    id: r.idRol,
                     estado: r.activo ? "Activo" : "Inactivo",
+                    accesoTexto: `${r.modulosConAcceso} de ${modulosData.length}`,
                 }))
             );
             setModulos(modulosData);
-            if (notificarCambio === true) await onRolesChange?.();
         } catch (e) {
             setError(e instanceof ApiError ? e.message : "No se pudieron cargar los roles.");
         } finally {
             setCargando(false);
         }
-    }, [onRolesChange]);
+    }
 
     useEffect(() => {
         if (!esAdministrador) return;
@@ -90,7 +110,7 @@ export default function RolesPanel({ user, onRolesChange }) {
         return () => {
             activo = false;
         };
-    }, [esAdministrador, cargarRoles]);
+    }, [esAdministrador]);
 
     if (!esAdministrador) {
         return (
@@ -100,216 +120,253 @@ export default function RolesPanel({ user, onRolesChange }) {
         );
     }
 
-    async function abrirDetalle(rol) {
-        setSeleccionado(rol);
-        setNombreEdicion(rol.nombre);
-        setDescripcionEdicion(rol.descripcion || "");
+    const esRolAdmin = form?.nombreOriginal === NOMBRE_ADMIN;
+    const hayCambios = !!form && instantanea({ ...form, nombreOriginal: undefined }) !== formInicial;
+
+    function abrirNuevo() {
+        const nuevo = {
+            idRol: null,
+            nombreOriginal: "",
+            nombre: "",
+            descripcion: "",
+            activo: true,
+            permisos: permisosVacios(modulos),
+        };
+
         setAviso("");
-        setError("");
-        setCargandoPermisos(true);
+        setErrorForm("");
+        setForm(nuevo);
+        setFormInicial(instantanea({ ...nuevo, nombreOriginal: undefined }));
+    }
+
+    async function abrirEdicion(rol) {
+        setAviso("");
+        setErrorForm("");
+        setCargandoForm(true);
+
+        const base = {
+            idRol: rol.idRol,
+            nombreOriginal: rol.nombre,
+            nombre: rol.nombre,
+            descripcion: rol.descripcion || "",
+            activo: rol.activo,
+            permisos: permisosVacios(modulos),
+        };
+
+        setForm(base);
+        setFormInicial("");
+
         try {
             const actuales = await api.obtenerPermisosRol(rol.idRol);
-            const base = permisosVacios(modulos);
-            const combinado = base.map((m) => {
-                const existente = actuales.find((p) => p.idModulo === m.idModulo);
-                return existente ? { ...m, ...existente } : m;
-            });
-            setPermisos(combinado);
+            const completo = { ...base, permisos: combinarPermisos(modulos, actuales) };
+
+            setForm(completo);
+            setFormInicial(instantanea({ ...completo, nombreOriginal: undefined }));
         } catch (e) {
-            setError(e instanceof ApiError ? e.message : "No se pudieron cargar los permisos del rol.");
+            setErrorForm(e instanceof ApiError ? e.message : "No se pudieron cargar los permisos del rol.");
         } finally {
-            setCargandoPermisos(false);
+            setCargandoForm(false);
         }
     }
 
-    function cerrarDetalle() {
-        setSeleccionado(null);
-        setPermisos([]);
-        setError("");
+    function cerrarForm(forzar = false) {
+        if (guardando) return;
+
+        if (!forzar && hayCambios) {
+            setConfirmarDescartar(true);
+            return;
+        }
+
+        setConfirmarDescartar(false);
+        setForm(null);
+        setErrorForm("");
     }
 
-    async function crearRol(e) {
-        e.preventDefault();
-        setGuardando(true);
-        setError("");
-        try {
-            await api.crearRol(nombreNuevo, descripcionNueva);
-            setNombreNuevo("");
-            setDescripcionNueva("");
-            setModoCreacion(false);
-            setAviso("Rol creado correctamente.");
-            await cargarRoles(true);
-        } catch (err) {
-            setError(err instanceof ApiError ? err.message : "No se pudo crear el rol.");
-        } finally {
-            setGuardando(false);
-        }
+    function actualizarCampo(campo, valor) {
+        setForm((f) => ({ ...f, [campo]: valor }));
     }
 
-    async function guardarTodo() {
-        setGuardando(true);
-        setError("");
-        try {
-            await api.editarRol(seleccionado.idRol, nombreEdicion, descripcionEdicion);
-            await api.definirPermisosRol(seleccionado.idRol, permisos);
-            setSeleccionado(null);
-            setPermisos([]);
-            setAviso("Rol y permisos guardados correctamente.");
-            await cargarRoles(true);
-        } catch (err) {
-            setError(err instanceof ApiError ? err.message : "No se pudo guardar el rol.");
-        } finally {
-            setGuardando(false);
-        }
-    }
-
-    async function alternarEstado() {
-        setGuardando(true);
-        setError("");
-        try {
-            const actualizado = await api.cambiarEstadoRol(seleccionado.idRol, !seleccionado.activo);
-            setSeleccionado((prev) => ({ ...prev, activo: actualizado.activo }));
-            setAviso(actualizado.activo ? "Rol activado." : "Rol desactivado.");
-            await cargarRoles(true);
-        } catch (err) {
-            setError(err instanceof ApiError ? err.message : "No se pudo cambiar el estado del rol.");
-        } finally {
-            setGuardando(false);
-        }
+    function bloqueada(idModulo) {
+        return esRolAdmin && idModulo === ID_MODULO_USUARIOS;
     }
 
     function actualizarCasilla(idModulo, accion, valor) {
-        setPermisos((prev) =>
-            prev.map((p) => (p.idModulo === idModulo ? { ...p, [accion]: valor } : p))
-        );
+        if (bloqueada(idModulo)) return;
+
+        setForm((f) => ({
+            ...f,
+            permisos: f.permisos.map((p) => (p.idModulo === idModulo ? { ...p, [accion]: valor } : p)),
+        }));
     }
 
     function marcarColumna(accion, valor) {
-        setPermisos((prev) => prev.map((p) => ({ ...p, [accion]: valor })));
+        setForm((f) => ({
+            ...f,
+            permisos: f.permisos.map((p) => (bloqueada(p.idModulo) ? p : { ...p, [accion]: valor })),
+        }));
     }
+
+    function marcarFila(idModulo, valor) {
+        if (bloqueada(idModulo)) return;
+
+        setForm((f) => ({
+            ...f,
+            permisos: f.permisos.map((p) => (
+                p.idModulo === idModulo
+                    ? { ...p, lectura: valor, escritura: valor, edicion: valor, eliminacion: valor }
+                    : p
+            )),
+        }));
+    }
+
+    async function guardar(e) {
+        e.preventDefault();
+        if (guardando || cargandoForm) return;
+
+        const nombre = form.nombre.trim();
+        if (!nombre) {
+            setErrorForm("El nombre del rol es obligatorio.");
+            return;
+        }
+
+        setGuardando(true);
+        setErrorForm("");
+
+        const datos = {
+            nombre,
+            descripcion: form.descripcion.trim(),
+            activo: form.activo,
+            permisos: form.permisos,
+        };
+
+        try {
+            const guardado = form.idRol === null
+                ? await api.crearRol(datos)
+                : await api.guardarRol(form.idRol, datos);
+
+            setForm(null);
+            setAviso(form.idRol === null
+                ? `El rol "${guardado.nombre}" se creó correctamente.`
+                : `El rol "${guardado.nombre}" se guardó correctamente.`);
+            await cargarRoles();
+            onChanged?.();
+        } catch (err) {
+            const detalle = err instanceof ApiError ? [err.message, ...err.errores].join(" ") : "No se pudo guardar el rol.";
+            setErrorForm(detalle);
+        } finally {
+            setGuardando(false);
+        }
+    }
+
+    const permisosCompletos = form?.permisos ?? [];
 
     return (
         <div>
-            <div className="flex items-center justify-between gap-4 mb-5">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <p className="text-sm" style={{ color: COLORS.muted }}>
-                    Roles internos y permisos por módulo.
+                    Roles internos y permisos por módulo. Se muestran todos los roles, activos e inactivos.
                 </p>
-                <Button variant="primary" onClick={() => setModoCreacion(true)}>
+                <Button variant="primary" onClick={abrirNuevo} disabled={cargando || modulos.length === 0}>
                     + Nuevo rol
                 </Button>
             </div>
 
-            {error && !seleccionado && !modoCreacion && <Notice tone="error">{error}</Notice>}
-            {aviso && !seleccionado && <Notice>{aviso}</Notice>}
+            {error && <Notice tone="error">{error}</Notice>}
+            {aviso && <Notice>{aviso}</Notice>}
 
-            {cargando ? (
-                <p className="text-sm" style={{ color: COLORS.muted }}>Cargando roles...</p>
-            ) : (
-                <DataTable
-                    columns={columnas}
-                    rows={roles}
-                    onRowClick={abrirDetalle}
-                    searchPlaceholder="Buscar rol..."
-                    initialShowInactive
-                    hideInactiveToggle
-                />
-            )}
+            <DataTable
+                columns={columnas}
+                rows={roles}
+                onRowClick={abrirEdicion}
+                loading={cargando}
+                searchPlaceholder="Buscar rol..."
+                initialShowInactive
+                hideInactiveToggle
+                emptyMessage="No hay roles registrados."
+            />
 
             <Modal
-                open={modoCreacion}
-                title="Nuevo rol"
-                subtitle="Definí el nombre y una descripción breve. Los permisos se asignan después."
-                onClose={() => setModoCreacion(false)}
-            >
-                <form onSubmit={crearRol} className="flex flex-col gap-4">
-                    {error && <Notice tone="error">{error}</Notice>}
-
-                    <FieldLabel label="Nombre del rol">
-                        <input
-                            className={inputClass}
-                            style={inputStyle}
-                            value={nombreNuevo}
-                            onChange={(e) => setNombreNuevo(e.target.value)}
-                            required
-                            maxLength={100}
-                        />
-                    </FieldLabel>
-
-                    <FieldLabel label="Descripción (opcional)">
-                        <textarea
-                            className={inputClass}
-                            style={inputStyle}
-                            value={descripcionNueva}
-                            onChange={(e) => setDescripcionNueva(e.target.value)}
-                            maxLength={250}
-                            rows={3}
-                        />
-                    </FieldLabel>
-
-                    <div className="flex justify-end gap-3 mt-2">
-                        <Button variant="ghost" onClick={() => setModoCreacion(false)}>
+                open={!!form}
+                title={form?.idRol === null ? "Nuevo rol" : form?.nombreOriginal}
+                subtitle={form?.idRol === null
+                    ? "Defina el nombre, el estado y los permisos. Todo se guarda con un solo botón."
+                    : "Edite los datos y permisos del rol y guarde todo con un solo botón."}
+                icon={ShieldCheck}
+                onClose={() => cerrarForm()}
+                width="max-w-3xl"
+                footer={form && (
+                    <>
+                        <Button variant="ghost" onClick={() => cerrarForm()} disabled={guardando}>
                             Cancelar
                         </Button>
-                        <Button variant="primary" type="submit" disabled={guardando}>
-                            Crear rol
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
-
-            <Modal
-                open={!!seleccionado}
-                title={seleccionado ? seleccionado.nombre : ""}
-                subtitle={seleccionado ? `Estado actual: ${seleccionado.activo ? "Activo" : "Inactivo"}` : ""}
-                onClose={cerrarDetalle}
-                width="max-w-3xl"
-                footer={seleccionado && (
-                    <>
-                        <Button
-                            variant={seleccionado.activo ? "danger" : "secondary"}
-                            onClick={alternarEstado}
-                            disabled={guardando}
-                            className="mr-auto"
-                        >
-                            {seleccionado.activo ? "Desactivar rol" : "Activar rol"}
-                        </Button>
-                        <Button variant="ghost" onClick={cerrarDetalle}>Cancelar</Button>
                         <Button
                             variant="primary"
-                            onClick={guardarTodo}
-                            disabled={guardando || cargandoPermisos}
+                            type="submit"
+                            form="rol-form"
+                            disabled={guardando || cargandoForm || (form.idRol !== null && !hayCambios)}
                         >
                             {guardando ? "Guardando..." : "Guardar"}
                         </Button>
                     </>
                 )}
             >
-                {seleccionado && (
-                    <div>
-                        {error && <Notice tone="error">{error}</Notice>}
-                        {aviso && <Notice>{aviso}</Notice>}
+                {form && (
+                    <form onSubmit={guardar} id="rol-form">
+                        {errorForm && <Notice tone="error">{errorForm}</Notice>}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                            <FieldLabel label="Nombre">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                            <FieldLabel label="Nombre del rol *">
                                 <input
                                     className={inputClass}
                                     style={inputStyle}
-                                    value={nombreEdicion}
-                                    onChange={(e) => setNombreEdicion(e.target.value)}
+                                    value={form.nombre}
+                                    onChange={(e) => actualizarCampo("nombre", e.target.value)}
                                     maxLength={100}
+                                    required
+                                    disabled={esRolAdmin || guardando}
                                 />
                             </FieldLabel>
+
                             <FieldLabel label="Descripción">
                                 <textarea
                                     className={inputClass}
                                     style={inputStyle}
-                                    value={descripcionEdicion}
-                                    onChange={(e) => setDescripcionEdicion(e.target.value)}
+                                    value={form.descripcion}
+                                    onChange={(e) => actualizarCampo("descripcion", e.target.value)}
                                     maxLength={250}
                                     rows={2}
+                                    disabled={guardando}
                                 />
                             </FieldLabel>
                         </div>
+
+                        <label
+                            className="flex items-start gap-3 rounded-xl p-4 mb-6 cursor-pointer"
+                            style={{
+                                border: `1px solid ${COLORS.border}`,
+                                backgroundColor: form.activo ? COLORS.greenTint : "#FAFAFA",
+                                opacity: esRolAdmin ? 0.7 : 1,
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                className="mt-0.5"
+                                checked={form.activo}
+                                onChange={(e) => actualizarCampo("activo", e.target.checked)}
+                                disabled={esRolAdmin || guardando}
+                                style={{ accentColor: COLORS.green }}
+                            />
+                            <span>
+                                <span className="block text-sm" style={{ color: COLORS.charcoal, fontWeight: 600 }}>
+                                    Rol activo
+                                </span>
+                                <span className="block text-xs mt-0.5" style={{ color: COLORS.muted }}>
+                                    {esRolAdmin
+                                        ? "El rol Administrador del sistema no se puede desactivar ni renombrar."
+                                        : "Un rol inactivo no se puede asignar a nuevas cuentas; las cuentas que ya lo tienen lo conservan."}
+                                </span>
+                            </span>
+                        </label>
 
                         <h3
                             className="text-xs uppercase tracking-wide mb-3"
@@ -318,11 +375,11 @@ export default function RolesPanel({ user, onRolesChange }) {
                             Permisos por módulo
                         </h3>
 
-                        {cargandoPermisos ? (
+                        {cargandoForm ? (
                             <p className="text-sm" style={{ color: COLORS.muted }}>Cargando permisos...</p>
                         ) : (
                             <div
-                                className="rounded-xl overflow-hidden"
+                                className="rounded-xl overflow-x-auto"
                                 style={{ border: `1px solid ${COLORS.border}` }}
                             >
                                 <table className="w-full text-sm">
@@ -332,7 +389,7 @@ export default function RolesPanel({ user, onRolesChange }) {
                                                 Módulo
                                             </th>
                                             {ACCIONES.map((a) => {
-                                                const todos = permisos.length > 0 && permisos.every((p) => p[a.key]);
+                                                const todos = permisosCompletos.length > 0 && permisosCompletos.every((p) => p[a.key]);
 
                                                 return (
                                                     <th key={a.key} className="text-center px-2 py-3 text-xs uppercase tracking-wide" style={{ color: COLORS.muted }}>
@@ -349,19 +406,33 @@ export default function RolesPanel({ user, onRolesChange }) {
                                                     </th>
                                                 );
                                             })}
+                                            <th className="text-center px-2 py-3 text-xs uppercase tracking-wide" style={{ color: COLORS.muted }}>
+                                                Todo
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {modulos.map((modulo) => {
-                                            const fila = permisos.find((p) => p.idModulo === modulo.idModulo);
+                                            const fila = permisosCompletos.find((p) => p.idModulo === modulo.idModulo);
+                                            const completo = ACCIONES.every((a) => fila?.[a.key]);
+
                                             return (
                                                 <tr key={modulo.idModulo} style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                                                    <td className="px-4 py-2.5">{modulo.nombre}</td>
+                                                    <td className="px-4 py-2.5">
+                                                        {modulo.nombre}
+                                                        {bloqueada(modulo.idModulo) && (
+                                                            <span className="block text-xs" style={{ color: COLORS.muted }}>
+                                                                Siempre con acceso total
+                                                            </span>
+                                                        )}
+                                                    </td>
                                                     {ACCIONES.map((a) => (
                                                         <td key={a.key} className="text-center py-2.5">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={!!fila?.[a.key]}
+                                                                disabled={bloqueada(modulo.idModulo) || guardando}
+                                                                aria-label={`${a.label}: ${modulo.nombre}`}
                                                                 onChange={(e) =>
                                                                     actualizarCasilla(modulo.idModulo, a.key, e.target.checked)
                                                                 }
@@ -369,6 +440,16 @@ export default function RolesPanel({ user, onRolesChange }) {
                                                             />
                                                         </td>
                                                     ))}
+                                                    <td className="text-center py-2.5">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={completo}
+                                                            disabled={bloqueada(modulo.idModulo) || guardando}
+                                                            aria-label={`Todos los permisos: ${modulo.nombre}`}
+                                                            onChange={(e) => marcarFila(modulo.idModulo, e.target.checked)}
+                                                            style={{ accentColor: COLORS.green }}
+                                                        />
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
@@ -376,9 +457,21 @@ export default function RolesPanel({ user, onRolesChange }) {
                                 </table>
                             </div>
                         )}
-                    </div>
+
+                    </form>
                 )}
             </Modal>
+
+            <ConfirmModal
+                open={confirmarDescartar}
+                title="¿Descartar los cambios?"
+                message="Hay cambios sin guardar en este rol. Si cierra ahora se perderán."
+                confirmLabel="Descartar cambios"
+                cancelLabel="Seguir editando"
+                tone="danger"
+                onConfirm={() => cerrarForm(true)}
+                onCancel={() => setConfirmarDescartar(false)}
+            />
         </div>
     );
 }
