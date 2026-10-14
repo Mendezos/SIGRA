@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Home,
+    Menu,
+    X,
     Wrench,
     Radio,
     Package,
@@ -38,6 +40,7 @@ import PoliticaSeguridadModal from "../components/PoliticaSeguridadModal";
 import DesbloquearCuentaModal from "../components/DesbloquearCuentaModal";
 import PerfilModal from "../components/PerfilModal";
 import ConfirmModal from "../components/ConfirmModal";
+import SeguimientoTickets from "../components/tickets/SeguimientoTickets";
 
 const COLORS = {
     green: "#5EB453",
@@ -81,23 +84,9 @@ function createInitialModuleData() {
     );
 }
 
-function nextTicketId(rows) {
-    const numbers = rows
-        .map((row) => {
-            const match = String(row.id ?? "").match(
-                /^BOL-(\d+)$/
-            );
-
-            return match ? Number(match[1]) : 0;
-        })
-        .filter(Number.isFinite);
-
-    const next = Math.max(0, ...numbers) + 1;
-
-    return `BOL-${String(next).padStart(5, "0")}`;
-}
-
 function Sidebar({
+    mobileOpen,
+    onCloseMobile,
     active,
     onSelect,
     user,
@@ -115,14 +104,15 @@ function Sidebar({
 
     return (
         <aside
-            className="w-72 shrink-0 h-screen sticky top-0 flex flex-col px-5 py-6"
+            className={`w-72 shrink-0 h-screen fixed md:sticky top-0 left-0 z-50 md:z-auto flex-col px-5 py-6 ${mobileOpen ? "flex" : "hidden md:flex"}`}
             style={{
                 borderRight: `1px solid ${COLORS.border}`,
                 backgroundColor: COLORS.white,
             }}
         >
             <div className="mb-7 px-2">
-                <BrandLogo compact />
+                <button type="button" aria-label="Cerrar menú" className="md:hidden absolute top-4 right-4" onClick={onCloseMobile}><X size={20} /></button>
+            <BrandLogo compact />
 
                 <div
                     style={{ color: COLORS.muted }}
@@ -665,6 +655,8 @@ function Welcome({
                     </div>
                 </section>
 
+                <SeguimientoTickets />
+
                 <ReportsPreview
                     user={user}
                     reports={reports}
@@ -701,7 +693,9 @@ export default function Dashboard({
     onProfileUpdated,
 }) {
     const [active, setActive] = useState(null);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [notice, setNotice] = useState("");
+    useEffect(() => { if (!notice) return; const t = setTimeout(() => setNotice(""), 3000); return () => clearTimeout(t); }, [notice]);
     const [moduleData, setModuleData] = useState(
         createInitialModuleData
     );
@@ -734,24 +728,9 @@ export default function Dashboard({
         });
     }
 
-    function handleGenerateTicket(values) {
-        const currentTickets =
-            moduleData.tickets ?? [];
-
-        const newTicket = {
-            ...values,
-            id: nextTicketId(currentTickets),
-            activo: true,
-        };
-
-        updateModuleData("tickets", (rows) => [
-            newTicket,
-            ...rows,
-        ]);
-
-        setNotice(
-            `La boleta ${newTicket.id} fue generada correctamente y quedó en estado ${newTicket.estado}.`
-        );
+    function handleGenerateTicket(ticket) {
+        setNotice(`La boleta ${ticket.numeroBoleta} fue registrada correctamente y quedó en estado ${ticket.estado}.`);
+        setActive("tickets");
     }
 
     function handleGenerateReport(values) {
@@ -781,10 +760,15 @@ export default function Dashboard({
             style={{ fontFamily: FONT }}
             className="min-h-screen w-full flex bg-white"
         >
+            <button type="button" aria-label="Abrir menú" aria-expanded={mobileMenuOpen} className="md:hidden fixed top-6 left-5 z-40 p-2 rounded-lg border bg-white" onClick={() => setMobileMenuOpen(true)}><Menu size={20} /></button>
+            {mobileMenuOpen && <button type="button" aria-label="Cerrar menú lateral" className="md:hidden fixed inset-0 bg-black/30 z-40" onClick={() => setMobileMenuOpen(false)} />}
             <Sidebar
+                mobileOpen={mobileMenuOpen}
+                onCloseMobile={() => setMobileMenuOpen(false)}
                 active={active}
                 onSelect={(moduleId) => {
                     setActive(moduleId);
+                    setMobileMenuOpen(false);
                     setNotice("");
                 }}
                 user={user}

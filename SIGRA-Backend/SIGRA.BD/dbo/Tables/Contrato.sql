@@ -6,6 +6,7 @@
     [FechaVencimiento] DATE            NOT NULL,
     [MontoMensual]     DECIMAL (12, 2) NOT NULL,
     [Condiciones]      VARCHAR (MAX)   NULL,
+    [CubreReparaciones] BIT CONSTRAINT [DF_Contrato_CubreReparaciones] DEFAULT (0) NOT NULL,
     [IdVendedor]       INT             NULL,
     [MotivoCancelacion] VARCHAR (300)  NULL,
     [FechaCancelacion] DATE            NULL,

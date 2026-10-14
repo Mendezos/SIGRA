@@ -31,6 +31,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IGestionCuentasDA, GestionCuentasDA>();
 builder.Services.AddScoped<IGestionCuentasFlujo, GestionCuentasFlujo>();
+builder.Services.AddScoped<ITicketsDA, TicketsDA>();
+builder.Services.AddScoped<ITicketsFlujo, TicketsFlujo>();
+builder.Services.AddScoped<INotificacionesDA, NotificacionesDA>();
+builder.Services.AddScoped<IExportacionService, ExportacionService>();
+builder.Services.AddScoped<ICorreosPendientesService, CorreosPendientesService>();
+builder.Services.AddSingleton(TimeProvider.System);
+if (!builder.Configuration.GetValue<bool>("Pruebas:DesactivarServiciosEnSegundoPlano"))
+    builder.Services.AddHostedService<SIGRA.API.Servicios.CorreosPendientesWorker>();
 
 const string PoliticaCorsReact = "PoliticaCorsReact";
 builder.Services.AddCors(opciones =>
@@ -100,7 +108,8 @@ builder.Services.AddScoped<IRolFlujo, RolFlujo>();
 builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
 builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
 builder.Services.AddScoped<IAlquilerFlujo, AlquilerFlujo>();
-builder.Services.AddHostedService<SIGRA.API.Servicios.ContratosVencimientoService>();
+if (!builder.Configuration.GetValue<bool>("Pruebas:DesactivarServiciosEnSegundoPlano"))
+    builder.Services.AddHostedService<SIGRA.API.Servicios.ContratosVencimientoService>();
 
 var app = builder.Build();
 
@@ -126,3 +135,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

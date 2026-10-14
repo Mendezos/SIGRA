@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DataTable from "./DataTable";
 import Modal from "./Modal";
 import {
@@ -33,7 +33,7 @@ function permisosVacios(modulos) {
     }));
 }
 
-export default function RolesPanel({ user }) {
+export default function RolesPanel({ user, onRolesChange }) {
     const [roles, setRoles] = useState([]);
     const [modulos, setModulos] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -53,7 +53,13 @@ export default function RolesPanel({ user }) {
 
     const esAdministrador = user.role === "Administrador del sistema";
 
-    async function cargarRoles() {
+    useEffect(() => {
+        if (!aviso) return;
+        const temporizador = window.setTimeout(() => setAviso(""), 3000);
+        return () => window.clearTimeout(temporizador);
+    }, [aviso]);
+
+    const cargarRoles = useCallback(async (notificarCambio = false) => {
         setCargando(true);
         setError("");
         try {
@@ -65,12 +71,13 @@ export default function RolesPanel({ user }) {
                 }))
             );
             setModulos(modulosData);
+            if (notificarCambio === true) await onRolesChange?.();
         } catch (e) {
             setError(e instanceof ApiError ? e.message : "No se pudieron cargar los roles.");
         } finally {
             setCargando(false);
         }
-    }
+    }, [onRolesChange]);
 
     useEffect(() => {
         if (!esAdministrador) return;
@@ -83,7 +90,7 @@ export default function RolesPanel({ user }) {
         return () => {
             activo = false;
         };
-    }, [esAdministrador]);
+    }, [esAdministrador, cargarRoles]);
 
     if (!esAdministrador) {
         return (
@@ -131,7 +138,7 @@ export default function RolesPanel({ user }) {
             setDescripcionNueva("");
             setModoCreacion(false);
             setAviso("Rol creado correctamente.");
-            await cargarRoles();
+            await cargarRoles(true);
         } catch (err) {
             setError(err instanceof ApiError ? err.message : "No se pudo crear el rol.");
         } finally {
@@ -148,7 +155,7 @@ export default function RolesPanel({ user }) {
             setSeleccionado(null);
             setPermisos([]);
             setAviso("Rol y permisos guardados correctamente.");
-            await cargarRoles();
+            await cargarRoles(true);
         } catch (err) {
             setError(err instanceof ApiError ? err.message : "No se pudo guardar el rol.");
         } finally {
@@ -163,7 +170,7 @@ export default function RolesPanel({ user }) {
             const actualizado = await api.cambiarEstadoRol(seleccionado.idRol, !seleccionado.activo);
             setSeleccionado((prev) => ({ ...prev, activo: actualizado.activo }));
             setAviso(actualizado.activo ? "Rol activado." : "Rol desactivado.");
-            await cargarRoles();
+            await cargarRoles(true);
         } catch (err) {
             setError(err instanceof ApiError ? err.message : "No se pudo cambiar el estado del rol.");
         } finally {

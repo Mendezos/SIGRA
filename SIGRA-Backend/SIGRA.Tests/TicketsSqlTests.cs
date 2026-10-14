@@ -1,0 +1,145 @@
+using System.Data;
+using System.Text.Json;
+using Dapper;
+using Microsoft.Data.SqlClient;
+using SIGRA.Abstracciones.Conexion;
+using SIGRA.Abstracciones.Dtos;
+using SIGRA.Abstracciones.Excepciones;
+using SIGRA.Abstracciones.Servicios;
+using SIGRA.DA.Repositorios;
+using SIGRA.Flujo.Flujos;
+using SIGRA.Flujo.Servicios;
+using Xunit;
+namespace SIGRA.Tests;
+public sealed class SqlFactAttribute : FactAttribute
+{public SqlFactAttribute(){if(string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SIGRA_TEST_SQL")))Skip="Configure SIGRA_TEST_SQL con una base aislada SIGRA_GTST_QA_ preparada con el modelo SQL.";}}
+public class TicketsSqlTests : IAsyncLifetime
+{
+    const int Admin=1,Coord=2,Recep=3,Tec1=4,Tec2=5,Vendedor=6;
+    private readonly Factory db=new(); private readonly CorreoPrueba mail=new();
+    private TicketsFlujo flujo=null!;private TicketsDA da=null!;private NotificacionesDA avisos=null!;
+    public async Task InitializeAsync()
+    {
+        if(Environment.GetEnvironmentVariable("SIGRA_TEST_SQL") is null)return;
+        using var c=db.CrearConexion();
+        await c.ExecuteAsync("""
+        DELETE CorreoPendiente;DELETE Notificacion;DELETE GarantiaSeguimiento;DELETE GarantiaTicket;
+        DELETE TicketEsperaRepuesto;DELETE TicketEdicion;DELETE TicketInventarioEvento;DELETE TicketAsignacion;
+        DELETE BitacoraEquipo WHERE IdTicket IS NOT NULL;DELETE TicketEquipo;DELETE BoletaMantenimiento;DELETE Reparacion;
+        DELETE TicketEstadoHistorial;DELETE TicketGestion;DELETE Auditoria WHERE Modulo='GTST';DELETE Ticket;
+        DELETE UsuarioEspecialidad;DELETE Correlativo WHERE Nombre='GTST';
+        IF NOT EXISTS(SELECT 1 FROM Rol) BEGIN
+          INSERT Rol(Nombre) VALUES(N'Administrador del sistema'),(N'Coordinador técnico'),(N'Recepcionista'),(N'Técnico'),(N'Vendedor / Ejecutivo de cuenta');
+          INSERT Modulo(IdModulo,Nombre) VALUES(2,N'Tickets de servicio técnico');INSERT Permiso(IdModulo) VALUES(2);
+          INSERT RolPermiso(IdRol,IdPermiso,Lectura,Escritura,Edicion,Eliminacion) SELECT IdRol,1,1,1,1,1 FROM Rol WHERE IdRol<>5;
+          INSERT Usuario(IdRol,Nombre,Correo,PasswordHash) VALUES(1,'Admin QA','admin@qa.invalid','test'),(2,'Coordinador QA','coord@qa.invalid','test'),(3,'Recepción QA','recep@qa.invalid','test'),(4,'Ana Técnica','ana@qa.invalid','test'),(4,'Luis Técnico','luis@qa.invalid','test'),(5,'Vendedor QA','ventas@qa.invalid','test');
+        END;
+        UPDATE Usuario SET Activo=1;
+        UPDATE RolPermiso SET Lectura=1,Escritura=1,Edicion=1,Eliminacion=1;
+        INSERT UsuarioEspecialidad(IdUsuario,Especialidad) VALUES(4,N'Radios'),(4,N'Repetidoras'),(5,N'Radios');
+        IF NOT EXISTS(SELECT 1 FROM ConfiguracionTickets) INSERT ConfiguracionTickets(Id,CargaMaxima,DiasHabilesEstimados) VALUES(1,5,5);
+        UPDATE ConfiguracionTickets SET CargaMaxima=5,DiasHabilesEstimados=5;
+        """);
+        da=new(db);avisos=new(db);flujo=new(da,new ExportacionService(),avisos,new CorreosPendientesService(avisos,mail),TimeProvider.System);
+    }
+    public Task DisposeAsync()=>Task.CompletedTask;
+    private Task<TicketDetalleDto> Crear(string tipo="Reparación",string? serie=null,int n=1)
+    {var d=ReglasTicketsTests.Entrada(tipo,serie??Guid.NewGuid().ToString("N"));for(var i=1;i<n;i++)d.Equipos.Add(new(){Marca="Motorola",Modelo="DEP-450",NumeroSerie=Guid.NewGuid().ToString("N"),Problema="No logra transmitir señal"});return flujo.RegistrarAsync(d,Recep);}
+    private static VersionTicketDto V(TicketDetalleDto t)=>new(){Version=t.Version};
+    private async Task<TicketDetalleDto> Procesar(TicketDetalleDto t)
+    {t=await flujo.RecibirAsync(t.IdTicket,V(t),Tec1);if(t.IdTecnicoAsignado is null)t=await flujo.AsignarAsync(t.IdTicket,new(){Version=t.Version,IdTecnico=Tec1},Coord);return await flujo.IniciarAsync(t.IdTicket,V(t),t.IdTecnicoAsignado!.Value);}
+    private static TrabajoTicketDto Reparado()=>new(){Hallazgos="Circuito averiado",Acciones="Reemplazo de circuito y prueba",Resolucion="Reparado",NumeroFactura="F-2026-01",Monto=15000,Observaciones="Equipo probado correctamente"};
+    [SqlFact] public async Task RegistroAtomicoMultiequipoYComprobanteOriginal()
+    {var t=await Crear(n:2);Assert.Equal(2,t.Equipos.Count);Assert.Equal(1,t.NumeroBoleta);Assert.Equal(32,t.CodigoSeguimiento.Length);Assert.Equal("Asignada",t.Estado);Assert.True(t.EsReparacion);Assert.Null(t.FechaRecepcionFisica);Assert.Equal(2,t.Estados.Count);Assert.Single(t.Asignaciones);Assert.Equal(Tec1,t.IdTecnicoAsignado);var pdf=await flujo.ComprobanteAsync(t.IdTicket,Recep);Assert.Equal("%PDF",System.Text.Encoding.ASCII.GetString(pdf.Contenido,0,4));}
+    [SqlFact] public async Task RegistroConcurrenteIdempotenteYCorrelativoSinHuecos()
+    {var d=ReglasTicketsTests.Entrada();var ids=await Task.WhenAll(Enumerable.Range(0,8).Select(_=>da.RegistrarAsync(d,Recep)));Assert.Single(ids.Distinct());var otros=await Task.WhenAll(Enumerable.Range(0,12).Select(i=>da.RegistrarAsync(ReglasTicketsTests.Entrada("Mantenimiento preventivo",Guid.NewGuid().ToString("N")),Recep)));using var c=db.CrearConexion();var nums=(await c.QueryAsync<long>("SELECT NumeroBoleta FROM TicketGestion ORDER BY NumeroBoleta")).ToArray();Assert.Equal(Enumerable.Range(1,13).Select(i=>(long)i),nums);Assert.Equal(12,otros.Distinct().Count());}
+    [SqlFact] public async Task FalloSqlNoConsumeCorrelativoNiDejaBoletaParcial()
+    {var d=ReglasTicketsTests.Entrada();d.Equipos.Add(d.Equipos[0]);await Assert.ThrowsAsync<ReglaNegocioException>(()=>da.RegistrarAsync(d,Recep));var t=await Crear();Assert.Equal(1,t.NumeroBoleta);using var c=db.CrearConexion();Assert.Equal(1,await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Ticket"));}
+    [SqlFact] public async Task CorrelativoSeReconciliaLuegoDeRestaurarContador()
+    {await Crear();using(var c=db.CrearConexion())await c.ExecuteAsync("UPDATE Correlativo SET Valor=0 WHERE Nombre='GTST'");Assert.Equal(2,(await Crear()).NumeroBoleta);}
+    [SqlFact] public async Task RecepcionRealInmutableYEstadosNoSaltan()
+    {var t=await Crear();await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.IniciarAsync(t.IdTicket,V(t),Tec1));await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},Tec1));await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.RecibirAsync(t.IdTicket,V(t),Recep));var antes=DateTimeOffset.UtcNow;t=await flujo.RecibirAsync(t.IdTicket,V(t),Tec2);Assert.Equal(Tec2,t.TecnicoReceptor);Assert.InRange(t.FechaRecepcionFisica!.Value,antes.AddSeconds(-1),DateTimeOffset.UtcNow.AddSeconds(1));Assert.Equal(TimeSpan.Zero,t.FechaRecepcionFisica.Value.Offset);await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.RecibirAsync(t.IdTicket,V(t),Tec1));t=await flujo.IniciarAsync(t.IdTicket,V(t),Tec1);Assert.Equal("En proceso",t.Estado);Assert.NotNull(t.FechaInicio);}
+    [SqlFact] public async Task AsignacionAutomaticaEspecialidadCargaYDesempate()
+    {var primero=await Crear();var segundo=await Crear();Assert.Equal(Tec1,primero.IdTecnicoAsignado);Assert.Equal(Tec2,segundo.IdTecnicoAsignado);using(var c=db.CrearConexion())await c.ExecuteAsync("UPDATE Usuario SET Activo=0 WHERE IdUsuario=4");var dto=ReglasTicketsTests.Entrada();dto.Equipos[0].Tipo="Repetidora";var t=await flujo.RegistrarAsync(dto,Recep);Assert.Null(t.IdTecnicoAsignado);Assert.Equal("Pendiente de asignación",t.EstadoAsignacion);Assert.NotEmpty(await avisos.ListarAsync(Coord));}
+    [SqlFact] public async Task LimiteCargaAdvertenciaConfirmacionYVistaCarga()
+    {await flujo.GuardarConfiguracionAsync(new(){CargaMaxima=1},Coord);var t1=await Crear();var t2=await Crear();var t3=await Crear();Assert.Null(t3.IdTecnicoAsignado);var ex=await Assert.ThrowsAsync<ConfirmacionRequeridaException>(()=>flujo.AsignarAsync(t3.IdTicket,new(){Version=t3.Version,IdTecnico=Tec1},Coord));Assert.Equal("CARGA_MAXIMA",ex.Codigo);t3=await flujo.AsignarAsync(t3.IdTicket,new(){Version=t3.Version,IdTecnico=Tec1,ConfirmarSobrecarga=true},Coord);Assert.Equal(2,(await flujo.TecnicosAsync(Coord)).Single(t=>t.IdUsuario==Tec1).TotalAbiertas);}
+    [SqlFact] public async Task ReasignacionNotificaAmbosYConservaHistoria()
+    {var t=await Crear(n:2);t=await flujo.AsignarAsync(t.IdTicket,new(){Version=t.Version,IdTecnico=Tec2},Coord);Assert.Equal(2,t.Asignaciones.Count);Assert.Contains(await avisos.ListarAsync(Tec1),n=>n.Titulo.Contains("Reasignación"));Assert.Contains(await avisos.ListarAsync(Tec2),n=>n.Mensaje.Contains(t.Equipos[1].NumeroSerie));var f=new FiltroTicketsDto{IdTecnico=Tec1};Assert.Empty((await flujo.ListarAsync(f,Tec1)).Items);}
+    [SqlFact] public async Task SeguimientoInternoSinPermisoModuloYClienteComoAlternativa()
+    {var t=await Crear();Assert.Equal(t.NumeroBoleta,(await flujo.SeguimientoAsync(t.CodigoSeguimiento,Vendedor)).NumeroBoleta);Assert.NotEmpty(await flujo.SeguimientoClienteAsync("Cliente",Vendedor));var ex=await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.SeguimientoAsync("código-incorrecto",Vendedor));Assert.Equal("El código ingresado no es válido",ex.Message);await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.ListarAsync(new(),Vendedor));}
+    [SqlFact] public async Task BorradorLargoPersistenteEsperaRepuestosYControlVersion()
+    {var t=await Procesar(await Crear());var version=t.Version;var trabajo=Reparado();trabajo.Hallazgos=new string('H',4900);trabajo.Etapa="En espera de repuesto";trabajo.Repuesto="Placa principal";t=await flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=t.Version,Trabajo=trabajo},Tec1);Assert.Equal(4900,t.Trabajo.Hallazgos!.Length);using(var c=db.CrearConexion())Assert.Equal(4900,await c.ExecuteScalarAsync<int>("SELECT LEN(Hallazgos) FROM Reparacion WHERE IdTicket=@id",new{id=t.IdTicket}));await Assert.ThrowsAsync<ConflictoDatosException>(()=>flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=version,Trabajo=trabajo},Tec1));trabajo.Etapa="En reparación";t=await flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=t.Version,Trabajo=trabajo},Tec1);using(var c=db.CrearConexion())Assert.Equal(0,await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM TicketEsperaRepuesto WHERE Fin IS NULL"));}
+    [SqlFact] public async Task CierreFacturaCongelaDatosYSePuedeCompletarConBorrador()
+    {var t=await Procesar(await Crear());t=await flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},Tec1);t=await flujo.RegistrarFacturaAsync(t.IdTicket,new(){Version=t.Version,NumeroFactura="F-1",Monto=10},Tec1);Assert.True(t.FacturaEmitida);await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},Tec1));await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.InactivarAsync(t.IdTicket,new(){Version=t.Version,Motivo="Error"},Admin));t=await flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=new()},Tec1);Assert.Equal("Cerrada",t.Estado);Assert.Equal("F-1",t.Trabajo.NumeroFactura);await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},Tec1));}
+    [SqlFact] public async Task GarantiaAutomaticaPorEquipoInmutableYSeguimiento()
+    {var t=await Procesar(await Crear(n:2));var w=new TrabajoTicketDto{Hallazgos="Defecto original de fábrica",Acciones="Envío al fabricante",Resolucion="Garantía",Proveedor="Kenwood",CasoProveedor="CASO-001"};t=await flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=w},Tec1);var g=await flujo.GarantiasAsync(new(){Proveedor="Kenwood"},Coord);Assert.Equal(2,g.Count);Assert.All(g,x=>Assert.Equal("CASO-001",x.CasoProveedor));await flujo.AgregarSeguimientoAsync(g[0].IdGarantia,new(){Estado="Resuelto por el proveedor",Nota="Equipo recibido y revisado"},Coord);var actualizado=(await flujo.GarantiasAsync(new(),Coord)).Single(x=>x.IdGarantia==g[0].IdGarantia);Assert.Equal(g[0].Fecha,actualizado.Fecha);Assert.Single(actualizado.Seguimiento);Assert.Equal("Resuelto por el proveedor",actualizado.Estado);await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.GarantiasAsync(new(),Tec1));}
+    [SqlFact] public async Task DerivacionConservaFolioCodigoClienteYEquipos()
+    {var t=await Procesar(await Crear("Mantenimiento correctivo"));var numero=t.NumeroBoleta;var codigo=t.CodigoSeguimiento;var serie=t.Equipos[0].NumeroSerie;t=await flujo.DerivarReparacionAsync(t.IdTicket,V(t),Tec1);Assert.True(t.EsReparacion);Assert.Equal(numero,t.NumeroBoleta);Assert.Equal(codigo,t.CodigoSeguimiento);Assert.Equal(serie,t.Equipos[0].NumeroSerie);Assert.Equal("En proceso",t.Estado);Assert.NotNull(t.FechaInicio);}
+    [SqlFact] public async Task CancelacionInactivacionLogicaYAuditoriaSoloAdmin()
+    {var t=await Crear("Mantenimiento preventivo");await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.InactivarAsync(t.IdTicket,new(){Version=t.Version,Motivo="Error"},Recep));t=await flujo.InactivarAsync(t.IdTicket,new(){Version=t.Version,Motivo="Registro duplicado"},Coord);Assert.False(t.Activo);Assert.Empty((await flujo.ListarAsync(new(),Coord)).Items);Assert.Single((await flujo.ListarAsync(new(){IncluirInactivos=true},Coord)).Items);Assert.NotEmpty(await flujo.HistorialAsync(new(){IdTicket=t.IdTicket},Recep));Assert.Contains(await flujo.AuditoriaAsync(new(){NumeroBoleta=t.NumeroBoleta},Admin),a=>a.Accion=="TICKET_INACTIVAR");await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.AuditoriaAsync(new(),Coord));var otro=await Crear("Mantenimiento preventivo");otro=await flujo.CancelarAsync(otro.IdTicket,new(){Version=otro.Version,Motivo="Cliente retiró el equipo"},Recep);Assert.Equal("Cancelada",otro.Estado);}
+    [SqlFact] public async Task IndicadoresCuentanBoletasNoEquiposYSinDatosNoDivideCero()
+    {Assert.Empty((await flujo.IndicadoresAsync(null,null,Coord)).Tecnicos);var a=await Procesar(await Crear(n:3));await flujo.CerrarAsync(a.IdTicket,new(){Version=a.Version,Trabajo=Reparado()},Tec1);var b=await Crear();b=await Procesar(b);var responsable=b.IdTecnicoAsignado!.Value;await flujo.CerrarAsync(b.IdTicket,new(){Version=b.Version,Trabajo=new(){Hallazgos="Daño irreparable",Resolucion="No reparado",JustificacionTecnica="Daño total en la tarjeta principal"}},responsable);var m=await flujo.IndicadoresAsync(null,null,Coord);Assert.Equal(2,m.Tecnicos.Sum(t=>t.Cerradas));Assert.Equal(1,m.Tecnicos.Sum(t=>t.Reparadas));Assert.Single(m.Motivos);Assert.All(m.Tecnicos,t=>Assert.NotNull(t.PromedioHoras));}
+    [SqlFact] public async Task PermisosSeRevisanEnCadaComandoYTrabajoSoloResponsable()
+    {var t=await Procesar(await Crear());await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},Tec2));await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.RegistrarAsync(ReglasTicketsTests.Entrada(),Tec1));using(var c=db.CrearConexion())await c.ExecuteAsync("UPDATE RolPermiso SET Edicion=0 WHERE IdRol=4");await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},Tec1));}
+    [SqlFact] public async Task EnvioFallaConReintentoYExitoAdjuntaPdfOriginal()
+    {var t=await Crear();await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.EnviarComprobanteAsync(t.IdTicket,new(){Correo="cliente@qa.invalid",Confirmado=false},Recep));mail.Fallar=true;await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.EnviarComprobanteAsync(t.IdTicket,new(){Correo="cliente@qa.invalid",Confirmado=true},Recep));using(var c=db.CrearConexion())Assert.Equal(1,await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM CorreoPendiente WHERE Destinatario='cliente@qa.invalid' AND Estado='Pendiente' AND Intentos=1"));mail.Fallar=false;await flujo.EnviarComprobanteAsync(t.IdTicket,new(){Correo="cliente@qa.invalid",Confirmado=true},Recep);Assert.Single(mail.Adjuntos);var pdf=await flujo.ComprobanteAsync(t.IdTicket,Recep);Assert.Equal(pdf.Contenido,mail.Adjuntos[0].Contenido);}
+    [SqlFact] public async Task HistorialExporteRespetaScopeSinResultadosYFechaInvalida()
+    {var t=await Crear(n:2);await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.ExportarHistorialAsync(new(),"pdf",Recep));await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.ExportarHistorialAsync(new(){NumeroSerie="inexistente"},"pdf",Recep));await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.HistorialAsync(new(){Desde=new(2026,12,1),Hasta=new(2026,1,1)},Recep));var x=await flujo.ExportarHistorialAsync(new(){IdTicket=t.IdTicket},"xlsx",Recep);Assert.True(x.Contenido.Length>500);Assert.Equal(2,(await flujo.HistorialAsync(new(){IdTicket=t.IdTicket},Recep)).Count);}
+    [SqlFact] public async Task InventarioCierreAtomicoCoberturaYAdvertenciaOtroCliente()
+    {
+        using var c=db.CrearConexion();var serie=Guid.NewGuid().ToString("N");
+        var eq=await c.ExecuteScalarAsync<int>("""
+          IF NOT EXISTS(SELECT 1 FROM CategoriaEquipo) INSERT CategoriaEquipo(Nombre) VALUES('Radios');
+          IF NOT EXISTS(SELECT 1 FROM ModeloEquipo) INSERT ModeloEquipo(IdCategoria,Marca,Modelo) VALUES((SELECT TOP 1 IdCategoria FROM CategoriaEquipo),'Kenwood','TK-3170');
+          IF NOT EXISTS(SELECT 1 FROM Proveedor) INSERT Proveedor(Nombre) VALUES('Proveedor QA');
+          INSERT Equipo(IdModelo,IdProveedor,NumeroSerie,FechaAdquisicion,CostoCompra) VALUES((SELECT TOP 1 IdModelo FROM ModeloEquipo),(SELECT TOP 1 IdProveedor FROM Proveedor),@serie,'2026-01-01',1000); SELECT CAST(SCOPE_IDENTITY() AS INT);
+        """,new{serie});
+        var d=ReglasTicketsTests.Entrada(serie:serie);var t=await flujo.RegistrarAsync(d,Recep);Assert.Equal("En reparación",await c.ExecuteScalarAsync<string>("SELECT Estado FROM Equipo WHERE IdEquipo=@eq",new{eq}));
+        t=await Procesar(t);
+        await c.ExecuteAsync("CREATE OR ALTER TRIGGER qa_FalloBitacora ON BitacoraEquipo AFTER INSERT AS THROW 50001,'Fallo de inventario simulado',1;");
+        try{await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},t.IdTecnicoAsignado!.Value));Assert.Equal("En proceso",(await flujo.ObtenerAsync(t.IdTicket,Coord)).Estado);Assert.Equal(0,await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM BitacoraEquipo WHERE IdTicket=@id",new{id=t.IdTicket}));}
+        finally{await c.ExecuteAsync("DROP TRIGGER qa_FalloBitacora");}
+        t=await flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=Reparado()},t.IdTecnicoAsignado!.Value);Assert.Equal("Disponible",await c.ExecuteScalarAsync<string>("SELECT Estado FROM Equipo WHERE IdEquipo=@eq",new{eq}));Assert.Equal(1,await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM BitacoraEquipo WHERE IdTicket=@id",new{id=t.IdTicket}));
+        await c.ExecuteAsync("INSERT Contrato(IdCliente,Estado,FechaInicio,FechaVencimiento,MontoMensual,CubreReparaciones) VALUES(@cliente,'Activo','2026-01-01','2030-01-01',1000,1); INSERT ContratoEquipo(IdContrato,IdEquipo,FechaAsignacion) VALUES(SCOPE_IDENTITY(),@eq,GETDATE());UPDATE Equipo SET Estado='Alquilado' WHERE IdEquipo=@eq;",new{cliente=t.IdCliente,eq});
+        var dto=ReglasTicketsTests.Entrada(serie:serie);dto.Empresa="Otro cliente QA";await Assert.ThrowsAsync<ConfirmacionRequeridaException>(()=>flujo.RegistrarAsync(dto,Recep));
+        t=await Procesar(await Crear(serie:serie));var trabajo=Reparado();trabajo.Monto=null;trabajo.NumeroFactura=null;t=await flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=trabajo},t.IdTecnicoAsignado!.Value);Assert.Equal("Alquilado",await c.ExecuteScalarAsync<string>("SELECT Estado FROM Equipo WHERE IdEquipo=@eq",new{eq}));Assert.False(t.FacturaEmitida);
+    }
+    private static EditarTicketDto Edicion(TicketDetalleDto t) => new(){Solicitud=Guid.NewGuid(),IdCliente=t.IdCliente,Empresa=t.Empresa,Contacto=t.Contacto,Telefono=t.Telefono,Correo=t.Correo,Cargo=t.Cargo,TipoServicio=t.TipoServicio,Version=t.Version,Equipos=t.Equipos};
+    [SqlFact] public async Task EditarConservaIdentidadRegistraCamposYComprobanteOriginal()
+    {var t=await Crear("Mantenimiento preventivo");var original=await flujo.ComprobanteAsync(t.IdTicket,Recep);var d=Edicion(t);d.Telefono="22222222";d.Equipos[0].Problema=new string('F',4500);d.TipoServicio="Mantenimiento correctivo";var a=await flujo.EditarAsync(t.IdTicket,d,Recep);Assert.Equal(t.NumeroBoleta,a.NumeroBoleta);Assert.Equal(t.CodigoSeguimiento,a.CodigoSeguimiento);Assert.Equal("22222222",a.Telefono);Assert.Equal(4500,a.Equipos[0].Problema.Length);Assert.Contains("teléfono",Assert.Single(a.Ediciones).Resumen);Assert.Equal(original.Contenido,(await flujo.ComprobanteAsync(a.IdTicket,Recep)).Contenido);a=await flujo.AsignarAsync(a.IdTicket,new(){Version=a.Version,IdTecnico=Tec1},Coord);d=Edicion(a);d.TipoServicio="Reparación";await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.EditarAsync(a.IdTicket,d,Recep));}
+    [SqlFact] public async Task TecnicoEditaAccesoriosPeroNoClienteYSoloBoletasPropias()
+    {var t=await Crear();var d=Edicion(t);d.Contacto="Otro contacto";await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.EditarAsync(t.IdTicket,d,Tec1));d.Contacto=t.Contacto;d.Equipos[0].Accesorios.Add("Cargador");var a=await flujo.EditarAsync(t.IdTicket,d,Tec1);Assert.Contains("Cargador",a.Equipos[0].Accesorios);var corrupto=Edicion(a);corrupto.Equipos=[null!];await Assert.ThrowsAsync<ValidacionException>(()=>flujo.EditarAsync(a.IdTicket,corrupto,Tec1));await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.EditarAsync(t.IdTicket,Edicion(a),Tec2));}
+    [SqlFact] public async Task MantenimientoCierraConCamposObligatoriosYBorradorRecuperable()
+    {var t=await Procesar(await Crear("Mantenimiento preventivo"));await Assert.ThrowsAsync<ValidacionException>(()=>flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=new()},Tec1));var trabajo=new TrabajoTicketDto{ServicioRealizado="Mantenimiento estándar",DetallesTrabajo="Limpieza y calibración",Observaciones="Entregado probado"};t=await flujo.GuardarTrabajoAsync(t.IdTicket,new(){Version=t.Version,Trabajo=trabajo},Tec1);var recuperado=await flujo.ObtenerAsync(t.IdTicket,Tec1);Assert.Equal("Limpieza y calibración",recuperado.Trabajo.DetallesTrabajo);t=await flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=recuperado.Trabajo},Tec1);Assert.Equal("Mantenimiento realizado",t.Trabajo.Resolucion);Assert.NotNull(t.FechaCierre);await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.EditarAsync(t.IdTicket,Edicion(t),Recep));await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.InactivarAsync(t.IdTicket,new(){Version=t.Version,Motivo="Prueba"},Admin));}
+    [SqlFact] public async Task AuditoriaFiltraBoletaUsuarioPeriodoYNoExponeIdentificadoresEnSnapshots()
+    {Assert.Contains(await flujo.ResponsablesAuditoriaAsync(Admin),u=>u.IdUsuario==Recep);await Assert.ThrowsAsync<AccesoDenegadoException>(()=>flujo.ResponsablesAuditoriaAsync(Coord));var t=await Crear();var d=Edicion(t);d.Telefono="22222222";t=await flujo.EditarAsync(t.IdTicket,d,Recep);var lista=await flujo.AuditoriaAsync(new(){NumeroBoleta=t.NumeroBoleta,IdUsuario=Recep},Admin);Assert.All(lista,a=>Assert.Equal(t.NumeroBoleta,a.NumeroBoleta));var edit=lista.Single(a=>a.Accion=="TICKET_EDITAR");using var json=JsonDocument.Parse(edit.Detalle!);Assert.Equal("88888888",json.RootElement.GetProperty("antes").GetProperty("telefono").GetString());Assert.Equal("22222222",json.RootElement.GetProperty("despues").GetProperty("telefono").GetString());Assert.DoesNotContain("idTicket",edit.Detalle!);Assert.Empty(await flujo.AuditoriaAsync(new(){Desde=new(2020,1,1),Hasta=new(2020,12,31)},Admin));}
+    [SqlFact] public async Task AvisosPropiosLecturaYReintentoCorreoTrasFallo()
+    {await Crear();var n=Assert.Single(await avisos.ListarAsync(Tec1));await Assert.ThrowsAsync<ReglaNegocioException>(()=>avisos.MarcarLeidaAsync(n.IdNotificacion,Tec2));await avisos.MarcarLeidaAsync(n.IdNotificacion,Tec1);Assert.NotNull(Assert.Single(await avisos.ListarAsync(Tec1)).FechaLectura);mail.Fallar=true;var service=new CorreosPendientesService(avisos,mail);Assert.False(await service.EnviarAhoraAsync());using(var c=db.CrearConexion())await c.ExecuteAsync("UPDATE CorreoPendiente SET ProximoIntento=DATEADD(SECOND,-1,SYSUTCDATETIME()) WHERE Estado='Pendiente'");mail.Fallar=false;Assert.True(await service.EnviarAhoraAsync());using(var c=db.CrearConexion())Assert.Equal(1,await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM CorreoPendiente WHERE Estado='Enviado' AND Intentos=2"));}
+    [SqlFact] public async Task PdfExcelGarantiasMantienenFiltrosYRegistroOriginal()
+    {var t=await Procesar(await Crear());t=await flujo.CerrarAsync(t.IdTicket,new(){Version=t.Version,Trabajo=new(){Hallazgos="Defecto de fabricación",Acciones="Enviado al proveedor",Resolucion="Garantía",Proveedor="Proveedor PDF",CasoProveedor="CP-123"}},Tec1);var filtro=new FiltroGarantiasDto{IdCliente=t.IdCliente,Proveedor="Proveedor PDF"};var pdf=await flujo.ExportarGarantiasAsync(filtro,"pdf",Coord);Assert.Equal("application/pdf",pdf.TipoContenido);var x=await flujo.ExportarGarantiasAsync(filtro,"xlsx",Admin);Assert.True(x.Contenido.Length>500);await Assert.ThrowsAsync<ReglaNegocioException>(()=>flujo.ExportarGarantiasAsync(new(){Proveedor="Sin casos"},"pdf",Coord));}
+    [SqlFact] public async Task EspecialidadesActualizadasReintentanPendientesSinDuplicarIdentidad()
+    {await flujo.GuardarEspecialidadesAsync(Tec1,new(){Especialidades=[]},Coord);await flujo.GuardarEspecialidadesAsync(Tec2,new(){Especialidades=[]},Coord);var t=await Crear();Assert.Equal("Pendiente de asignación",t.EstadoAsignacion);await flujo.GuardarEspecialidadesAsync(Tec2,new(){Especialidades=["Radios"]},Coord);var a=await flujo.ObtenerAsync(t.IdTicket,Coord);Assert.Equal(Tec2,a.IdTecnicoAsignado);Assert.Equal(t.CodigoSeguimiento,a.CodigoSeguimiento);Assert.Single(a.Asignaciones);}
+    [SqlFact] public async Task CatalogoGtstRecuperaContactoCargoSinCambiarClientesDeOtrosModulos()
+    {
+        var dto = ReglasTicketsTests.Entrada("Mantenimiento preventivo", Guid.NewGuid().ToString("N"));
+        dto.Empresa = "Cliente contacto " + Guid.NewGuid().ToString("N"); dto.Cargo = "Administrador"; dto.Correo = "contacto@qa.invalid";
+        var boleta = await flujo.RegistrarAsync(dto, Recep);
+        var cliente = Assert.Single(await flujo.ClientesAsync(dto.Empresa, Recep));
+        Assert.Equal(dto.Contacto, cliente.Contacto); Assert.Equal("Administrador", cliente.Cargo); Assert.Equal(dto.Correo, cliente.Correo);
+        var edit = Edicion(boleta); edit.Contacto = "Nuevo contacto"; edit.Cargo = "Encargado de mantenimiento"; edit.Telefono = "22222222"; edit.Correo = null;
+        boleta = await flujo.EditarAsync(boleta.IdTicket, edit, Recep);
+        cliente = Assert.Single(await flujo.ClientesAsync(dto.Empresa, Recep));
+        Assert.Equal("Nuevo contacto", cliente.Contacto); Assert.Equal("Encargado de mantenimiento", cliente.Cargo); Assert.Equal("22222222", cliente.Telefono); Assert.Null(cliente.Correo);
+        using var c = db.CrearConexion();
+        Assert.Equal(dto.Contacto, await c.ExecuteScalarAsync<string>("SELECT Contacto FROM Cliente WHERE IdCliente=@id", new { id=boleta.IdCliente }));
+        await flujo.InactivarAsync(boleta.IdTicket, new() { Version=boleta.Version, Motivo="Registro de prueba duplicado" }, Coord);
+        cliente = Assert.Single(await flujo.ClientesAsync(dto.Empresa, Recep));
+        Assert.Null(cliente.Cargo); Assert.Equal(dto.Contacto,cliente.Contacto);
+    }
+    private sealed class Factory : IConexionFactory
+    {public IDbConnection CrearConexion(){var raw=Environment.GetEnvironmentVariable("SIGRA_TEST_SQL")??throw new InvalidOperationException("SIGRA_TEST_SQL requerido");var b=new SqlConnectionStringBuilder(raw);if(!b.InitialCatalog.StartsWith("SIGRA_GTST_QA_",StringComparison.Ordinal))throw new InvalidOperationException("Las pruebas solo pueden modificar una base SIGRA_GTST_QA_.");return new SqlConnection(raw);}}
+    private sealed class CorreoPrueba : IEmailService
+    {public bool Fallar{get;set;}public IReadOnlyList<AdjuntoCorreoDto> Adjuntos{get;private set;}=[];
+     public Task EnviarAsync(string c,string n,string a,string h)=>EnviarAsync(c,n,a,h,[]);
+     public Task EnviarAsync(string c,string n,string a,string h,IReadOnlyList<AdjuntoCorreoDto> adjuntos){if(Fallar)throw new InvalidOperationException("Proveedor de correo fuera de servicio en QA");Adjuntos=adjuntos;return Task.CompletedTask;}}
+}

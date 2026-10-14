@@ -10,6 +10,7 @@ export default function ConfirmModal({
     cancelLabel = "Cancelar",
     onConfirm,
     onCancel,
+    variant = "primary",
 }) {
     if (!open) return null;
 
@@ -23,7 +24,7 @@ export default function ConfirmModal({
                 <Button variant="ghost" onClick={onCancel}>
                     {cancelLabel}
                 </Button>
-                <Button variant="primary" onClick={onConfirm}>
+                <Button variant={variant} onClick={onConfirm}>
                     {confirmLabel}
                 </Button>
             </div>

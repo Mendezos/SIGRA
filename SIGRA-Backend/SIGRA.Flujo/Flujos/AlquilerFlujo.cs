@@ -193,7 +193,7 @@ public class AlquilerFlujo : IAlquilerFlujo
         if (dto.FechaVencimiento!.Value.Date <= dto.FechaInicio!.Value.Date)
             throw new ReglaNegocioException("La fecha de vencimiento debe ser posterior a la fecha de inicio del contrato.");
 
-        if (dto.MontoMensual <= 0)
+        if (dto.MontoMensual is null || dto.MontoMensual <= 0)
             throw new ReglaNegocioException("El monto mensual debe ser un valor numérico mayor a cero.");
 
         var idsEquipo = new List<int>();
@@ -214,7 +214,7 @@ public class AlquilerFlujo : IAlquilerFlujo
         var accesorios = await ValidarAccesoriosAsync(dto.Accesorios);
 
         var idContrato = await _alquilerDA.InsertarContratoAsync(empresa, dto.FechaInicio.Value.Date, dto.FechaVencimiento.Value.Date,
-                dto.MontoMensual.Value, Normalizar(dto.Condiciones), idVendedor, idsEquipo, idUsuario, accesorios);
+                dto.MontoMensual.Value, Normalizar(dto.Condiciones), idVendedor, idsEquipo, idUsuario, accesorios, dto.CubreReparaciones);
 
         await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "Contrato", idContrato, "CONTRATO_REGISTRADO",
             $"{empresa}: {idsEquipo.Count} equipo(s), {dto.FechaInicio:yyyy-MM-dd} a {dto.FechaVencimiento:yyyy-MM-dd}");

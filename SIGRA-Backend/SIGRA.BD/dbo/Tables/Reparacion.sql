@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[Reparacion] (
     [IdReparacion]         INT             IDENTITY (1, 1) NOT NULL,
     [IdTicket]             INT             NOT NULL,
-    [TecnicoResponsable]   INT             NOT NULL,
+    [TecnicoResponsable]   INT             NULL,
     [Hallazgos]            VARCHAR (MAX)   NULL,
     [TrabajoRealizado]     VARCHAR (MAX)   NULL,
     [Resolucion]           VARCHAR (50)    NULL,

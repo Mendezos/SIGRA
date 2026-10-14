@@ -20,7 +20,7 @@ public interface IAlquilerDA
     Task<List<ClienteDto>> ListarClientesAsync();
     Task<List<EquipoDisponibleDto>> ListarEquiposParaContratoAsync();
     Task<int> InsertarContratoAsync(string empresa, DateTime fechaInicio, DateTime fechaVencimiento, decimal montoMensual,
-        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null);
+        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null, bool cubreReparaciones = false);
     Task<List<ContratoDto>> ListarContratosAsync(string? texto, string? estado);
     Task<ContratoDto?> ObtenerContratoAsync(int idContrato);
     Task<List<ContratoEquipoDto>> ListarEquiposDeContratoAsync(int idContrato);

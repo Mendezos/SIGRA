@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 const COLORS = {
@@ -18,6 +19,7 @@ export default function Modal({
     footer,
     width = "max-w-lg",
 }) {
+    const titleId = useId();
     useEffect(() => {
         if (!open) return;
 
@@ -31,7 +33,7 @@ export default function Modal({
 
     if (!open) return null;
 
-    return (
+    return createPortal(
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
             style={{
@@ -43,7 +45,7 @@ export default function Modal({
             <div
                 role="dialog"
                 aria-modal="true"
-                aria-label={typeof title === "string" ? title : undefined}
+                aria-labelledby={titleId}
                 className={`w-full ${width} bg-white rounded-2xl relative flex flex-col overflow-hidden`}
                 style={{
                     maxHeight: "calc(100vh - 3rem)",
@@ -60,6 +62,7 @@ export default function Modal({
                 >
                     <div className="min-w-0">
                         <h2
+                            id={titleId}
                             className="text-lg leading-snug"
                             style={{ color: COLORS.charcoal, fontWeight: 600 }}
                         >
@@ -103,6 +106,7 @@ export default function Modal({
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

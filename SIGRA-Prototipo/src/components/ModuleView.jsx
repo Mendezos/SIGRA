@@ -7,7 +7,6 @@ import EntityPanel from "./EntityPanel";
 import Modal from "./Modal";
 import RecordForm from "./RecordForm";
 import GirasCalendar from "./GirasCalendar";
-import RolesPanel from "./RolesPanel";
 import StatusBadge from "./StatusBadge";
 import {
     canAccessModule,
@@ -18,6 +17,7 @@ import {
 import CuentasPanel from "./CuentasPanel";
 import InventarioPanel from "./inventario/InventarioPanel";
 import AlquilerPanel from "./alquiler/AlquilerPanel";
+import TicketsPanel from "./tickets/TicketsPanel";
 
 const COLORS = {
     green: "#5EB453",
@@ -428,6 +428,8 @@ export default function ModuleView({
     }
 
     const showMetrics =
+        module.id !== "tickets" &&
+        module.id !== "usuarios" &&
         module.id !== "inventario" &&
         module.id !== "alquiler" &&
         (!module.metricsRoles ||
@@ -613,7 +615,7 @@ export default function ModuleView({
     }
 
     return (
-        <main className="flex-1 min-w-0 px-10 py-10 overflow-x-auto">
+        <main className="flex-1 min-w-0 px-5 pt-24 pb-8 md:p-10 overflow-x-auto">
             <div className="flex items-start justify-between mb-1">
                 <div className="flex items-center gap-3">
                     <div
@@ -754,6 +756,10 @@ export default function ModuleView({
                         user.role
                     )}
                 />
+            ) : module.id === "usuarios" ? (
+                <CuentasPanel user={user} />
+            ) : module.id === "tickets" ? (
+                <TicketsPanel user={user} />
             ) : hasTabs ? (
                 <>
                     <TabSwitcher
@@ -762,13 +768,6 @@ export default function ModuleView({
                         onSelect={setActiveTab}
                     />
 
-                    {module.id === "usuarios" &&
-                    currentTab.key === "roles" ? (
-                        <RolesPanel user={user} />
-                    ) : module.id === "usuarios" &&
-                      currentTab.key === "cuentas" ? (
-                        <CuentasPanel user={user} />
-                    ) : (
                     <EntityPanel
                         key={currentTab.key}
                         idPrefix={idPrefixFor(
@@ -803,7 +802,6 @@ export default function ModuleView({
                                 : undefined
                         }
                     />
-                    )}
                 </>
             ) : module.id === "inventario" ? (
                 <InventarioPanel user={user} />

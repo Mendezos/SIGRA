@@ -39,6 +39,21 @@ public class ManejadorGlobalExcepcionesMiddleware
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsJsonAsync(new { mensaje = ex.Message });
         }
+        catch (AccesoDenegadoException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new { mensaje = ex.Message });
+        }
+        catch (ConflictoDatosException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(new { mensaje = ex.Message, codigo = "DATOS_ACTUALIZADOS" });
+        }
+        catch (ConfirmacionRequeridaException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(new { mensaje = ex.Message, codigo = ex.Codigo });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error no controlado en la API.");

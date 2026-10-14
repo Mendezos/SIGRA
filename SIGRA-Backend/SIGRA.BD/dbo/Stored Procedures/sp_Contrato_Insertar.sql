@@ -7,7 +7,8 @@ CREATE PROCEDURE sp_Contrato_Insertar
     @IdVendedor        INT = NULL,
     @IdsEquipo         VARCHAR(MAX),
     @IdUsuario         INT,
-    @AccesoriosJson    NVARCHAR(MAX) = NULL
+    @AccesoriosJson    NVARCHAR(MAX) = NULL,
+    @CubreReparaciones BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -41,8 +42,8 @@ BEGIN
         THROW 50001, 'El equipo seleccionado no se encuentra disponible en el inventario.', 1;
     END
 
-    INSERT INTO Contrato (IdCliente, Estado, FechaInicio, FechaVencimiento, MontoMensual, Condiciones, IdVendedor)
-    VALUES (@IdCliente, 'Activo', @FechaInicio, @FechaVencimiento, @MontoMensual, @Condiciones, @IdVendedor);
+    INSERT INTO Contrato (IdCliente, Estado, FechaInicio, FechaVencimiento, MontoMensual, Condiciones, IdVendedor, CubreReparaciones)
+    VALUES (@IdCliente, 'Activo', @FechaInicio, @FechaVencimiento, @MontoMensual, @Condiciones, @IdVendedor, @CubreReparaciones);
     SET @IdContrato = SCOPE_IDENTITY();
 
     INSERT INTO ContratoEquipo (IdContrato, IdEquipo, FechaAsignacion)

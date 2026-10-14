@@ -22,6 +22,9 @@ public class EmailService : IEmailService
     }
 
     public async Task EnviarAsync(string destinatarioCorreo, string destinatarioNombre, string asunto, string cuerpoHtml)
+        => await EnviarAsync(destinatarioCorreo, destinatarioNombre, asunto, cuerpoHtml, Array.Empty<SIGRA.Abstracciones.Dtos.AdjuntoCorreoDto>());
+
+    public async Task EnviarAsync(string destinatarioCorreo, string destinatarioNombre, string asunto, string cuerpoHtml, IReadOnlyList<SIGRA.Abstracciones.Dtos.AdjuntoCorreoDto> adjuntos)
     {
         var cliente = new SendGridClient(_apiKey);
         var origen = new EmailAddress(_fromEmail, _fromName);
@@ -29,6 +32,8 @@ public class EmailService : IEmailService
         var textoPlano = Regex.Replace(cuerpoHtml, "<[^>]+>", " ");
 
         var mensaje = MailHelper.CreateSingleEmail(origen, destino, asunto, textoPlano, cuerpoHtml);
+        foreach (var adjunto in adjuntos)
+            mensaje.AddAttachment(adjunto.Nombre, Convert.ToBase64String(adjunto.Contenido), adjunto.TipoContenido);
         var respuesta = await cliente.SendEmailAsync(mensaje);
 
         if ((int)respuesta.StatusCode >= 400)

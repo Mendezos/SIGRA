@@ -1,0 +1,17 @@
+export const TIPOS_SERVICIO = ["Mantenimiento preventivo", "Mantenimiento correctivo", "Reparación", "Revisión diagnóstica"];
+export const ESTADOS = ["Creada", "Asignada", "En proceso", "Cerrada", "Cancelada"];
+export const ETAPAS = ["En diagnóstico", "En espera de repuesto", "En reparación", "Reparado"];
+export const RESOLUCIONES = ["Reparado", "No reparado", "Garantía"];
+export const ESTADOS_GARANTIA = ["En trámite", "Resuelto por el proveedor", "Rechazado por el proveedor"];
+export const PATRON_TELEFONO = "\\s*(?:\\+506(?:\\s|-)*)?(?:[0-9](?:\\s|-)*){7}[0-9]\\s*";
+export const telefonoValido = valor => new RegExp(`^(?:${PATRON_TELEFONO})$`).test(valor ?? "");
+export const fecha = (valor) => valor ? new Date(valor).toLocaleString("es-CR", { timeZone: "America/Costa_Rica" }) : "Sin registro";
+export const fechaCorta = (valor) => valor ? new Date(valor).toLocaleDateString("es-CR", { timeZone: "America/Costa_Rica" }) : "Sin registro";
+export const abierta = (boleta) => boleta?.activo && ["Creada", "Asignada", "En proceso"].includes(boleta.estado);
+export const gestion = (user) => ["Administrador del sistema", "Coordinador técnico"].includes(user.role);
+export const recepcion = (user) => gestion(user) || user.role === "Recepcionista";
+export const tecnico = (user) => user.role === "Técnico";
+export const propio = (user, boleta) => tecnico(user) && Number(user.idUsuario) === boleta?.idTecnicoAsignado && boleta?.estadoAsignacion === "Asignada";
+export const mensajeError = (error) => [error.message, ...(error.errores ?? [])].join(" ");
+export const trabajoVacio = { servicioRealizado: "", detallesTrabajo: "", observaciones: "", hallazgos: "", acciones: "", etapa: "En diagnóstico", repuesto: "", resolucion: "", tieneCobro: false, numeroFactura: "", monto: "", justificacionTecnica: "", proveedor: "", casoProveedor: "" };
+export const equipoVacio = () => ({ marca: "", modelo: "", tipo: "Portátil", especialidad: "Radios", numeroSerie: "", accesorios: [], problema: "" });
