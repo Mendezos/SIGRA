@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { DonutCard, KpiCard } from "../charts/Graficos";
 import DataTable from "../DataTable";
 import { Button, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -48,31 +48,11 @@ function Resumen({ todos }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
             <div className="lg:col-span-2 grid grid-cols-2 gap-4 content-start">
                 {tarjetas.map((t) => (
-                    <div key={t.titulo} className="rounded-lg p-4" style={{ backgroundColor: COLORS.greenTint }}>
-                        <p className="text-xs mb-1" style={{ color: COLORS.muted }}>{t.titulo}</p>
-                        <p className="text-2xl" style={{ color: t.color ?? COLORS.charcoal, fontWeight: 600 }}>{t.valor}</p>
-                    </div>
+                    <KpiCard key={t.titulo} titulo={t.titulo} valor={t.valor} color={t.color} />
                 ))}
             </div>
 
-            <div className="rounded-xl p-3" style={{ border: `1px solid ${COLORS.border}` }}>
-                <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: COLORS.muted, fontWeight: 600 }}>Contratos por estado</h3>
-                {datos.length === 0 ? (
-                    <p className="text-sm py-8 text-center" style={{ color: COLORS.muted }}>Sin contratos todavía</p>
-                ) : (
-                    <div style={{ width: "100%", height: 190 }}>
-                        <ResponsiveContainer>
-                            <PieChart>
-                                <Pie data={datos} dataKey="value" nameKey="name" innerRadius={42} outerRadius={70} paddingAngle={2}>
-                                    {datos.map((d) => <Cell key={d.name} fill={COLORES_ESTADO[d.name] ?? COLORS.muted} />)}
-                                </Pie>
-                                <Tooltip />
-                                <Legend wrapperStyle={{ fontSize: 11 }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
-            </div>
+            <DonutCard titulo="Contratos por estado" datos={datos} colores={COLORES_ESTADO} vacio="Sin contratos todavía" />
         </div>
     );
 }

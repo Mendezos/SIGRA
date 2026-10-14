@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Modal from "../Modal";
+import { BarChartCard, KpiCard } from "../charts/Graficos";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
@@ -12,15 +12,6 @@ const SERIES = [
     { key: "enTaller", label: "En taller", color: "#E0A526" },
     { key: "dadosDeBaja", label: "Dados de baja", color: "#C0392B" },
 ];
-
-function Tarjeta({ titulo, valor, color }) {
-    return (
-        <div className="rounded-lg p-4" style={{ backgroundColor: COLORS.greenTint }}>
-            <p className="text-xs mb-1" style={{ color: COLORS.muted }}>{titulo}</p>
-            <p className="text-2xl" style={{ color: color ?? COLORS.charcoal, fontWeight: 600 }}>{valor}</p>
-        </div>
-    );
-}
 
 function MinimoModal({ categoria, onClose, onSaved }) {
     const [valor, setValor] = useState(String(categoria.cantidadMinima));
@@ -163,31 +154,20 @@ export default function StockTab({ canConfigure, version }) {
             ) : (
                 <>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                        <Tarjeta titulo="Total de equipos" valor={totales.total} />
-                        <Tarjeta titulo="Disponibles" valor={totales.disponibles} color={COLORS.greenDark} />
-                        <Tarjeta titulo="En uso (alquilados)" valor={totales.enUso} />
-                        <Tarjeta titulo="En taller" valor={totales.enTaller} />
-                        <Tarjeta titulo="Dados de baja" valor={totales.dadosDeBaja} color={COLORS.red} />
+                        <KpiCard titulo="Total de equipos" valor={totales.total} />
+                        <KpiCard titulo="Disponibles" valor={totales.disponibles} color={COLORS.greenDark} />
+                        <KpiCard titulo="En uso (alquilados)" valor={totales.enUso} />
+                        <KpiCard titulo="En taller" valor={totales.enTaller} />
+                        <KpiCard titulo="Dados de baja" valor={totales.dadosDeBaja} color={COLORS.red} />
                     </div>
 
-                    <div className="rounded-xl p-4 mb-6" style={{ border: `1px solid ${COLORS.border}` }}>
-                        <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>
-                            {idCategoria || idModelo ? "Stock por modelo" : "Stock por categoría"}
-                        </h3>
-                        <div style={{ width: "100%", height: 280 }}>
-                            <ResponsiveContainer>
-                                <BarChart data={datosGrafico} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
-                                    <XAxis dataKey="nombre" tick={{ fontSize: 12, fill: COLORS.muted }} />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: COLORS.muted }} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                                    {SERIES.map((s) => (
-                                        <Bar key={s.key} dataKey={s.key} name={s.label} stackId="stock" fill={s.color} />
-                                    ))}
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                    <div className="mb-6">
+                        <BarChartCard
+                            titulo={idCategoria || idModelo ? "Stock por modelo" : "Stock por categoría"}
+                            datos={datosGrafico}
+                            series={SERIES}
+                            apiladas
+                        />
                     </div>
 
                     <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORS.border}` }}>

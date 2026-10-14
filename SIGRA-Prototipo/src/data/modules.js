@@ -1,5 +1,4 @@
-
-﻿// Datos y esquemas de los módulos funcionales del Sistema Integral de Gestión Radifax.
+// Datos y esquemas de los módulos funcionales del Sistema Integral de Gestión Radifax.
 
 // Los datos son de ejemplo ("quemados"), tal y como se acordó con el docente: este curso
 // cubre análisis y modelado de requerimientos, no la implementación final con backend real.
