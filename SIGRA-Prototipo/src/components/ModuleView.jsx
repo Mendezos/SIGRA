@@ -18,6 +18,9 @@ import {
 import CuentasPanel from "./CuentasPanel";
 import InventarioPanel from "./inventario/InventarioPanel";
 import AlquilerPanel from "./alquiler/AlquilerPanel";
+import FrecuenciasPanel from "./frecuencias/FrecuenciasPanel";
+import FrecuenciasDashboardWidget from "./frecuencias/FrecuenciasDashboardWidget";
+import { puedeVerResumenFrecuencias } from "./frecuencias/helpers";
 import { obtenerResumen } from "../services/cuentasService";
 
 const COLORS = {
@@ -458,6 +461,7 @@ export default function ModuleView({
     const showMetrics =
         module.id !== "inventario" &&
         module.id !== "alquiler" &&
+        module.id !== "frecuencias" &&
         (module.id !== "usuarios" || !!resumenUsuarios) &&
         (!module.metricsRoles ||
             module.metricsRoles.includes(user.role));
@@ -647,10 +651,15 @@ export default function ModuleView({
 
     if (module.id === "dashboard") {
         extraContent = (
-            <GenerateReportWidget
-                role={user.role}
-                onGenerate={handleGenerateReport}
-            />
+            <>
+                {puedeVerResumenFrecuencias(user.role) && (
+                    <FrecuenciasDashboardWidget />
+                )}
+                <GenerateReportWidget
+                    role={user.role}
+                    onGenerate={handleGenerateReport}
+                />
+            </>
         );
     }
 
@@ -873,6 +882,8 @@ export default function ModuleView({
                 <InventarioPanel user={user} />
             ) : module.id === "alquiler" ? (
                 <AlquilerPanel user={user} />
+            ) : module.id === "frecuencias" ? (
+                <FrecuenciasPanel user={user} />
             ) : (
                 <EntityPanel
                     idPrefix={idPrefixFor(module.id)}

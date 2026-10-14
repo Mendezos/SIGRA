@@ -6,6 +6,7 @@ using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
 using SIGRA.Abstracciones.Servicios;
 using SIGRA.API.Middlewares;
+using SIGRA.API.Servicios;
 using SIGRA.DA.Conexion;
 using SIGRA.DA.Repositorios;
 using SIGRA.DA.Servicios;
@@ -87,6 +88,7 @@ builder.Services.AddScoped<IRolDA, RolDA>();
 builder.Services.AddScoped<IModuloDA, ModuloDA>();
 builder.Services.AddScoped<IInventarioDA, InventarioDA>();
 builder.Services.AddScoped<IAlquilerDA, AlquilerDA>();
+builder.Services.AddScoped<IFrecuenciaDA, FrecuenciaDA>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -100,6 +102,10 @@ builder.Services.AddScoped<IRolFlujo, RolFlujo>();
 builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
 builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
 builder.Services.AddScoped<IAlquilerFlujo, AlquilerFlujo>();
+builder.Services.AddScoped<IFrecuenciaFlujo, FrecuenciaFlujo>();
+
+// Revisa los vencimientos de las frecuencias y envía las alertas (RCFR-003).
+builder.Services.AddHostedService<AlertasFrecuenciaHostedService>();
 
 var app = builder.Build();
 

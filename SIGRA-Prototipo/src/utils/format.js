@@ -29,6 +29,27 @@ export function formatearFechaHora(value, vacio = "Sin registro") {
         .replace(",", "");
 }
 
+// Fecha y hora exactas (con segundos), para la bitácora de auditoría.
+export function formatearFechaHoraExacta(value, vacio = "Sin registro") {
+    if (!value) return vacio;
+
+    const fecha = aFecha(value);
+    if (Number.isNaN(fecha.getTime())) return vacio;
+
+    return fecha
+        .toLocaleString("es-CR", {
+            timeZone: ZONA,
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+        })
+        .replace(",", "");
+}
+
 // Fecha sin hora (por ejemplo fecha de nacimiento): no se desplaza por zona horaria.
 export function formatearFechaCorta(value, vacio = "Sin registro") {
     if (!value) return vacio;
@@ -81,6 +102,15 @@ export const ACCIONES_AUDITORIA = {
     ROL_DESACTIVADO: "Rol desactivado",
     PERMISOS_DEFINIDOS: "Permisos actualizados",
     POLITICA_ACTUALIZADA: "Política de seguridad actualizada",
+    SOLICITUD_FRECUENCIA_REGISTRADA: "Solicitud de frecuencia registrada",
+    DOCUMENTO_SOLICITUD_ADJUNTADO: "Documento de solicitud de frecuencia adjuntado",
+    FRECUENCIA_OTORGADA: "Frecuencia otorgada",
+    RENOVACION_FRECUENCIA_INICIADA: "Renovación de frecuencia iniciada",
+    FRECUENCIA_RENOVADA: "Frecuencia renovada",
+    SOLICITUD_FRECUENCIA_CANCELADA: "Solicitud de frecuencia cancelada",
+    ALERTA_VENCIMIENTO_GENERADA: "Alerta de vencimiento generada",
+    ALERTA_VENCIMIENTO_ATENDIDA: "Alerta de vencimiento atendida",
+    FRECUENCIA_VENCIDA: "Frecuencia vencida",
     CambioRol: "Cambio de rol de la cuenta",
     Creacion: "Cuenta creada",
 };
@@ -98,6 +128,7 @@ export const ENTIDADES_AUDITORIA = {
     Rol: "Rol",
     Sesion: "Sesión",
     PoliticaSeguridad: "Política de seguridad",
+    SolicitudFrecuencia: "Solicitud de frecuencia",
 };
 
 export function nombreEntidad(entidad) {

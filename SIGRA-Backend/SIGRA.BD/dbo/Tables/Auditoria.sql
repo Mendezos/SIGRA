@@ -1,4 +1,4 @@
-CREATE TABLE [dbo].[Auditoria] (
+﻿CREATE TABLE [dbo].[Auditoria] (
     [IdAuditoria]       BIGINT IDENTITY(1, 1) NOT NULL,
     [IdUsuario]         INT NULL,
     [Modulo]            VARCHAR(50) NOT NULL,
@@ -31,4 +31,8 @@ GO
 
 CREATE NONCLUSTERED INDEX [IX_Auditoria_IdUsuario]
 ON [dbo].[Auditoria] ([IdUsuario] ASC);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_Auditoria_Entidad_Fecha]
+ON [dbo].[Auditoria] ([Entidad] ASC, [IdEntidad] ASC, [Fecha] ASC);
 GO
