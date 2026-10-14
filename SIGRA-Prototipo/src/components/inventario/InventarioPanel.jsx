@@ -17,7 +17,7 @@ export default function InventarioPanel({ user }) {
     const [tab, setTab] = useState("equipos");
     // Se incrementa cuando una pestaña cambia datos para que el stock se vuelva a consultar.
     const [version, setVersion] = useState(0);
-    const canWrite = puedeEscribirInventario(user.role);
+    const canWrite = puedeEscribirInventario(user);
 
     const alCambiar = () => setVersion((v) => v + 1);
 
@@ -26,7 +26,7 @@ export default function InventarioPanel({ user }) {
             <SubTabs tabs={TABS} active={tab} onSelect={setTab} />
 
             {tab === "equipos" && <EquiposTab canWrite={canWrite} onChanged={alCambiar} />}
-            {tab === "stock" && <StockTab canConfigure={puedeConfigurarStock(user.role)} version={version} />}
+            {tab === "stock" && <StockTab canConfigure={puedeConfigurarStock(user)} version={version} />}
             {tab === "movimientos" && <MovimientosTab canWrite={canWrite} onChanged={alCambiar} />}
             {tab === "bodega" && <BodegaTab canWrite={canWrite} />}
         </div>

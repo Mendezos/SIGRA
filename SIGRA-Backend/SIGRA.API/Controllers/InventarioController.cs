@@ -1,13 +1,15 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.API.Extensions;
+using SIGRA.API.Filters;
 
 namespace SIGRA.API.Controllers;
 
+// Módulo 4 (Inventario de equipos): lo que cada rol puede leer, crear o editar sale de "Roles y permisos".
 [ApiController]
+[PermisoModulo(4)]
 [Route("api/inventario")]
 public class InventarioController : ControllerBase
 {
@@ -20,42 +22,42 @@ public class InventarioController : ControllerBase
 
     // ---------- Catálogos ----------
     [HttpGet("categorias")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<CategoriaDto>>> Categorias() => Ok(await _flujo.ListarCategoriasAsync());
 
     [HttpGet("proveedores")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<ProveedorDto>>> Proveedores() => Ok(await _flujo.ListarProveedoresAsync());
 
     [HttpGet("modelos")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<ModeloDto>>> Modelos([FromQuery] int? idCategoria) =>
         Ok(await _flujo.ListarModelosAsync(idCategoria));
 
     // ---------- Equipos ----------
     [HttpGet("equipos")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<EquipoListaDto>>> ListarEquipos(
         [FromQuery] string? texto, [FromQuery] int? idCategoria, [FromQuery] string? estado) =>
         Ok(await _flujo.ListarEquiposAsync(texto, idCategoria, estado));
 
     [HttpGet("equipos/existe-serie")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult> ExisteSerie([FromQuery] string serie) =>
         Ok(new { existe = await _flujo.ExisteSerieAsync(serie) });
 
     [HttpGet("equipos/serie/{numeroSerie}")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<FichaEquipoDto>> FichaPorSerie(string numeroSerie) =>
         Ok(await _flujo.ObtenerFichaPorSerieAsync(numeroSerie));
 
     [HttpGet("equipos/{idEquipo:int}")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<FichaEquipoDto>> FichaPorId(int idEquipo) =>
         Ok(await _flujo.ObtenerFichaPorIdAsync(idEquipo));
 
     [HttpPost("equipos")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult<FichaEquipoDto>> RegistrarEquipo([FromBody] RegistrarEquipoDto dto)
     {
         var idEquipo = await _flujo.RegistrarEquipoAsync(dto, User.ObtenerIdUsuario());
@@ -64,60 +66,60 @@ public class InventarioController : ControllerBase
 
     // La bitácora del equipo es de solo lectura: se alimenta sola al cerrarse las boletas.
     [HttpGet("equipos/{idEquipo:int}/bitacora")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<BitacoraEquipoDto>>> Bitacora(int idEquipo) =>
         Ok(await _flujo.ObtenerBitacoraAsync(idEquipo));
 
     [HttpPut("equipos/{idEquipo:int}/bitacora/{idBitacora:long}")]
     [HttpDelete("equipos/{idEquipo:int}/bitacora/{idBitacora:long}")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public ActionResult BitacoraSoloLectura(int idEquipo, long idBitacora) =>
         throw new ReglaNegocioException("La bitácora del equipo es de solo lectura: sus registros no se pueden editar ni eliminar.");
 
     // Puntos de integración con el módulo de boletas: abrir/cerrar una boleta actualiza el inventario.
     [HttpPost("equipos/{idEquipo:int}/boleta-abierta")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult<FichaEquipoDto>> BoletaAbierta(int idEquipo, [FromBody] EventoBoletaEquipoDto dto) =>
         Ok(await _flujo.RegistrarBoletaAbiertaAsync(idEquipo, dto, User.ObtenerIdUsuario()));
 
     [HttpPost("equipos/{idEquipo:int}/boleta-cerrada")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult<FichaEquipoDto>> BoletaCerrada(int idEquipo, [FromBody] EventoBoletaEquipoDto dto) =>
         Ok(await _flujo.RegistrarBoletaCerradaAsync(idEquipo, dto, User.ObtenerIdUsuario()));
 
     [HttpPatch("equipos/{idEquipo:int}/estado")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult<FichaEquipoDto>> CambiarEstado(int idEquipo, [FromBody] CambiarEstadoEquipoDto dto) =>
         Ok(await _flujo.CambiarEstadoAsync(idEquipo, dto, User.ObtenerIdUsuario()));
 
     // ---------- Movimientos ----------
     [HttpGet("movimientos")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<MovimientoDto>>> Movimientos([FromQuery] int? idEquipo, [FromQuery] string? tipo) =>
         Ok(await _flujo.ListarMovimientosAsync(idEquipo, tipo));
 
     [HttpPost("movimientos/entrada")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult<FichaEquipoDto>> Entrada([FromBody] RegistrarMovimientoEquipoDto dto) =>
         Ok(await _flujo.RegistrarEntradaAsync(dto, User.ObtenerIdUsuario()));
 
     [HttpPost("movimientos/salida")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult<FichaEquipoDto>> Salida([FromBody] RegistrarMovimientoEquipoDto dto) =>
         Ok(await _flujo.RegistrarSalidaAsync(dto, User.ObtenerIdUsuario()));
 
     // ---------- Stock ----------
     [HttpGet("stock/categorias")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<StockCategoriaDto>>> StockCategorias() => Ok(await _flujo.StockPorCategoriaAsync());
 
     [HttpGet("stock/modelos")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<StockModeloDto>>> StockModelos([FromQuery] int? idCategoria) =>
         Ok(await _flujo.StockPorModeloAsync(idCategoria));
 
     [HttpPut("stock/categorias/{idCategoria:int}/minimo")]
-    [Authorize(Roles = "Administrador del sistema,Coordinador tecnico")]
+    [RolesPermitidos("Administrador del sistema,Coordinador tecnico")]
     public async Task<ActionResult> GuardarMinimo(int idCategoria, [FromBody] GuardarStockMinimoDto dto)
     {
         await _flujo.GuardarStockMinimoAsync(idCategoria, dto, User.ObtenerIdUsuario());
@@ -126,12 +128,12 @@ public class InventarioController : ControllerBase
 
     // ---------- Accesorios y repuestos ----------
     [HttpGet("{tipo}")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<ArticuloBodegaDto>>> ListarArticulos(string tipo) =>
         Ok(await _flujo.ListarArticulosAsync(ValidarTipo(tipo)));
 
     [HttpPost("{tipo}")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult> CrearArticulo(string tipo, [FromBody] GuardarArticuloBodegaDto dto)
     {
         var id = await _flujo.CrearArticuloAsync(ValidarTipo(tipo), dto, User.ObtenerIdUsuario());
@@ -139,7 +141,7 @@ public class InventarioController : ControllerBase
     }
 
     [HttpPut("{tipo}/{id:int}")]
-    [Authorize(Roles = RolesEscritura)]
+    [RolesPermitidos(RolesEscritura)]
     public async Task<ActionResult> EditarArticulo(string tipo, int id, [FromBody] GuardarArticuloBodegaDto dto)
     {
         await _flujo.EditarArticuloAsync(ValidarTipo(tipo), id, dto, User.ObtenerIdUsuario());

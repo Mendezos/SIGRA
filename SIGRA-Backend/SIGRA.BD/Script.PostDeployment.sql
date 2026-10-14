@@ -17,7 +17,7 @@ INSERT INTO @Roles (Nombre, Descripcion) VALUES
 INSERT INTO Rol (Nombre, Descripcion, Activo)
 SELECT n.Nombre, n.Descripcion, 1
 FROM @Roles n
-WHERE NOT EXISTS (SELECT 1 FROM Rol r WHERE r.Nombre = n.Nombre);
+WHERE NOT EXISTS (SELECT 1 FROM Rol r WHERE r.Nombre COLLATE Latin1_General_CI_AI = n.Nombre);
 
 -- 2) Módulos: catálogo real (antes solo existían como números documentados en comentarios del frontend).
 -- IdModulo debe coincidir con MODULE_KEY_TO_ID del frontend: src/data/roleCapabilities.js
@@ -109,7 +109,7 @@ VALUES
 INSERT INTO RolPermiso (IdRol, IdPermiso, Lectura, Escritura, Edicion, Eliminacion)
 SELECT r.IdRol, p.IdPermiso, s.Lectura, s.Escritura, s.Edicion, s.Eliminacion
 FROM @RolPermisoSeed s
-INNER JOIN Rol r ON r.Nombre = s.RolNombre
+INNER JOIN Rol r ON r.Nombre COLLATE Latin1_General_CI_AI = s.RolNombre
 INNER JOIN Permiso p ON p.IdModulo = s.IdModulo
 WHERE NOT EXISTS (
     SELECT 1 FROM RolPermiso rp WHERE rp.IdRol = r.IdRol AND rp.IdPermiso = p.IdPermiso
@@ -148,7 +148,7 @@ INSERT INTO @Usuarios (Correo, Nombre, RolNombre, PasswordHash) VALUES
 INSERT INTO Usuario (IdRol, Nombre, Correo, PasswordHash, Activo, IntentosFallidos)
 SELECT r.IdRol, u.Nombre, u.Correo, u.PasswordHash, 1, 0
 FROM @Usuarios u
-INNER JOIN Rol r ON r.Nombre = u.RolNombre
+INNER JOIN Rol r ON r.Nombre COLLATE Latin1_General_CI_AI = u.RolNombre
 WHERE NOT EXISTS (SELECT 1 FROM Usuario ex WHERE ex.Correo = u.Correo);
 
 
@@ -379,3 +379,38 @@ FROM (VALUES
     (N'Equipo probado en taller antes de salir al sitio', 8)
 ) AS v(Nombre, Orden)
 WHERE NOT EXISTS (SELECT 1 FROM RequisitoInstalacion r WHERE r.Nombre = v.Nombre);
+
+
+-- 12) Permisos de Inventario y Alquiler según las historias de usuario (solo agrega los que faltan)
+--   Vendedor: consulta el inventario (INVE-002, 006, 010) y gestiona contratos (CARR-002, 003, 014).
+--   Recepcionista: registra los contactos iniciales (CARR-001).
+DECLARE @PermisosInvAlq TABLE (RolNombre VARCHAR(100), IdModulo INT, Lectura BIT, Escritura BIT, Edicion BIT, Eliminacion BIT);
+INSERT INTO @PermisosInvAlq VALUES
+    (N'Vendedor / Ejecutivo de cuenta', 3, 1, 1, 1, 0),
+    (N'Vendedor / Ejecutivo de cuenta', 4, 1, 0, 0, 0),
+    (N'Recepcionista', 3, 1, 1, 0, 0);
+
+INSERT INTO RolPermiso (IdRol, IdPermiso, Lectura, Escritura, Edicion, Eliminacion)
+SELECT r.IdRol, p.IdPermiso, s.Lectura, s.Escritura, s.Edicion, s.Eliminacion
+FROM @PermisosInvAlq s
+INNER JOIN Rol r ON r.Nombre COLLATE Latin1_General_CI_AI = s.RolNombre
+INNER JOIN Permiso p ON p.IdModulo = s.IdModulo
+WHERE NOT EXISTS (SELECT 1 FROM RolPermiso rp WHERE rp.IdRol = r.IdRol AND rp.IdPermiso = p.IdPermiso);
+
+-- Corrige el permiso heredado del Técnico en Inventario (solo si todavía está como solo lectura, el valor viejo por omisión):
+-- las historias INVE-001 y INVE-003 piden que el técnico registre equipos y cambie su estado.
+UPDATE rp
+SET Escritura = 1, Edicion = 1
+FROM RolPermiso rp
+INNER JOIN Rol r ON r.IdRol = rp.IdRol
+INNER JOIN Permiso p ON p.IdPermiso = rp.IdPermiso
+WHERE r.Nombre COLLATE Latin1_General_CI_AI = N'Técnico' AND p.IdModulo = 4
+  AND rp.Lectura = 1 AND rp.Escritura = 0 AND rp.Edicion = 0 AND rp.Eliminacion = 0;
+
+-- Cuenta de prueba para la recepción (CARR-001). Usa la misma contraseña que la de Kimberly Sánchez: Ventas#2026
+INSERT INTO Usuario (IdRol, Nombre, Correo, PasswordHash, Activo, IntentosFallidos)
+SELECT r.IdRol, N'Laura Recepción', 'recepcion@radifaxcr.com', v.PasswordHash, 1, 0
+FROM Rol r
+CROSS APPLY (SELECT TOP 1 PasswordHash FROM Usuario WHERE Correo = 'kimberly.sanchez@radifaxcr.com') v
+WHERE r.Nombre COLLATE Latin1_General_CI_AI = N'Recepcionista'
+  AND NOT EXISTS (SELECT 1 FROM Usuario ex WHERE ex.Correo = 'recepcion@radifaxcr.com');

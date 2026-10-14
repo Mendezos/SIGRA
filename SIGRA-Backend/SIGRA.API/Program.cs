@@ -16,6 +16,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configuración propia de cada computadora (por ejemplo, la conexión a su SQL Server). No se sube a Git.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(opciones =>
 {
     opciones.InvalidModelStateResponseFactory = contexto =>

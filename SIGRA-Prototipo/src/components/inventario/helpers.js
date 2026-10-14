@@ -3,12 +3,22 @@ const quitarTildes = (texto = "") =>
 
 const ROLES_ESCRITURA = ["administrador del sistema", "coordinador tecnico", "tecnico"];
 
-export function puedeEscribirInventario(role) {
-    return ROLES_ESCRITURA.includes(quitarTildes(role));
+// Los permisos del rol (lo que el administrador define en "Roles y permisos") llegan en user.permisos.
+export function tienePermiso(user, idModulo, accion) {
+    const permiso = (user?.permisos ?? []).find((p) => p.idModulo === idModulo);
+    return !!permiso?.[accion];
 }
 
-export function puedeConfigurarStock(role) {
-    return ["administrador del sistema", "coordinador tecnico"].includes(quitarTildes(role));
+const MODULO_INVENTARIO = 4;
+
+// Además del permiso del módulo, la historia limita quién puede registrar y cambiar equipos.
+export function puedeEscribirInventario(user) {
+    return ROLES_ESCRITURA.includes(quitarTildes(user.role)) && tienePermiso(user, MODULO_INVENTARIO, "escritura");
+}
+
+export function puedeConfigurarStock(user) {
+    return ["administrador del sistema", "coordinador tecnico"].includes(quitarTildes(user.role))
+        && tienePermiso(user, MODULO_INVENTARIO, "edicion");
 }
 
 export const colones = (valor) =>

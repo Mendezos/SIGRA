@@ -1,19 +1,22 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.API.Extensions;
+using SIGRA.API.Filters;
 
 namespace SIGRA.API.Controllers;
 
+// Módulo 3 (Alquiler de radios y repetidoras): lo que cada rol puede leer, crear o editar sale de "Roles y permisos".
 [ApiController]
+[PermisoModulo(3)]
 [Route("api/alquiler")]
 public class AlquilerController : ControllerBase
 {
     private const string RolAdministrador = "Administrador del sistema";
     private const string RolVendedor = "Vendedor / Ejecutivo de cuenta";
     private const string RolesContactos = RolAdministrador + "," + RolVendedor;
+    private const string RolesAtencionContactos = RolesContactos + ",Recepcionista";
     private const string RolesLectura = RolAdministrador + ",Gerente,Coordinador tecnico,Tecnico," + RolVendedor;
     private const string RolesRadios = RolAdministrador + ",Coordinador tecnico,Tecnico";
     // Margen sobre los 10 MB permitidos para que la validación del sistema (y su mensaje) responda antes que el servidor.
@@ -25,170 +28,170 @@ public class AlquilerController : ControllerBase
 
     // ---------- Contactos iniciales ----------
     [HttpGet("vendedores")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesAtencionContactos)]
     public async Task<ActionResult<List<VendedorDto>>> Vendedores() => Ok(await _flujo.ListarVendedoresAsync());
 
     [HttpGet("contactos/sugerencia")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesAtencionContactos)]
     public async Task<ActionResult<SugerenciaContactoDto>> Sugerencia([FromQuery] string empresa) =>
         Ok(await _flujo.ObtenerSugerenciaContactoAsync(empresa));
 
     [HttpGet("contactos")]
-    [Authorize(Roles = RolesContactos + ",Gerente")]
+    [RolesPermitidos(RolesAtencionContactos + ",Gerente")]
     public async Task<ActionResult<List<ContactoDto>>> Contactos()
     {
         // Cada vendedor solo ve los contactos que tiene asignados.
-        int? idVendedor = User.IsInRole(RolVendedor) ? User.ObtenerIdUsuario() : null;
+        int? idVendedor = User.TieneRol(RolVendedor) ? User.ObtenerIdUsuario() : null;
         return Ok(await _flujo.ListarContactosAsync(idVendedor));
     }
 
     [HttpGet("contactos/{idContacto:int}")]
-    [Authorize(Roles = RolesContactos + ",Gerente")]
+    [RolesPermitidos(RolesAtencionContactos + ",Gerente")]
     public async Task<ActionResult<DetalleContactoDto>> Contacto(int idContacto) =>
         Ok(await _flujo.ObtenerContactoAsync(idContacto));
 
     [HttpPost("contactos")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesAtencionContactos)]
     public async Task<ActionResult<RegistrarContactoResultadoDto>> RegistrarContacto([FromBody] RegistrarContactoDto dto) =>
         Ok(await _flujo.RegistrarContactoAsync(dto, User.ObtenerIdUsuario()));
 
     [HttpPut("contactos/{idContacto:int}/vendedor")]
-    [Authorize(Roles = RolAdministrador)]
+    [RolesPermitidos(RolAdministrador)]
     public async Task<ActionResult<DetalleContactoDto>> Reasignar(int idContacto, [FromBody] ReasignarContactoDto dto) =>
         Ok(await _flujo.ReasignarContactoAsync(idContacto, dto, User.ObtenerIdUsuario()));
 
     // ---------- Contratos ----------
     [HttpGet("clientes")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<ClienteDto>>> Clientes() => Ok(await _flujo.ListarClientesAsync());
 
     [HttpGet("equipos-disponibles")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesContactos)]
     public async Task<ActionResult<List<EquipoDisponibleDto>>> EquiposDisponibles() =>
         Ok(await _flujo.ListarEquiposParaContratoAsync());
 
     [HttpGet("contratos")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<ContratoDto>>> Contratos([FromQuery] string? texto, [FromQuery] string? estado) =>
         Ok(await _flujo.ListarContratosAsync(texto, estado));
 
     [HttpGet("contratos/{idContrato:int}")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<DetalleContratoDto>> Contrato(int idContrato) =>
         Ok(await _flujo.ObtenerContratoAsync(idContrato));
 
     [HttpPost("contratos")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesContactos)]
     public async Task<ActionResult<DetalleContratoDto>> RegistrarContrato([FromBody] RegistrarContratoDto dto)
     {
         var idUsuario = User.ObtenerIdUsuario();
-        int? idVendedor = User.IsInRole(RolVendedor) ? idUsuario : null;
+        int? idVendedor = User.TieneRol(RolVendedor) ? idUsuario : null;
         return Ok(await _flujo.RegistrarContratoAsync(dto, idVendedor, idUsuario));
     }
 
     [HttpPut("contratos/{idContrato:int}/accesorios")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesContactos)]
     public async Task<ActionResult<DetalleContratoDto>> GuardarAccesorios(int idContrato, [FromBody] GuardarAccesoriosContratoDto dto) =>
-        Ok(await _flujo.GuardarAccesoriosContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.IsInRole(RolAdministrador)));
+        Ok(await _flujo.GuardarAccesoriosContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.TieneRol(RolAdministrador)));
 
     [HttpPost("contratos/{idContrato:int}/renovar")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesContactos)]
     public async Task<ActionResult<DetalleContratoDto>> Renovar(int idContrato, [FromBody] RenovarContratoDto dto) =>
-        Ok(await _flujo.RenovarContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.IsInRole(RolAdministrador)));
+        Ok(await _flujo.RenovarContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.TieneRol(RolAdministrador)));
 
     [HttpPost("contratos/{idContrato:int}/cancelar")]
-    [Authorize(Roles = RolAdministrador)]
+    [RolesPermitidos(RolAdministrador)]
     public async Task<ActionResult<DetalleContratoDto>> Cancelar(int idContrato, [FromBody] CancelarContratoDto dto) =>
         Ok(await _flujo.CancelarContratoAsync(idContrato, dto, User.ObtenerIdUsuario()));
 
     [HttpGet("contratos/{idContrato:int}/renovaciones")]
-    [Authorize(Roles = RolesContactos)]
+    [RolesPermitidos(RolesContactos)]
     public async Task<ActionResult<List<RenovacionDto>>> Renovaciones(int idContrato) =>
-        Ok(await _flujo.ListarRenovacionesAsync(idContrato, User.ObtenerIdUsuario(), User.IsInRole(RolAdministrador)));
+        Ok(await _flujo.ListarRenovacionesAsync(idContrato, User.ObtenerIdUsuario(), User.TieneRol(RolAdministrador)));
 
     // Bitácora completa del contrato: solo el Administrador, y solo de lectura.
     [HttpGet("contratos/{idContrato:int}/auditoria")]
-    [Authorize(Roles = RolAdministrador)]
+    [RolesPermitidos(RolAdministrador)]
     public async Task<ActionResult<List<AuditoriaContratoDto>>> Auditoria(int idContrato) =>
         Ok(await _flujo.ListarAuditoriaContratoAsync(idContrato));
 
     [HttpPut("contratos/{idContrato:int}/auditoria/{idAuditoria:long}")]
     [HttpDelete("contratos/{idContrato:int}/auditoria/{idAuditoria:long}")]
-    [Authorize(Roles = RolAdministrador)]
+    [RolesPermitidos(RolAdministrador)]
     public ActionResult AuditoriaSoloLectura(int idContrato, long idAuditoria) =>
         throw new ReglaNegocioException("La bitácora de auditoría es de solo lectura: sus eventos no se pueden editar ni eliminar.");
 
     // ---------- Radios en alquiler ----------
     [HttpGet("radios")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<RadioDto>>> Radios([FromQuery] string? texto) =>
         Ok(await _flujo.ListarRadiosAsync(texto));
 
     [HttpGet("radios/serie/{numeroSerie}")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<RadioDto>> RadioPorSerie(string numeroSerie) =>
         Ok(await _flujo.ObtenerRadioPorSerieAsync(numeroSerie));
 
     [HttpGet("radios/{idRadio:int}/baterias")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<CambioBateriaDto>>> Baterias(int idRadio) =>
         Ok(await _flujo.ListarBateriasAsync(idRadio));
 
     [HttpGet("baterias/alertas")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<RadioDto>>> BateriasPorCambiar() =>
         Ok(await _flujo.ListarRadiosConBateriaPorCambiarAsync());
 
     [HttpPost("radios/bateria")]
-    [Authorize(Roles = RolesRadios)]
+    [RolesPermitidos(RolesRadios)]
     public async Task<ActionResult<RadioDto>> CambiarBateria([FromBody] RegistrarBateriaDto dto) =>
         Ok(await _flujo.RegistrarCambioBateriaAsync(dto, User.ObtenerIdUsuario()));
 
     [HttpPost("radios")]
-    [Authorize(Roles = RolesRadios)]
+    [RolesPermitidos(RolesRadios)]
     public async Task<ActionResult<DetalleContratoDto>> AgregarRadio([FromBody] AgregarRadioDto dto) =>
         Ok(await _flujo.AgregarRadioAContratoAsync(dto, User.ObtenerIdUsuario()));
 
     // ---------- Fichas técnicas de repetidoras (CARR-009) ----------
     [HttpGet("repetidoras")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<RepetidoraDto>>> Repetidoras([FromQuery] string? texto, [FromQuery] bool? facturable) =>
         Ok(await _flujo.ListarRepetidorasAsync(texto, facturable));
 
     [HttpGet("repetidoras/serie/{numeroSerie}")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<RepetidoraDto>> RepetidoraPorSerie(string numeroSerie) =>
         Ok(await _flujo.ObtenerRepetidoraPorSerieAsync(numeroSerie));
 
     [HttpPost("repetidoras/ficha")]
-    [Authorize(Roles = RolesRadios)]
+    [RolesPermitidos(RolesRadios)]
     public async Task<ActionResult<RepetidoraDto>> RegistrarFichaRepetidora([FromBody] GuardarFichaRepetidoraDto dto) =>
         Ok(await _flujo.GuardarFichaRepetidoraAsync(dto, false, User.ObtenerIdUsuario()));
 
     [HttpPut("repetidoras/ficha")]
-    [Authorize(Roles = RolesRadios)]
+    [RolesPermitidos(RolesRadios)]
     public async Task<ActionResult<RepetidoraDto>> ActualizarFichaRepetidora([FromBody] GuardarFichaRepetidoraDto dto) =>
         Ok(await _flujo.GuardarFichaRepetidoraAsync(dto, true, User.ObtenerIdUsuario()));
 
     // ---------- Checklist previo a la instalación (CARR-011) ----------
     [HttpGet("repetidoras/{numeroSerie}/checklist")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<ChecklistRepetidoraDto>> Checklist(string numeroSerie) =>
         Ok(await _flujo.ObtenerChecklistAsync(numeroSerie));
 
     [HttpPost("repetidoras/{numeroSerie}/checklist")]
-    [Authorize(Roles = RolesRadios)]
+    [RolesPermitidos(RolesRadios)]
     public async Task<ActionResult<ChecklistRepetidoraDto>> GuardarChecklist(string numeroSerie, [FromBody] GuardarChecklistDto dto) =>
         Ok(await _flujo.GuardarChecklistAsync(numeroSerie, dto, User.ObtenerIdUsuario()));
 
     // ---------- Documentos técnicos de la repetidora (CARR-012) ----------
     [HttpGet("repetidoras/{numeroSerie}/documentos")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<DocumentoRepetidoraDto>>> Documentos(string numeroSerie) =>
         Ok(await _flujo.ListarDocumentosAsync(numeroSerie));
 
     [HttpPost("repetidoras/{numeroSerie}/documentos")]
-    [Authorize(Roles = RolesRadios)]
+    [RolesPermitidos(RolesRadios)]
     [RequestSizeLimit(LimiteSolicitudBytes)]
     public async Task<ActionResult<DocumentoRepetidoraDto>> AdjuntarDocumento(string numeroSerie, [FromForm] SubirDocumentoFormulario formulario)
     {
@@ -211,7 +214,7 @@ public class AlquilerController : ControllerBase
     }
 
     [HttpGet("repetidoras/documentos/{idDocumento:int}/archivo")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<IActionResult> DescargarDocumento(int idDocumento, [FromQuery] bool descargar = true)
     {
         var documento = await _flujo.ObtenerDocumentoAsync(idDocumento);
@@ -223,7 +226,7 @@ public class AlquilerController : ControllerBase
 
     // ---------- Bitácora de mantenimiento de la repetidora (CARR-013) ----------
     [HttpGet("repetidoras/{numeroSerie}/bitacora")]
-    [Authorize(Roles = RolesLectura)]
+    [RolesPermitidos(RolesLectura)]
     public async Task<ActionResult<List<BitacoraMantenimientoDto>>> BitacoraRepetidora(string numeroSerie) =>
         Ok(await _flujo.ObtenerBitacoraRepetidoraAsync(numeroSerie));
 }

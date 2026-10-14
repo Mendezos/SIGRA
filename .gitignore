@@ -397,3 +397,6 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 /SIGRA-Backend/SIGRA.BD/Migraciones/Scripts CARR-009 hasta CARR-013
+
+# Configuración local de cada integrante (conexión a su SQL Server)
+SIGRA-Backend/SIGRA.API/appsettings.Local.json

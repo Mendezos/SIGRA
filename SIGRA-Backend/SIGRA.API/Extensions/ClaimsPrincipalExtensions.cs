@@ -1,4 +1,5 @@
 using SIGRA.Abstracciones.Excepciones;
+using SIGRA.API.Filters;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -23,4 +24,16 @@ public static class ClaimsPrincipalExtensions
             ?? usuario.FindFirst("jti")?.Value
             ?? throw new SesionInvalidaException("Token inválido.");
     }
+
+    // Roles del token, sin mayúsculas ni tildes (para que Técnico y Tecnico se traten igual).
+    public static bool TieneAlgunRol(this ClaimsPrincipal usuario, IEnumerable<string> rolesNormalizados)
+    {
+        var buscados = rolesNormalizados as ISet<string> ?? rolesNormalizados.ToHashSet();
+        return usuario.Claims
+            .Where(c => c.Type == ClaimTypes.Role || c.Type == "role")
+            .Any(c => buscados.Contains(NormalizadorRoles.Normalizar(c.Value)));
+    }
+
+    public static bool TieneRol(this ClaimsPrincipal usuario, string rol) =>
+        usuario.TieneAlgunRol(new[] { NormalizadorRoles.Normalizar(rol) });
 }

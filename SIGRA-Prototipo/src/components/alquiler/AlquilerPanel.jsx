@@ -13,18 +13,22 @@ import {
     puedeRegistrarContrato,
     puedeRegistrarFichaRepetidora,
     puedeVerContactos,
+    puedeVerContratos,
 } from "./helpers";
 
 export default function AlquilerPanel({ user }) {
-    const [tab, setTab] = useState("contratos");
-
     // Para sumar una pestaña basta agregarla aquí y renderizarla abajo.
     const tabs = [
-        { key: "contratos", label: "Contratos" },
-        { key: "radios", label: "Radios en alquiler" },
-        { key: "repetidoras", label: "Repetidoras" },
-        ...(puedeVerContactos(user.role) ? [{ key: "contactos", label: "Contactos iniciales" }] : []),
+        ...(puedeVerContratos(user)
+            ? [
+                  { key: "contratos", label: "Contratos" },
+                  { key: "radios", label: "Radios en alquiler" },
+                  { key: "repetidoras", label: "Repetidoras" },
+              ]
+            : []),
+        ...(puedeVerContactos(user) ? [{ key: "contactos", label: "Contactos iniciales" }] : []),
     ];
+    const [tab, setTab] = useState(tabs[0]?.key ?? "contratos");
 
     return (
         <div className="mt-6">
@@ -32,17 +36,17 @@ export default function AlquilerPanel({ user }) {
 
             {tab === "contratos" && (
                 <ContratosTab
-                    canRegister={puedeRegistrarContrato(user.role)}
-                    canAsignarRadio={puedeAsignarRadio(user.role)}
-                    canRenovar={puedeRegistrarContrato(user.role)}
-                    canCancelar={puedeCancelarContrato(user.role)}
-                    canVerAuditoria={puedeVerAuditoria(user.role)}
+                    canRegister={puedeRegistrarContrato(user)}
+                    canAsignarRadio={puedeAsignarRadio(user)}
+                    canRenovar={puedeRegistrarContrato(user)}
+                    canCancelar={puedeCancelarContrato(user)}
+                    canVerAuditoria={puedeVerAuditoria(user)}
                 />
             )}
-            {tab === "radios" && <RadiosTab canAsignar={puedeAsignarRadio(user.role)} />}
-            {tab === "repetidoras" && <RepetidorasTab canRegistrar={puedeRegistrarFichaRepetidora(user.role)} />}
+            {tab === "radios" && <RadiosTab canAsignar={puedeAsignarRadio(user)} />}
+            {tab === "repetidoras" && <RepetidorasTab canRegistrar={puedeRegistrarFichaRepetidora(user)} />}
             {tab === "contactos" && (
-                <ContactosTab canRegister={puedeRegistrarContacto(user.role)} canReasignar={puedeReasignarContacto(user.role)} />
+                <ContactosTab canRegister={puedeRegistrarContacto(user)} canReasignar={puedeReasignarContacto(user)} />
             )}
         </div>
     );
