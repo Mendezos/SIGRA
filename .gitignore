@@ -400,3 +400,6 @@ FodyWeavers.xsd
 
 # Configuración local de cada integrante (conexión a su SQL Server)
 SIGRA-Backend/SIGRA.API/appsettings.Local.json
+
+# Paquetes comprimidos de migraciones (los scripts van como .sql)
+SIGRA-Backend/SIGRA.BD/Migraciones/*.zip
