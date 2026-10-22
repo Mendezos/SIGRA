@@ -65,6 +65,7 @@ async function llamar(rol, metodo, ruta, cuerpo) {
     return datos;
 }
 
+const sinTildes = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const hoy = new Date();
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const dias = (n) => { const d = new Date(hoy); d.setDate(d.getDate() + n); return iso(d); };
@@ -94,10 +95,26 @@ const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 const archivo = (buffer, nombre, tipo) => new File([buffer], nombre, { type: tipo });
 
 // ---------- Datos ----------
-const PROVEEDOR = { Motorola: 2, Kenwood: 3 };
-const CATEGORIA = { portatil: 2, movil: 3, repetidora: 4 };
+// Los identificadores de categorías y proveedores cambian de una base a otra: se buscan por nombre.
+const CATEGORIA_NOMBRE = { portatil: "Radio portátil", movil: "Radio móvil", repetidora: "Repetidora" };
+const CATEGORIA = {};
+const PROVEEDOR = {};
+async function resolverCatalogos() {
+    const categorias = await llamar("admin", "GET", "/inventario/categorias");
+    for (const [clave, nombre] of Object.entries(CATEGORIA_NOMBRE)) {
+        const c = categorias.find((x) => sinTildes(x.nombre) === sinTildes(nombre));
+        if (!c) throw new Error(`No existe la categoría ${nombre}`);
+        CATEGORIA[clave] = c.idCategoria;
+    }
+    const proveedores = await llamar("admin", "GET", "/inventario/proveedores");
+    for (const marca of ["Motorola", "Kenwood"]) {
+        const p = proveedores.find((x) => sinTildes(x.nombre).includes(sinTildes(marca)));
+        if (!p) throw new Error(`No existe un proveedor de ${marca}`);
+        PROVEEDOR[marca] = p.idProveedor;
+    }
+}
 
-const EQUIPOS = [
+const EQUIPOS = () => [
     ...[1, 2, 3, 4, 5, 6].map((n) => ({ serie: `SN-6100${n}`, cat: CATEGORIA.portatil, marca: "Motorola", modelo: "CP200", desc: "Radio portátil analógico UHF, 16 canales", costo: 145000 })),
     ...[1, 2, 3, 4, 5, 6].map((n) => ({ serie: `SN-6200${n}`, cat: CATEGORIA.portatil, marca: "Kenwood", modelo: "TK-3170", desc: "Radio portátil UHF 400-470 MHz, 16 canales", costo: 132000 })),
     ...[1, 2, 3].map((n) => ({ serie: `SN-6300${n}`, cat: CATEGORIA.portatil, marca: "Kenwood", modelo: "TK-3401", desc: "Radio portátil UHF, 4 W, resistente al agua", costo: 158000 })),
@@ -235,7 +252,8 @@ async function equipos() {
 async function etapaInventario() {
     titulo("Inventario: equipos");
     await equipos();
-    for (const e of EQUIPOS) {
+    await resolverCatalogos();
+    for (const e of EQUIPOS()) {
         await paso(`${e.serie} · ${e.marca} ${e.modelo}`, async () => {
             if (equiposPorSerie[e.serie]) return "omitido";
             await llamar("admin", "POST", "/inventario/equipos", {
@@ -434,7 +452,8 @@ async function etapaTickets() {
     titulo("Tickets de servicio técnico");
     const clientesTickets = await llamar("recepcion", "GET", "/tickets/clientes");
     const tecnicos = await llamar("admin", "GET", "/tickets/tecnicos");
-    const idTecnico = { ricardo: tecnicos.find((t) => t.nombre.startsWith("Ricardo"))?.idUsuario, tomas: tecnicos.find((t) => t.nombre.startsWith("Tomas"))?.idUsuario };
+    const idTecnico = { ricardo: tecnicos.find((t) => sinTildes(t.nombre).startsWith("ricardo"))?.idUsuario, tomas: tecnicos.find((t) => sinTildes(t.nombre).startsWith("tomas"))?.idUsuario };
+    if (!idTecnico.ricardo || !idTecnico.tomas) throw new Error("Faltan los técnicos Ricardo Infante o Tomás Díaz; ejecute Sincronizar-BD.cjs para crearlos.");
     const rolPorId = { [idTecnico.ricardo]: "ricardo", [idTecnico.tomas]: "tomas" };
 
     await paso("Especialidades de los técnicos", async () => {
@@ -533,7 +552,7 @@ async function etapaStock() {
     const minimos = { "Radio móvil": 2, "Repetidora": 1, "Radio portátil": 5 };
     for (const [nombre, minimo] of Object.entries(minimos)) {
         await paso(`Stock mínimo de ${nombre}: ${minimo}`, async () => {
-            const c = categorias.find((x) => x.categoria === nombre);
+            const c = categorias.find((x) => sinTildes(x.categoria) === sinTildes(nombre));
             if (!c) throw new Error("La categoría no existe");
             if (c.cantidadMinima === minimo) return "omitido";
             await llamar("admin", "PUT", `/inventario/stock/categorias/${c.idCategoria}/minimo`, { cantidadMinima: minimo });

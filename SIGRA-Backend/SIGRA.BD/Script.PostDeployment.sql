@@ -415,8 +415,24 @@ CROSS APPLY (SELECT TOP 1 PasswordHash FROM Usuario WHERE Correo = 'kimberly.san
 WHERE r.Nombre COLLATE Latin1_General_CI_AI = N'Recepcionista'
   AND NOT EXISTS (SELECT 1 FROM Usuario ex WHERE ex.Correo = 'recepcion@radifaxcr.com');
 
--- Tomás Díaz (segundo técnico) quedó con una contraseña de relleno que no permite iniciar sesión. Para poder
--- demostrar el flujo de tickets con dos técnicos usa la misma contraseña que Ricardo Infante: RadifaxCR2026
+-- Segundo técnico y segundo vendedor para las demostraciones: la asignación entre dos técnicos y la asignación en cascada de
+-- vendedores (Henry Ortiz queda inactivo; al reactivarlo entra en la rotación). Usan las contraseñas de Ricardo (RadifaxCR2026)
+-- y de Kimberly (Ventas#2026).
+INSERT INTO Usuario (IdRol, Nombre, Correo, PasswordHash, Activo, IntentosFallidos)
+SELECT r.IdRol, N'Tomás Díaz', 'tomas.diaz@radifaxcr.com', c.PasswordHash, 1, 0
+FROM Rol r
+CROSS APPLY (SELECT TOP 1 PasswordHash FROM Usuario WHERE Correo = 'ricardo.infante@radifaxcr.com') c
+WHERE r.Nombre COLLATE Latin1_General_CI_AI = N'Técnico'
+  AND NOT EXISTS (SELECT 1 FROM Usuario ex WHERE ex.Correo = 'tomas.diaz@radifaxcr.com');
+
+INSERT INTO Usuario (IdRol, Nombre, Correo, PasswordHash, Activo, IntentosFallidos)
+SELECT r.IdRol, N'Henry Ortiz', 'henry.ortiz@radifaxcr.com', c.PasswordHash, 0, 0
+FROM Rol r
+CROSS APPLY (SELECT TOP 1 PasswordHash FROM Usuario WHERE Correo = 'kimberly.sanchez@radifaxcr.com') c
+WHERE r.Nombre COLLATE Latin1_General_CI_AI = N'Vendedor / Ejecutivo de cuenta'
+  AND NOT EXISTS (SELECT 1 FROM Usuario ex WHERE ex.Correo = 'henry.ortiz@radifaxcr.com');
+
+-- Si Tomás ya existía con una contraseña de relleno que no permite iniciar sesión, se le asigna la de Ricardo.
 UPDATE t SET t.PasswordHash = r.PasswordHash, t.IntentosFallidos = 0
 FROM Usuario t
 CROSS APPLY (SELECT TOP 1 PasswordHash FROM Usuario WHERE Correo = 'ricardo.infante@radifaxcr.com') r
