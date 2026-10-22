@@ -25,6 +25,22 @@ Cuentas de prueba (contraseña entre paréntesis):
 | Técnico | ricardo.infante@radifaxcr.com | RadifaxCR2026 |
 | Vendedor | kimberly.sanchez@radifaxcr.com | Ventas#2026 |
 | Recepcionista | recepcion@radifaxcr.com | Ventas#2026 |
+| Técnico (segundo) | tomas.diaz@radifaxcr.com | RadifaxCR2026 |
+
+### Datos de demostración (opcional)
+
+Con la API corriendo, carga datos coherentes de los módulos de Inventario, Alquiler, Frecuencias y Tickets (equipos, contratos en
+todos los estados, baterías, repuestos, repetidoras con ficha y checklist, solicitudes de frecuencia, boletas y garantías), pensados
+para probar todo el Sprint 2 y mostrarlo. Se puede ejecutar varias veces sin duplicar nada.
+
+```bash
+cd SIGRA-Backend/SIGRA.BD
+node Cargar-DatosDemo.cjs                  # todo
+node Cargar-DatosDemo.cjs --solo tickets   # una etapa: inventario, contratos, baterias, repetidoras, contactos, frecuencias, tickets, stock
+```
+
+Usa las cuentas de prueba de esta guía. Las series de los datos de demostración empiezan con SN-61 (CP200), SN-62 (TK-3170),
+SN-63 (TK-3401), SN-64 (móviles DGM4100) y SN-78 (repetidoras SLR 1000).
 
 ## 2. Conexión a SQL Server
 
