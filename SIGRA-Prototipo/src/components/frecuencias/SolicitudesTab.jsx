@@ -31,7 +31,7 @@ const FILTROS_VACIOS = { texto: "", cliente: "", estado: "", idVendedor: "", zon
 const hayCriterios = (f) => Object.values(f).some((v) => String(v).trim() !== "");
 
 export default function SolicitudesTab({ user, abrirId, onAbierta }) {
-    const canRegistrar = puedeRegistrarSolicitud(user.role);
+    const canRegistrar = puedeRegistrarSolicitud(user);
     const [todas, setTodas] = useState([]);
     const [solicitudes, setSolicitudes] = useState([]);
     const [filtros, setFiltros] = useState(FILTROS_VACIOS);

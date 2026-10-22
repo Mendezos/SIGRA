@@ -10,6 +10,7 @@ namespace SIGRA.API.Controllers;
 [ApiController]
 [Route("api/cuentas")]
 [Authorize(Roles = "Administrador del sistema")]
+[PermisoModulo(1)]
 public class CuentasController : ControllerBase
 {
     private readonly ICuentaFlujo _flujo;

@@ -5,11 +5,13 @@ using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.API.Extensions;
 using System.Globalization;
+using SIGRA.API.Filters;
 
 namespace SIGRA.API.Controllers;
 
 [ApiController]
 [Route("api/frecuencias")]
+[PermisoModulo(11)]
 public class FrecuenciasController : ControllerBase
 {
     private const string RolAdministrador = "Administrador del sistema";

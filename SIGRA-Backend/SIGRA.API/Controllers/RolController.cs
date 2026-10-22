@@ -4,12 +4,14 @@ using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.API.Extensions;
+using SIGRA.API.Filters;
 
 namespace SIGRA.API.Controllers;
 
 [ApiController]
 [Route("api/roles")]
 [Authorize(Roles = "Administrador del sistema")]
+[PermisoModulo(1)]
 public class RolController : ControllerBase
 {
     private readonly IRolFlujo _flujo;

@@ -35,7 +35,7 @@ const columnas = [
 ];
 
 export default function AlertasTab({ user, onVerSolicitud }) {
-    const canAtender = puedeAtenderAlerta(user.role);
+    const canAtender = puedeAtenderAlerta(user);
     const [alertas, setAlertas] = useState([]);
     const [filtro, setFiltro] = useState("pendientes");
     const [cargando, setCargando] = useState(true);

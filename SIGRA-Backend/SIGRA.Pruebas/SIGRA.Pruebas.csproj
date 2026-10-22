@@ -16,12 +16,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SIGRA.Abstracciones\SIGRA.Abstracciones.csproj" />
     <ProjectReference Include="..\SIGRA.Flujo\SIGRA.Flujo.csproj" />
+    <ProjectReference Include="..\SIGRA.API\SIGRA.API.csproj" />
   </ItemGroup>
 
 </Project>
