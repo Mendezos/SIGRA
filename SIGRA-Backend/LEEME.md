@@ -52,5 +52,7 @@ dotnet test SIGRA-Backend/SIGRA.Tests/SIGRA.Tests.csproj
 
 Cada módulo se protege con los permisos que el administrador define en *Usuarios y accesos > Roles y permisos*
 (tabla `RolPermiso`): Lectura para consultar, Escritura para crear, Edición para modificar y Eliminación para borrar.
-Los controladores de Inventario y Alquiler ya los aplican (`[PermisoModulo(idModulo)]` y `[RolesPermitidos(...)]`,
-que comparan los roles sin importar mayúsculas ni tildes).
+Los controladores de Inventario, Alquiler, Frecuencias y Usuarios (cuentas, roles, módulos y política de seguridad) los aplican con
+`[PermisoModulo(idModulo)]` y `[RolesPermitidos(...)]`, que comparan los roles sin importar mayúsculas ni tildes. El módulo de
+Tickets valida el mismo permiso dentro de su flujo. Si el administrador cambia un permiso en *Roles y permisos*, se aplica en la
+siguiente petición, sin volver a iniciar sesión; los botones de cada pantalla también se ocultan según ese permiso.

@@ -5,12 +5,14 @@ using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Modelos;
 using SIGRA.API.Extensions;
+using SIGRA.API.Filters;
 
 namespace SIGRA.API.Controllers;
 
 [ApiController]
 [Route("api/politica-seguridad")]
 [Authorize(Roles = "Administrador del sistema")]
+[PermisoModulo(1)]
 public class PoliticaSeguridadController : ControllerBase
 {
     private readonly IPoliticaSeguridadFlujo _flujo;

@@ -624,7 +624,7 @@ export default function ModuleView({
     if (module.id === "dashboard") {
         extraContent = (
             <>
-                {puedeVerResumenFrecuencias(user.role) && (
+                {puedeVerResumenFrecuencias(user) && (
                     <FrecuenciasDashboardWidget />
                 )}
                 <GenerateReportWidget
