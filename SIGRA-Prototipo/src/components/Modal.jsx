@@ -37,6 +37,10 @@ export default function Modal({
     width = "max-w-lg",
     icon: Icon,
     tone = "default",
+    headerExtra,
+    tabs,
+    activeTab,
+    onTabChange,
 }) {
     const panelRef = useRef(null);
     const onCloseRef = useRef(onClose);
@@ -123,13 +127,20 @@ export default function Modal({
                 <div style={{ height: 4, backgroundColor: palette.accent }} className="shrink-0" />
 
                 <div
-                    className="flex items-start gap-4 px-6 sm:px-7 pt-5 pb-4 shrink-0"
-                    style={{ borderBottom: `1px solid ${COLORS.border}` }}
+                    className="flex items-center gap-4 px-6 sm:px-7 pt-5 pb-4 shrink-0"
+                    style={{
+                        borderBottom: tabs ? "none" : `1px solid ${COLORS.border}`,
+                        background: `linear-gradient(180deg, ${palette.badgeBg} 0%, #FFFFFF 100%)`,
+                    }}
                 >
                     {Icon && (
                         <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ backgroundColor: palette.badgeBg, color: palette.badgeFg }}
+                            className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
+                            style={{
+                                backgroundColor: "#FFFFFF",
+                                color: palette.badgeFg,
+                                boxShadow: `0 0 0 1px ${palette.accent}33, 0 3px 8px rgba(25,35,25,0.08)`,
+                            }}
                         >
                             <Icon size={20} />
                         </div>
@@ -149,6 +160,8 @@ export default function Modal({
                         )}
                     </div>
 
+                    {headerExtra && <div className="shrink-0">{headerExtra}</div>}
+
                     <button
                         type="button"
                         onClick={onClose}
@@ -159,6 +172,37 @@ export default function Modal({
                         <X size={18} />
                     </button>
                 </div>
+
+                {tabs && (
+                    <div
+                        role="tablist"
+                        className="flex gap-7 px-6 sm:px-7 shrink-0 overflow-x-auto"
+                        style={{ borderBottom: `1px solid ${COLORS.border}` }}
+                    >
+                        {tabs.map((tab) => {
+                            const activa = tab.key === activeTab;
+
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={activa}
+                                    onClick={() => onTabChange?.(tab.key)}
+                                    className="pb-3 pt-1 text-sm whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5EB453]"
+                                    style={{
+                                        color: activa ? palette.badgeFg : COLORS.muted,
+                                        fontWeight: activa ? 600 : 400,
+                                        borderBottom: `2px solid ${activa ? palette.accent : "transparent"}`,
+                                        marginBottom: -1,
+                                    }}
+                                >
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 <div className="modal-body px-6 sm:px-7 py-6 overflow-y-auto">{children}</div>
 

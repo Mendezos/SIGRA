@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { Lock, RefreshCw, ScrollText, UserCog, UserPlus, UserRound, X } from "lucide-react";
+import {
+    Activity, CalendarPlus, Cake, GraduationCap, Heart, IdCard, Lock, Mail, MapPin,
+    Phone, RefreshCw, ScrollText, ShieldCheck, UserCog, UserPlus, UserRound, Wallet, X, KeyRound, Clock,
+} from "lucide-react";
 import DataTable from "./DataTable";
 import RecordForm from "./RecordForm";
 import Modal from "./Modal";
@@ -307,40 +310,85 @@ function DetalleAuditoria({ registro }) {
     );
 }
 
-function DetalleGeneral({ cuenta }) {
-    return (
-        <>
+const PESTANAS_CUENTA = [
+    { key: "personal", label: "Datos personales" },
+    { key: "acceso", label: "Cuenta y acceso" },
+];
+
+function DetalleGeneral({ cuenta, pestana }) {
+    if (pestana === "acceso") {
+        return (
             <DetailGrid
-                title="Datos personales"
                 items={[
-                    { label: "Nombre completo", value: cuenta.nombre },
-                    { label: "Cédula", value: cuenta.cedula },
-                    { label: "Fecha de nacimiento", value: formatearFechaCorta(cuenta.fechaNacimiento, "") },
-                    { label: "Estado civil", value: cuenta.estadoCivil },
-                    { label: "Grado académico", value: cuenta.gradoAcademico },
-                    { label: "Teléfono", value: cuenta.telefono },
-                    { label: "Correo corporativo", value: cuenta.correo },
-                    { label: "Dirección", value: cuenta.direccion, wide: true },
-                ]}
-            />
-            <DetailGrid
-                title="Cuenta y acceso"
-                items={[
-                    { label: "Rol", value: cuenta.rol },
-                    { label: "Salario", value: formatearColones(cuenta.salario, "") },
-                    { label: "Estado", value: cuenta.activo ? "Activo" : "Inactivo" },
+                    { icon: ShieldCheck, label: "Rol", value: cuenta.rol },
+                    { icon: Wallet, label: "Salario", value: formatearColones(cuenta.salario, "") },
+                    { icon: Activity, label: "Estado", value: cuenta.activo ? "Activo" : "Inactivo" },
                     {
+                        icon: Lock,
                         label: "Bloqueo",
                         value: cuenta.bloqueada
                             ? `Bloqueada hasta ${formatearFechaHora(cuenta.bloqueadoHasta)}`
                             : "Sin bloqueo",
                     },
-                    { label: "Intentos fallidos de acceso", value: String(cuenta.intentosFallidos ?? 0) },
-                    { label: "Fecha de creación", value: formatearFechaHora(cuenta.fechaCreacion, "") },
-                    { label: "Último acceso", value: formatearFechaHora(cuenta.ultimoAcceso, "") },
+                    { icon: KeyRound, label: "Intentos fallidos de acceso", value: String(cuenta.intentosFallidos ?? 0) },
+                    { icon: CalendarPlus, label: "Fecha de creación", value: formatearFechaHora(cuenta.fechaCreacion, "") },
+                    { icon: Clock, label: "Último acceso", value: formatearFechaHora(cuenta.ultimoAcceso, ""), wide: true },
                 ]}
             />
-        </>
+        );
+    }
+
+    return (
+        <DetailGrid
+            items={[
+                { icon: UserRound, label: "Nombre completo", value: cuenta.nombre },
+                { icon: IdCard, label: "Cédula", value: cuenta.cedula },
+                { icon: Cake, label: "Fecha de nacimiento", value: formatearFechaCorta(cuenta.fechaNacimiento, "") },
+                { icon: Heart, label: "Estado civil", value: cuenta.estadoCivil },
+                { icon: GraduationCap, label: "Grado académico", value: cuenta.gradoAcademico },
+                { icon: Phone, label: "Teléfono", value: cuenta.telefono },
+                { icon: Mail, label: "Correo corporativo", value: cuenta.correo },
+                { icon: MapPin, label: "Dirección", value: cuenta.direccion },
+            ]}
+        />
+    );
+}
+
+function DetalleCuentaModal({ cuenta, open, onClose, abrir }) {
+    const [pestana, setPestana] = useState("personal");
+
+    return (
+        <Modal
+            open={open}
+            title={cuenta.nombre}
+            subtitle={`${cuenta.rol} · ${cuenta.correo}`}
+            icon={UserRound}
+            onClose={onClose}
+            width="max-w-3xl"
+            headerExtra={<Pill tone={cuenta.activo ? "positive" : "negative"}>{cuenta.activo ? "Activo" : "Inactivo"}</Pill>}
+            tabs={PESTANAS_CUENTA}
+            activeTab={pestana}
+            onTabChange={setPestana}
+            footer={(
+                <>
+                    <Button onClick={() => abrir("editar")}>Editar datos</Button>
+                    <Button disabled={!cuenta.activo} onClick={() => abrir("rol")}>
+                        Cambiar rol
+                    </Button>
+                    {cuenta.bloqueada && (
+                        <Button onClick={() => abrir("desbloquear")}>Desbloquear</Button>
+                    )}
+                    <Button
+                        variant={cuenta.activo ? "danger" : "primary"}
+                        onClick={() => abrir(cuenta.activo ? "inactivar" : "reactivar")}
+                    >
+                        {cuenta.activo ? "Inactivar" : "Reactivar"}
+                    </Button>
+                </>
+            )}
+        >
+            <DetalleGeneral cuenta={cuenta} pestana={pestana} />
+        </Modal>
     );
 }
 
@@ -935,33 +983,15 @@ export default function CuentasPanel({ user, onChanged }) {
                 </>
             )}
 
-            <Modal
-                open={!!seleccionada && !modo}
-                title={seleccionada?.nombre}
-                subtitle={seleccionada ? `${seleccionada.rol} · ${seleccionada.correo}` : ""}
-                icon={UserRound}
-                onClose={() => setSeleccionada(null)}
-                width="max-w-3xl"
-                footer={seleccionada && (
-                    <>
-                        <Button onClick={() => abrir("editar")}>Editar datos</Button>
-                        <Button disabled={!seleccionada.activo} onClick={() => abrir("rol")}>
-                            Cambiar rol
-                        </Button>
-                        {seleccionada.bloqueada && (
-                            <Button onClick={() => abrir("desbloquear")}>Desbloquear</Button>
-                        )}
-                        <Button
-                            variant={seleccionada.activo ? "danger" : "primary"}
-                            onClick={() => abrir(seleccionada.activo ? "inactivar" : "reactivar")}
-                        >
-                            {seleccionada.activo ? "Inactivar" : "Reactivar"}
-                        </Button>
-                    </>
-                )}
-            >
-                {seleccionada && <DetalleGeneral cuenta={seleccionada} />}
-            </Modal>
+            {seleccionada && (
+                <DetalleCuentaModal
+                    key={seleccionada.idUsuario}
+                    cuenta={seleccionada}
+                    open={!modo}
+                    onClose={() => setSeleccionada(null)}
+                    abrir={abrir}
+                />
+            )}
 
             <Modal
                 open={!!modo}

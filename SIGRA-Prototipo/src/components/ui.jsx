@@ -104,26 +104,45 @@ export function FieldLabel({ label, children }) {
 
 export function DetailGrid({ title, items }) {
     return (
-        <section className="mb-5">
+        <section className="mb-6 last:mb-0">
             {title && (
                 <h3
-                    className="text-xs uppercase tracking-wide mb-3"
-                    style={{ color: COLORS.muted, fontWeight: 600 }}
+                    className="flex items-center gap-2 text-xs uppercase tracking-wide mb-4"
+                    style={{ color: COLORS.greenDark, fontWeight: 600 }}
                 >
+                    <span className="inline-block w-1 h-3.5 rounded-full" style={{ backgroundColor: COLORS.green }} />
                     {title}
                 </h3>
             )}
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                {items.map((item) => (
-                    <div key={item.label} className={item.wide ? "sm:col-span-2" : ""}>
-                        <dt className="text-xs mb-0.5" style={{ color: COLORS.muted }}>
-                            {item.label}
-                        </dt>
-                        <dd className="text-sm" style={{ color: COLORS.charcoal }}>
-                            {item.value || "Sin registro"}
-                        </dd>
-                    </div>
-                ))}
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                {items.map((item) => {
+                    const Icono = item.icon;
+
+                    return (
+                        <div
+                            key={item.label}
+                            className={`flex items-start gap-3 pb-2.5 ${item.wide ? "sm:col-span-2" : ""}`}
+                            style={{ borderBottom: "1px solid #DCEBD9" }}
+                        >
+                            {Icono && (
+                                <span
+                                    className="mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                    style={{ backgroundColor: COLORS.greenTint, color: COLORS.greenDark }}
+                                >
+                                    <Icono size={15} />
+                                </span>
+                            )}
+                            <div className="min-w-0">
+                                <dt className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: COLORS.muted }}>
+                                    {item.label}
+                                </dt>
+                                <dd className="text-sm break-words" style={{ color: COLORS.charcoal, fontWeight: 500 }}>
+                                    {item.value || "Sin registro"}
+                                </dd>
+                            </div>
+                        </div>
+                    );
+                })}
             </dl>
         </section>
     );
