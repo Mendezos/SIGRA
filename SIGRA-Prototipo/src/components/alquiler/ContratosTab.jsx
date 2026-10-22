@@ -170,6 +170,7 @@ export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar,
                 <p className="text-sm" style={{ color: COLORS.muted }}>Cargando contratos...</p>
             ) : (
                 <DataTable
+                    cardMax={6}
                     columns={columnas}
                     rows={filas}
                     onRowClick={abrirDetalle}

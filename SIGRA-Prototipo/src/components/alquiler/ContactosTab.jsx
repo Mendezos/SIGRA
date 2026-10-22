@@ -11,7 +11,7 @@ import { fechaHora } from "./helpers";
 
 const columnas = [
     { key: "fecha", label: "Fecha" },
-    { key: "empresa", label: "Empresa" },
+    { key: "empresa", label: "Empresa", cardTitle: true },
     { key: "contacto", label: "Contacto" },
     { key: "medio", label: "Medio" },
     { key: "vendedor", label: "Vendedor asignado" },

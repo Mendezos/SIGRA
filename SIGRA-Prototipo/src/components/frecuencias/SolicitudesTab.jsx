@@ -160,6 +160,7 @@ export default function SolicitudesTab({ user, abrirId, onAbierta }) {
                 <p className="text-sm" style={{ color: COLORS.muted }}>Cargando solicitudes...</p>
             ) : (
                 <DataTable
+                    cardMax={6}
                     columns={columnas}
                     rows={filas}
                     onRowClick={(fila) => setDetalle(solicitudes.find((s) => s.idSolicitud === fila.id) ?? null)}

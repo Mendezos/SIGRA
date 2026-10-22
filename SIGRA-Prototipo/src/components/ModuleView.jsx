@@ -8,6 +8,7 @@ import Modal from "./Modal";
 import RecordForm from "./RecordForm";
 import GirasCalendar from "./GirasCalendar";
 import StatusBadge from "./StatusBadge";
+import { Tabs } from "./ui";
 import {
     canAccessModule,
     canRescheduleGiras,
@@ -51,39 +52,7 @@ function idPrefixFor(id) {
 }
 
 function TabSwitcher({ tabs, active, onSelect }) {
-    return (
-        <div
-            className="flex items-center gap-1 mb-6"
-            style={{
-                borderBottom: `1px solid ${COLORS.border}`,
-            }}
-        >
-            {tabs.map((tab) => {
-                const isActive = tab.key === active;
-
-                return (
-                    <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => onSelect(tab.key)}
-                        className="px-4 py-2.5 text-sm"
-                        style={{
-                            color: isActive
-                                ? COLORS.green
-                                : COLORS.muted,
-                            fontWeight: isActive ? 600 : 400,
-                            borderBottom: isActive
-                                ? `2px solid ${COLORS.green}`
-                                : "2px solid transparent",
-                            marginBottom: "-1px",
-                        }}
-                    >
-                        {tab.label}
-                    </button>
-                );
-            })}
-        </div>
-    );
+    return <Tabs tabs={tabs} active={active} onSelect={onSelect} className="mb-6" />;
 }
 
 function GenerateReportWidget({ role, onGenerate }) {

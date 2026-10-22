@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import { Paginacion } from "./ui";
 
 const COLORS = {
     green: "#5EB453",
+    greenDark: "#4CA23D",
     greenTint: "#EAF6E8",
     charcoal: "#323232",
     muted: "#6E6E6E",
@@ -16,15 +18,103 @@ function selectClass() {
     return "px-3 py-2 rounded-lg text-sm bg-white";
 }
 
+function valorDeCelda(columna, fila) {
+    if (columna.render) return columna.render(fila);
+    if (columna.key === "estado") return <StatusBadge value={fila[columna.key]} />;
+    return fila[columna.key] === "" ? "—" : fila[columna.key] ?? "—";
+}
+
+// Las columnas de estado se muestran como etiqueta en la parte superior de la tarjeta.
+function esInsignia(columna) {
+    return columna.cardBadge ?? /^(estado|estadoTexto|estadoAlerta|estadoRegistrado|bloqueo|bloqueoTexto|activo)$/i.test(columna.key);
+}
+
+function TarjetaRegistro({ fila, columnas, maxCampos, onClick }) {
+    const titulo = columnas.find((c) => c.cardTitle) ?? columnas[0];
+    const resto = columnas.filter((c) => c !== titulo && !c.cardHide);
+    const insignias = resto.filter(esInsignia);
+    const campos = resto.filter((c) => !esInsignia(c)).slice(0, maxCampos);
+    const inactivo = fila.activo === false;
+    const interactiva = !!onClick;
+
+    return (
+        <div
+            role={interactiva ? "button" : undefined}
+            tabIndex={interactiva ? 0 : undefined}
+            onClick={interactiva ? () => onClick(fila) : undefined}
+            onKeyDown={interactiva ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onClick(fila);
+                }
+            } : undefined}
+            className={`group flex flex-col gap-3 rounded-2xl bg-white p-5 transition-all outline-none ${
+                interactiva
+                    ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(25,35,25,0.10)] focus-visible:shadow-[0_0_0_3px_#EAF6E8]"
+                    : ""
+            }`}
+            style={{
+                border: `1px solid ${COLORS.border}`,
+                borderTop: `3px solid ${COLORS.green}`,
+                opacity: inactivo ? 0.6 : 1,
+            }}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0" style={{ color: COLORS.charcoal, fontWeight: 600 }}>
+                    <div className="text-[15px] leading-snug break-words">{valorDeCelda(titulo, fila)}</div>
+                    {inactivo && <span className="text-xs" style={{ color: COLORS.muted, fontWeight: 400 }}>(inactivo)</span>}
+                </div>
+                {insignias.length > 0 && (
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                        {insignias.map((c) => (
+                            <span key={c.key}>{valorDeCelda(c, fila)}</span>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {campos.length > 0 && (
+                <dl className="flex flex-col gap-1.5 pt-3" style={{ borderTop: "1px solid #DCEBD9" }}>
+                    {campos.map((c) => (
+                        <div key={c.key} className="flex items-baseline justify-between gap-4 text-sm">
+                            <dt className="text-[11px] uppercase tracking-wide shrink-0" style={{ color: COLORS.muted, fontWeight: 600 }}>
+                                {c.label}
+                            </dt>
+                            <dd className="min-w-0 text-right break-words" style={{ color: COLORS.charcoal }}>
+                                {valorDeCelda(c, fila)}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
+
+            {interactiva && (
+                <span
+                    className="mt-auto inline-flex items-center gap-1 self-end text-xs transition-transform group-hover:translate-x-0.5"
+                    style={{ color: COLORS.greenDark, fontWeight: 600 }}
+                >
+                    Ver detalles <ChevronRight size={14} />
+                </span>
+            )}
+        </div>
+    );
+}
+
 /**
- * Tabla con búsqueda, filtros y paginación.
+ * Lista de registros con búsqueda, filtros y paginación.
+ *
+ * Por defecto cada registro se muestra como una tarjeta: la primera columna es el título,
+ * las columnas de estado van como etiqueta y las siguientes (hasta `cardMax`) como datos.
+ * Al presionar la tarjeta o "Ver detalles" se ejecuta `onRowClick`. Con layout="table" se usa
+ * la tabla clásica, pensada para bitácoras y reportes con muchas columnas.
  *
  * Modo local (por defecto): filtra y pagina `rows` en el navegador.
  * Modo servidor: si se pasa `serverPagination` ({ page, pageSize, total,
- * onPageChange, onPageSizeChange }) la tabla solo muestra `rows` (la página
- * actual) y delega la paginación al servidor.
+ * onPageChange, onPageSizeChange }) solo muestra `rows` (la página actual) y delega la
+ * paginación al servidor.
  *
- * Cada columna admite: key, label, render(row), nowrap, align, cellClassName.
+ * Cada columna admite: key, label, render(row), nowrap, align, cellClassName y, para las
+ * tarjetas, cardTitle, cardBadge y cardHide.
  */
 export default function DataTable({
     columns,
@@ -50,6 +140,8 @@ export default function DataTable({
     loading = false,
     stickyFirstColumn = false,
     compact = false,
+    layout = "cards",
+    cardMax = 4,
     emptyMessage = "No hay registros que coincidan con la búsqueda o los filtros.",
 }) {
     const [query, setQuery] = useState("");
@@ -60,6 +152,7 @@ export default function DataTable({
     const [page, setPage] = useState({ number: 1, filtersKey: "" });
 
     const enServidor = !!serverPagination;
+    const comoTarjetas = layout === "cards";
 
     const hasEstadoColumn = !enServidor && showEstadoFilter && columns.some((c) => c.key === "estado");
     const hasVenceColumn = !enServidor && columns.some((c) => c.key === "vence");
@@ -228,157 +321,140 @@ export default function DataTable({
                 </div>
             ) : null}
 
-            <div
-                className={`rounded-xl overflow-auto max-w-full ${tableContainerClassName}`}
-                style={{ border: `1px solid ${COLORS.border}` }}
-                tabIndex={0}
-                role="region"
-                aria-label="Tabla de registros con desplazamiento horizontal"
-            >
-                <table
-                    className={`w-full text-sm ${tableClassName}`}
-                    style={{
-                        borderCollapse: "collapse",
-                        opacity: loading ? 0.55 : 1,
-                        transition: "opacity 120ms",
-                    }}
-                    aria-busy={loading}
-                >
-                    <thead className="sticky top-0" style={{ backgroundColor: COLORS.greenTint }}>
-                        <tr style={{ backgroundColor: COLORS.greenTint }}>
-                            {columns.map((c, index) => (
-                                <th
-                                    key={c.key}
-                                    className={`${celda} text-xs uppercase tracking-wide ${c.nowrap ? "whitespace-nowrap" : ""}`}
-                                    style={{
-                                        color: COLORS.muted,
-                                        fontWeight: 600,
-                                        textAlign: c.align ?? "left",
-                                        ...(stickyFirstColumn && index === 0
-                                            ? { position: "sticky", left: 0, zIndex: 2, backgroundColor: COLORS.greenTint }
-                                            : {}),
-                                    }}
-                                >
-                                    {c.label}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {visibleRows.length === 0 && (
-                            <tr>
-                                <td
-                                    colSpan={columns.length}
-                                    className="px-4 py-6 text-center text-sm"
-                                    style={{ color: COLORS.muted }}
-                                >
-                                    {loading ? "Cargando..." : emptyMessage}
-                                </td>
-                            </tr>
-                        )}
-
+            {comoTarjetas ? (
+                visibleRows.length === 0 ? (
+                    <div
+                        className="rounded-2xl px-4 py-10 text-center text-sm"
+                        style={{ border: `1px dashed ${COLORS.border}`, color: COLORS.muted, backgroundColor: "#FAFAFA" }}
+                    >
+                        {loading ? "Cargando..." : emptyMessage}
+                    </div>
+                ) : (
+                    <div
+                        className="grid gap-4"
+                        style={{
+                            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                            opacity: loading ? 0.55 : 1,
+                            transition: "opacity 120ms",
+                        }}
+                        aria-busy={loading}
+                    >
                         {visibleRows.map((row, i) => (
-                            <tr
+                            <TarjetaRegistro
                                 key={row.id ?? i}
-                                onClick={() => onRowClick?.(row)}
-                                className="cursor-pointer"
-                                style={{
-                                    borderTop: `1px solid ${COLORS.border}`,
-                                    opacity: row.activo === false ? 0.55 : 1,
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = "#FAFAFA";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = "transparent";
-                                }}
-                            >
+                                fila={row}
+                                columnas={columns}
+                                maxCampos={cardMax}
+                                onClick={onRowClick}
+                            />
+                        ))}
+                    </div>
+                )
+            ) : (
+                <div
+                    className={`rounded-xl overflow-auto max-w-full ${tableContainerClassName}`}
+                    style={{ border: `1px solid ${COLORS.border}` }}
+                    tabIndex={0}
+                    role="region"
+                    aria-label="Tabla de registros con desplazamiento horizontal"
+                >
+                    <table
+                        className={`w-full text-sm ${tableClassName}`}
+                        style={{
+                            borderCollapse: "collapse",
+                            opacity: loading ? 0.55 : 1,
+                            transition: "opacity 120ms",
+                        }}
+                        aria-busy={loading}
+                    >
+                        <thead className="sticky top-0" style={{ backgroundColor: COLORS.greenTint }}>
+                            <tr style={{ backgroundColor: COLORS.greenTint }}>
                                 {columns.map((c, index) => (
-                                    <td
+                                    <th
                                         key={c.key}
-                                        className={`${celda} ${c.nowrap ? "whitespace-nowrap" : ""} ${c.cellClassName ?? ""}`}
+                                        className={`${celda} text-xs uppercase tracking-wide ${c.nowrap ? "whitespace-nowrap" : ""}`}
                                         style={{
-                                            color: COLORS.charcoal,
+                                            color: COLORS.muted,
+                                            fontWeight: 600,
                                             textAlign: c.align ?? "left",
                                             ...(stickyFirstColumn && index === 0
-                                                ? { position: "sticky", left: 0, zIndex: 1, backgroundColor: "#FFFFFF" }
+                                                ? { position: "sticky", left: 0, zIndex: 2, backgroundColor: COLORS.greenTint }
                                                 : {}),
                                         }}
                                     >
-                                        {c.render ? (
-                                            c.render(row)
-                                        ) : c.key === "estado" ? (
-                                            <StatusBadge value={row[c.key]} />
-                                        ) : (
-                                            row[c.key] === "" ? "—" : row[c.key] ?? "—"
-                                        )}
-
-                                        {!enServidor && c.key === columns[0].key && row.activo === false && (
-                                            <span className="ml-2 text-xs" style={{ color: COLORS.muted }}>
-                                                (inactivo)
-                                            </span>
-                                        )}
-                                    </td>
+                                        {c.label}
+                                    </th>
                                 ))}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+
+                        <tbody>
+                            {visibleRows.length === 0 && (
+                                <tr>
+                                    <td
+                                        colSpan={columns.length}
+                                        className="px-4 py-6 text-center text-sm"
+                                        style={{ color: COLORS.muted }}
+                                    >
+                                        {loading ? "Cargando..." : emptyMessage}
+                                    </td>
+                                </tr>
+                            )}
+
+                            {visibleRows.map((row, i) => (
+                                <tr
+                                    key={row.id ?? i}
+                                    onClick={() => onRowClick?.(row)}
+                                    className={onRowClick ? "cursor-pointer" : ""}
+                                    style={{
+                                        borderTop: `1px solid ${COLORS.border}`,
+                                        opacity: row.activo === false ? 0.55 : 1,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = "#FAFAFA";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = "transparent";
+                                    }}
+                                >
+                                    {columns.map((c, index) => (
+                                        <td
+                                            key={c.key}
+                                            className={`${celda} ${c.nowrap ? "whitespace-nowrap" : ""} ${c.cellClassName ?? ""}`}
+                                            style={{
+                                                color: COLORS.charcoal,
+                                                textAlign: c.align ?? "left",
+                                                ...(stickyFirstColumn && index === 0
+                                                    ? { position: "sticky", left: 0, zIndex: 1, backgroundColor: "#FFFFFF" }
+                                                    : {}),
+                                            }}
+                                        >
+                                            {valorDeCelda(c, row)}
+
+                                            {!enServidor && c.key === columns[0].key && row.activo === false && (
+                                                <span className="ml-2 text-xs" style={{ color: COLORS.muted }}>
+                                                    (inactivo)
+                                                </span>
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {pagination || enServidor ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
-                    <p className="text-xs" style={{ color: COLORS.muted }} role="status" aria-live="polite">
-                        {total === 0
-                            ? "0 registros"
-                            : `Mostrando ${firstRow + 1}–${Math.min(firstRow + pageSize, total)} de ${total} registros`}
-                    </p>
-
-                    <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-2 text-xs" style={{ color: COLORS.muted }}>
-                            Filas por página
-                            <select
-                                value={pageSize}
-                                onChange={(e) => cambiarTamano(Number(e.target.value))}
-                                className="px-2 py-1 rounded-lg text-xs bg-white"
-                                style={{ border: `1px solid ${COLORS.border}` }}
-                            >
-                                {(enServidor ? PAGE_SIZES : tamanos).map((n) => (
-                                    <option key={n} value={n}>
-                                        {n}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <nav aria-label="Paginación" className="flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={() => irAPagina(currentPage - 1)}
-                                disabled={currentPage <= 1 || loading}
-                                aria-label="Página anterior"
-                                className="p-1.5 rounded-lg disabled:opacity-40"
-                                style={{ border: `1px solid ${COLORS.border}` }}
-                            >
-                                <ChevronLeft size={14} />
-                            </button>
-                            <span className="text-xs px-2" style={{ color: COLORS.charcoal }}>
-                                Página {currentPage} de {totalPages}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => irAPagina(currentPage + 1)}
-                                disabled={currentPage >= totalPages || loading}
-                                aria-label="Página siguiente"
-                                className="p-1.5 rounded-lg disabled:opacity-40"
-                                style={{ border: `1px solid ${COLORS.border}` }}
-                            >
-                                <ChevronRight size={14} />
-                            </button>
-                        </nav>
-                    </div>
-                </div>
+                <Paginacion
+                    total={total}
+                    page={currentPage}
+                    pageSize={pageSize}
+                    onPageChange={irAPagina}
+                    onPageSizeChange={cambiarTamano}
+                    sizes={enServidor ? PAGE_SIZES : tamanos}
+                    loading={loading}
+                />
             ) : showCount && (
                 <p className="text-xs mt-2" style={{ color: COLORS.muted }}>
                     {filtered.length} de {rows.length} registros

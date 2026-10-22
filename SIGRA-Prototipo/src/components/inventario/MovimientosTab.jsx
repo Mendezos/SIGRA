@@ -214,7 +214,7 @@ export default function MovimientosTab({ canWrite, onChanged }) {
             {cargando ? (
                 <p className="text-sm" style={{ color: COLORS.muted }}>Cargando movimientos...</p>
             ) : (
-                <DataTable columns={columnas} rows={filas} searchPlaceholder="Buscar movimiento..." hideInactiveToggle />
+                <DataTable layout="table" columns={columnas} rows={filas} searchPlaceholder="Buscar movimiento..." hideInactiveToggle />
             )}
 
             {modal && (

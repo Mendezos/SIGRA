@@ -257,6 +257,7 @@ export default function RadiosTab({ canAsignar }) {
                 <p className="text-sm" style={{ color: COLORS.muted }}>Cargando radios...</p>
             ) : (
                 <DataTable
+                    cardMax={5}
                     columns={columnas}
                     rows={filas}
                     onRowClick={abrirFila}

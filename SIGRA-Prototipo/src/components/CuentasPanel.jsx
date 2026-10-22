@@ -421,7 +421,7 @@ const columnasCuentas = [
             </span>
         ),
     },
-    { key: "fechaNacimientoTexto", label: "Nacimiento", nowrap: true },
+    { key: "fechaNacimientoTexto", label: "Nacimiento", nowrap: true, cardHide: true },
     { key: "estadoCivil", label: "Estado civil", nowrap: true },
     { key: "gradoAcademico", label: "Grado académico", nowrap: true },
     {
@@ -963,6 +963,7 @@ export default function CuentasPanel({ user, onChanged }) {
                     </div>
 
                     <DataTable
+                        layout="table"
                         columns={columnasAuditoria}
                         rows={filasAuditoria}
                         onRowClick={setRegistroAuditoria}

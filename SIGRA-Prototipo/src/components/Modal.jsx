@@ -176,7 +176,7 @@ export default function Modal({
                 {tabs && (
                     <div
                         role="tablist"
-                        className="flex gap-7 px-6 sm:px-7 shrink-0 overflow-x-auto"
+                        className="flex gap-7 px-6 sm:px-7 shrink-0 overflow-x-auto overflow-y-hidden"
                         style={{ borderBottom: `1px solid ${COLORS.border}` }}
                     >
                         {tabs.map((tab) => {
