@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BadgeCheck, Ban, Download, Eye, RefreshCw, ScrollText, FileSpreadsheet, FileText, Image as ImageIcon, Upload } from "lucide-react";
+import { Antenna, BadgeCheck, Ban, Building2, CalendarCheck, CalendarClock, CalendarPlus, Download, Eye, Gauge, MapPin, Radio, RefreshCw, ScrollText, FileSpreadsheet, FileText, Image as ImageIcon, Upload, UserRound, Waves } from "lucide-react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
 import { Button, DetailGrid, Notice } from "../ui";
@@ -31,6 +31,7 @@ function IconoArchivo({ contenido }) {
 }
 
 export default function SolicitudDetalleModal({ solicitud: s, canAdjuntar, onOtorgar, onRenovar, onCancelar, onAuditoria, onVerSolicitud, onDocumentosCambiaron, onClose }) {
+    const [pestana, setPestana] = useState("resumen");
     const [documentos, setDocumentos] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState("");
@@ -131,22 +132,26 @@ export default function SolicitudDetalleModal({ solicitud: s, canAdjuntar, onOto
             onClose={onClose}
             title={`Solicitud ${api.codigoSolicitud(s.idSolicitud)}`}
             subtitle={`${s.empresa} · repetidora ${s.numeroSerie}`}
+            icon={Antenna}
             width="max-w-3xl"
+            headerExtra={<StatusBadge value={s.estado} />}
+            tabs={[
+                { key: "resumen", label: "Resumen" },
+                { key: "documentos", label: `Documentos${documentos.length ? ` (${documentos.length})` : ""}` },
+                { key: "renovaciones", label: "Renovaciones" },
+            ]}
+            activeTab={pestana}
+            onTabChange={setPestana}
             footer={
-                <div className="flex justify-end">
-                    <Button variant="ghost" onClick={onClose}>Cerrar</Button>
-                </div>
-            }
-        >
-            <div className="flex items-center gap-4 mb-5">
-                <div>
-                    <p className="text-xs uppercase tracking-wide mb-1" style={{ color: COLORS.muted, fontWeight: 600 }}>Estado del trámite</p>
-                    <StatusBadge value={s.estado} />
-                </div>
-                <div className="ml-auto flex flex-wrap justify-end gap-2">
+                <>
                     <Button className="flex items-center gap-1.5" onClick={onAuditoria} title="Bitácora de auditoría completa (solo Administrador)">
                         <ScrollText size={14} /> Auditoría
                     </Button>
+                    {canAdjuntar && api.ESTADOS_CANCELABLES.includes(s.estado) && !s.idSolicitudRenovacion && (
+                        <Button variant="danger" className="flex items-center gap-1.5" onClick={onCancelar}>
+                            <Ban size={14} /> Cancelar solicitud
+                        </Button>
+                    )}
                     {canAdjuntar && (api.ESTADOS_RENOVABLES.includes(s.estado) || s.estado === "Cancelada") && !s.idSolicitudRenovacion && (
                         <Button variant="primary" className="flex items-center gap-1.5" onClick={renovar}>
                             <RefreshCw size={14} /> Iniciar renovación
@@ -157,57 +162,51 @@ export default function SolicitudDetalleModal({ solicitud: s, canAdjuntar, onOto
                             <BadgeCheck size={14} /> Registrar otorgamiento
                         </Button>
                     )}
-                    {canAdjuntar && api.ESTADOS_CANCELABLES.includes(s.estado) && !s.idSolicitudRenovacion && (
-                        <Button variant="danger" className="flex items-center gap-1.5" onClick={onCancelar}>
-                            <Ban size={14} /> Cancelar solicitud
-                        </Button>
-                    )}
-                </div>
-            </div>
-
+                </>
+            }
+        >
             {errorRenovar && <Notice tone="error">{errorRenovar}</Notice>}
 
+            {pestana === "resumen" && (
             <DetailGrid
                 items={[
-                    { label: "Cliente", value: s.empresa },
-                    { label: "Repetidora", value: `${s.numeroSerie} · ${s.marca} ${s.modelo}` },
-                    { label: "Frecuencia solicitada", value: s.frecuencia },
-                    { label: "Banda", value: s.banda },
-                    { label: "Potencia", value: s.potencia },
-                    { label: "Fecha de presentación", value: fechaCorta(s.fechaPresentacion) },
-                    { label: "Zona geográfica de cobertura", value: s.zonaCobertura, wide: true },
-                    { label: "Vendedor responsable", value: s.vendedor },
-                    { label: "Registrada el", value: fechaCorta(s.fechaRegistro) },
+                    { icon: Building2, label: "Cliente", value: s.empresa },
+                    { icon: Radio, label: "Repetidora", value: `${s.numeroSerie} · ${s.marca} ${s.modelo}` },
+                    { icon: Waves, label: "Frecuencia solicitada", value: s.frecuencia },
+                    { icon: Antenna, label: "Banda", value: s.banda },
+                    { icon: Gauge, label: "Potencia", value: s.potencia },
+                    { icon: CalendarPlus, label: "Fecha de presentación", value: fechaCorta(s.fechaPresentacion) },
+                    { icon: MapPin, label: "Zona geográfica de cobertura", value: s.zonaCobertura, wide: true },
+                    { icon: UserRound, label: "Vendedor responsable", value: s.vendedor },
+                    { icon: CalendarCheck, label: "Registrada el", value: fechaCorta(s.fechaRegistro) },
                     ...(s.estado === "Cancelada"
                         ? [
-                              { label: "Fecha de cancelación", value: fechaHora(s.fechaCancelacion) },
-                              { label: "Cancelada por", value: s.usuarioCancelacion },
-                              { label: "Motivo de la cancelación", value: s.motivoCancelacion, wide: true },
+                              { icon: CalendarClock, label: "Fecha de cancelación", value: fechaHora(s.fechaCancelacion) },
+                              { icon: UserRound, label: "Cancelada por", value: s.usuarioCancelacion },
+                              { icon: FileText, label: "Motivo de la cancelación", value: s.motivoCancelacion, wide: true },
                           ]
                         : []),
                     ...(s.fechaOtorgamiento
                         ? [
-                              { label: "Resolución o expediente", value: s.numeroResolucion },
-                              { label: "Fecha de otorgamiento", value: fechaCorta(s.fechaOtorgamiento) },
-                              { label: "Fecha de vencimiento", value: fechaCorta(s.fechaVencimiento) },
-                              { label: "Tiempo para el vencimiento", value: textoDias(s.diasParaVencer, s.estado) },
+                              { icon: FileText, label: "Resolución o expediente", value: s.numeroResolucion },
+                              { icon: CalendarCheck, label: "Fecha de otorgamiento", value: fechaCorta(s.fechaOtorgamiento) },
+                              { icon: CalendarClock, label: "Fecha de vencimiento", value: fechaCorta(s.fechaVencimiento) },
+                              { icon: CalendarClock, label: "Tiempo para el vencimiento", value: textoDias(s.diasParaVencer, s.estado) },
                           ]
                         : []),
                     ...(s.idSolicitudOrigen
-                        ? [{ label: "Renovación de", value: api.codigoSolicitud(s.idSolicitudOrigen), wide: true }]
+                        ? [{ icon: RefreshCw, label: "Renovación de", value: api.codigoSolicitud(s.idSolicitudOrigen), wide: true }]
                         : []),
                     ...(s.idSolicitudRenovacion
-                        ? [{ label: "Renovación iniciada", value: `${api.codigoSolicitud(s.idSolicitudRenovacion)} · ${s.estadoRenovacion}`, wide: true }]
+                        ? [{ icon: RefreshCw, label: "Renovación iniciada", value: `${api.codigoSolicitud(s.idSolicitudRenovacion)} · ${s.estadoRenovacion}`, wide: true }]
                         : []),
                 ]}
             />
+            )}
 
-            <HistorialRenovaciones idSolicitud={s.idSolicitud} onVerSolicitud={onVerSolicitud} />
+            {pestana === "renovaciones" && <HistorialRenovaciones idSolicitud={s.idSolicitud} onVerSolicitud={onVerSolicitud} />}
 
-            <h3 className="text-xs uppercase tracking-wide mb-3 mt-6" style={{ color: COLORS.muted, fontWeight: 600 }}>
-                Documentos del trámite
-            </h3>
-
+            {pestana === "documentos" && <>
             {error && <Notice tone="error">{error}</Notice>}
             {exitosos.length > 0 && (
                 <Notice>
@@ -288,6 +287,7 @@ export default function SolicitudDetalleModal({ solicitud: s, canAdjuntar, onOto
                     })}
                 </ul>
             )}
+            </>}
         </Modal>
     );
 }

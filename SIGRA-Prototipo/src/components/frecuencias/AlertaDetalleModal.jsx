@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Activity, AlertTriangle, BellRing, Building2, CalendarClock, CheckCircle2, Hourglass, Mail, Radio, UserRound, Waves } from "lucide-react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
 import { Button, DetailGrid, FieldLabel, Notice } from "../ui";
@@ -37,6 +37,8 @@ export default function AlertaDetalleModal({ alerta: a, canAtender, onVerSolicit
             onClose={onClose}
             title={`Alerta de vencimiento · ${api.codigoSolicitud(a.idSolicitud)}`}
             subtitle={`${a.empresa} · ${a.frecuencia}`}
+            icon={BellRing}
+            tone={a.urgente && !a.atendida ? "danger" : "default"}
             width="max-w-2xl"
             footer={
                 <div className="flex justify-between gap-3">
@@ -64,15 +66,16 @@ export default function AlertaDetalleModal({ alerta: a, canAtender, onVerSolicit
 
             <DetailGrid
                 items={[
-                    { label: "Cliente", value: a.empresa },
-                    { label: "Repetidora", value: a.numeroSerie },
-                    { label: "Frecuencia", value: `${a.frecuencia}${a.banda ? ` (${a.banda})` : ""}` },
-                    { label: "Estado de la frecuencia", value: a.estadoSolicitud },
-                    { label: "Fecha de vencimiento", value: fechaCorta(a.fechaVencimiento) },
-                    { label: "Días restantes", value: textoDias(a.diasRestantes) },
-                    { label: "Alerta generada el", value: fechaCorta(a.fechaAlerta) },
-                    { label: "Vendedor responsable", value: a.vendedor },
+                    { icon: Building2, label: "Cliente", value: a.empresa },
+                    { icon: Radio, label: "Repetidora", value: a.numeroSerie },
+                    { icon: Waves, label: "Frecuencia", value: `${a.frecuencia}${a.banda ? ` (${a.banda})` : ""}` },
+                    { icon: Activity, label: "Estado de la frecuencia", value: a.estadoSolicitud },
+                    { icon: CalendarClock, label: "Fecha de vencimiento", value: fechaCorta(a.fechaVencimiento) },
+                    { icon: Hourglass, label: "Días restantes", value: textoDias(a.diasRestantes) },
+                    { icon: BellRing, label: "Alerta generada el", value: fechaCorta(a.fechaAlerta) },
+                    { icon: UserRound, label: "Vendedor responsable", value: a.vendedor },
                     {
+                        icon: Mail,
                         label: "Correo electrónico",
                         value: a.correoEnviado ? `Enviado el ${fechaHora(a.fechaEnvio)}` : "Aún no se ha podido enviar",
                         wide: true,

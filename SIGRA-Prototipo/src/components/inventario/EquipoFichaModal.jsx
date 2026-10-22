@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Boxes } from "lucide-react";
+import { Boxes, Building2, CalendarDays, FileText, Hash, MapPin, Package, Tag, Truck, Wallet, Wrench } from "lucide-react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
-import { Button, DetailGrid, FieldLabel, Notice, SubTabs } from "../ui";
+import { Button, DetailGrid, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/inventarioService";
@@ -96,7 +96,7 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
     const [error, setError] = useState("");
     const [mensaje, setMensaje] = useState("");
     const [guardando, setGuardando] = useState(false);
-    const [vista, setVista] = useState("historial");
+    const [vista, setVista] = useState("datos");
 
     if (!ficha) return null;
     const { equipo, historial } = ficha;
@@ -111,6 +111,7 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
             const actualizada = await api.cambiarEstadoEquipo(equipo.idEquipo, nuevoEstado, motivo);
             setNuevoEstado("");
             setMotivo("");
+            setVista("datos");
             setMensaje(`El estado del equipo cambió a "${actualizada.equipo.estado}".`);
             onChanged(actualizada);
         } catch (err) {
@@ -121,16 +122,24 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
     }
 
     const detalles = [
-        { label: "Categoría", value: equipo.categoria },
-        { label: "Marca", value: equipo.marca },
-        { label: "Modelo", value: equipo.modelo },
-        { label: "Propietario", value: equipo.propietario },
-        { label: "Ubicación", value: equipo.ubicacion },
-        { label: "Proveedor", value: equipo.proveedor },
-        { label: "Fecha de adquisición", value: fechaCorta(equipo.fechaAdquisicion) },
-        { label: "Costo de compra", value: colones(equipo.costoCompra) },
-        ...(equipo.manejaCantidad ? [{ label: "Cantidad en stock", value: String(equipo.cantidad) }] : []),
-        { label: "Descripción técnica", value: equipo.descripcionTecnica, wide: true },
+        { icon: Tag, label: "Categoría", value: equipo.categoria },
+        { icon: Hash, label: "Marca", value: equipo.marca },
+        { icon: Package, label: "Modelo", value: equipo.modelo },
+        { icon: Building2, label: "Propietario", value: equipo.propietario },
+        { icon: MapPin, label: "Ubicación", value: equipo.ubicacion },
+        { icon: Truck, label: "Proveedor", value: equipo.proveedor },
+        { icon: CalendarDays, label: "Fecha de adquisición", value: fechaCorta(equipo.fechaAdquisicion) },
+        { icon: Wallet, label: "Costo de compra", value: colones(equipo.costoCompra) },
+        ...(equipo.manejaCantidad ? [{ icon: Boxes, label: "Cantidad en stock", value: String(equipo.cantidad) }] : []),
+        { icon: FileText, label: "Descripción técnica", value: equipo.descripcionTecnica, wide: true },
+    ];
+
+    const puedeCambiarEstado = canWrite && !dadoDeBaja;
+    const tabs = [
+        { key: "datos", label: "Datos del equipo" },
+        ...(puedeCambiarEstado ? [{ key: "estado", label: "Cambiar estado" }] : []),
+        { key: "historial", label: "Historial completo" },
+        { key: "bitacora", label: "Bitácora de boletas" },
     ];
 
     return (
@@ -139,12 +148,18 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
             onClose={onClose}
             title={`${equipo.marca} ${equipo.modelo}`}
             subtitle={`Número de serie ${equipo.numeroSerie}`}
+            icon={Wrench}
             width="max-w-3xl"
+            headerExtra={<StatusBadge value={equipo.estado} />}
+            tabs={tabs}
+            activeTab={vista}
+            onTabChange={setVista}
         >
             {mensaje && <Notice>{mensaje}</Notice>}
             {error && <Notice tone="error">{error}</Notice>}
 
-            <div className="flex flex-col sm:flex-row gap-5 mb-6">
+            {vista === "datos" && (
+            <div className="flex flex-col sm:flex-row gap-5">
                 {equipo.foto ? (
                     <img
                         src={equipo.foto}
@@ -163,11 +178,6 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
                 )}
 
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-4">
-                        <span className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>Estado actual</span>
-                        <StatusBadge value={equipo.estado} />
-                    </div>
-
                     {dadoDeBaja && (
                         <div className="rounded-lg px-4 py-3 mb-4 text-sm" style={{ backgroundColor: COLORS.redTint, color: COLORS.red }}>
                             Dado de baja el {fechaCorta(equipo.fechaBaja)}. Motivo: {equipo.motivoBaja || "sin registro"}.
@@ -177,9 +187,10 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
                     <DetailGrid items={detalles} />
                 </div>
             </div>
+            )}
 
-            {canWrite && !dadoDeBaja && (
-                <section className="rounded-xl p-4 mb-6" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${COLORS.border}` }}>
+            {vista === "estado" && puedeCambiarEstado && (
+                <section className="rounded-xl p-4" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${COLORS.border}` }}>
                     <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>
                         Cambiar estado
                     </h3>
@@ -206,12 +217,8 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
                 </section>
             )}
 
-            <SubTabs
-                tabs={[{ key: "historial", label: "Historial completo" }, { key: "bitacora", label: "Bitácora de boletas" }]}
-                active={vista}
-                onSelect={setVista}
-            />
-            {vista === "historial" ? <Historial items={historial} /> : <Bitacora key={historial.length} idEquipo={equipo.idEquipo} />}
+            {vista === "historial" && <Historial items={historial} />}
+            {vista === "bitacora" && <Bitacora key={historial.length} idEquipo={equipo.idEquipo} />}
         </Modal>
     );
 }

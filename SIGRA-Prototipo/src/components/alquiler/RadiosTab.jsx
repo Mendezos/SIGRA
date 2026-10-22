@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BatteryWarning, Plus, Radio, Search } from "lucide-react";
+import { BatteryCharging, BatteryWarning, Building2, CalendarPlus, MapPin, Plus, Radio, Search, Tag } from "lucide-react";
 import DataTable from "../DataTable";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
@@ -72,6 +72,7 @@ function FichaRadioModal({ radio, canRegistrar, onClose, onChanged }) {
     const [baterias, setBaterias] = useState([]);
     const [registrando, setRegistrando] = useState(false);
     const [mensaje, setMensaje] = useState("");
+    const [pestana, setPestana] = useState("datos");
 
     useEffect(() => {
         let activo = true;
@@ -84,32 +85,36 @@ function FichaRadioModal({ radio, canRegistrar, onClose, onChanged }) {
     }, [radio]);
 
     return (
-        <Modal open onClose={onClose} title={`${radio.marca} ${radio.modelo}`} subtitle={`Número de serie ${radio.numeroSerie}`} width="max-w-xl">
+        <Modal
+            open
+            onClose={onClose}
+            title={`${radio.marca} ${radio.modelo}`}
+            subtitle={`Número de serie ${radio.numeroSerie}`}
+            icon={Radio}
+            width="max-w-xl"
+            headerExtra={<StatusBadge value={radio.estado} />}
+            tabs={[{ key: "datos", label: "Datos del radio" }, { key: "bateria", label: "Batería" }]}
+            activeTab={pestana}
+            onTabChange={setPestana}
+        >
             {mensaje && <Notice>{mensaje}</Notice>}
 
-            <div className="flex items-center gap-4 mb-5">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ backgroundColor: COLORS.greenTint }}>
-                    <Radio size={26} color={COLORS.green} />
-                </div>
-                <div>
-                    <p className="text-xs uppercase tracking-wide mb-1" style={{ color: COLORS.muted, fontWeight: 600 }}>Estado actual</p>
-                    <StatusBadge value={radio.estado} />
-                </div>
-            </div>
-
+            {pestana === "datos" && (
             <DetailGrid
                 items={[
-                    { label: "Modelo", value: `${radio.marca} ${radio.modelo}` },
-                    { label: "Categoría", value: radio.categoria },
-                    { label: "Contrato asociado", value: `${api.codigoContrato(radio.idContrato)} · ${radio.empresa}`, wide: true },
-                    { label: "Fecha de asignación", value: fechaCorta(radio.fechaAsignacion) },
-                    { label: "Ubicación", value: radio.ubicacion },
+                    { icon: Radio, label: "Modelo", value: `${radio.marca} ${radio.modelo}` },
+                    { icon: Tag, label: "Categoría", value: radio.categoria },
+                    { icon: Building2, label: "Contrato asociado", value: `${api.codigoContrato(radio.idContrato)} · ${radio.empresa}`, wide: true },
+                    { icon: CalendarPlus, label: "Fecha de asignación", value: fechaCorta(radio.fechaAsignacion) },
+                    { icon: MapPin, label: "Ubicación", value: radio.ubicacion },
                 ]}
             />
+            )}
 
+            {pestana === "bateria" && (
             <section>
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>Batería</h3>
+                    <h3 className="flex items-center gap-2 text-xs uppercase tracking-wide" style={{ color: COLORS.greenDark, fontWeight: 600 }}><BatteryCharging size={14} /> Estado de la batería</h3>
                     {canRegistrar && <Button onClick={() => { setMensaje(""); setRegistrando(true); }}>Registrar cambio</Button>}
                 </div>
 
@@ -137,6 +142,7 @@ function FichaRadioModal({ radio, canRegistrar, onClose, onChanged }) {
                     </>
                 )}
             </section>
+            )}
 
             {registrando && (
                 <CambioBateriaModal

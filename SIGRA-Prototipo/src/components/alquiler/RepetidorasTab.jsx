@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardCheck, FileText, MapPin, Pencil, Plus, RadioTower } from "lucide-react";
+import { Building2, ClipboardCheck, FileText, Gauge, HardHat, MapPin, Navigation, Package, Pencil, Plus, Radio, RadioTower, Tag, UserRound, Waves } from "lucide-react";
 import DataTable from "../DataTable";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
@@ -37,17 +37,22 @@ const textoInstalacion = (estado) =>
           : "Sin checklist: pendiente de verificación previa";
 
 function FichaRepetidoraModal({ repetidora: r, canEditar, onEditar, onChecklist, onDocumentos, onClose }) {
+    const [pestana, setPestana] = useState("ficha");
+
     return (
-        <Modal open onClose={onClose} title={`${r.marca} ${r.modelo}`} subtitle={`Repetidora · serie ${r.numeroSerie}`} width="max-w-2xl">
-            <div className="flex items-center gap-4 mb-5">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ backgroundColor: COLORS.greenTint }}>
-                    <RadioTower size={26} color={COLORS.green} />
-                </div>
-                <div>
-                    <p className="text-xs uppercase tracking-wide mb-1" style={{ color: COLORS.muted, fontWeight: 600 }}>Estado del equipo</p>
-                    <StatusBadge value={r.estado} />
-                </div>
-                <div className="ml-auto flex flex-wrap gap-2">
+        <Modal
+            open
+            onClose={onClose}
+            title={`${r.marca} ${r.modelo}`}
+            subtitle={`Repetidora · serie ${r.numeroSerie}`}
+            icon={RadioTower}
+            width="max-w-2xl"
+            headerExtra={<StatusBadge value={r.estado} />}
+            tabs={[{ key: "ficha", label: "Ficha técnica" }, { key: "bitacora", label: "Bitácora de mantenimiento" }]}
+            activeTab={pestana}
+            onTabChange={setPestana}
+            footer={(r.tieneFicha || canEditar) ? (
+                <>
                     {r.tieneFicha && (
                         <Button className="flex items-center gap-1.5" onClick={onDocumentos}>
                             <FileText size={14} /> Documentos
@@ -59,38 +64,42 @@ function FichaRepetidoraModal({ repetidora: r, canEditar, onEditar, onChecklist,
                         </Button>
                     )}
                     {canEditar && (
-                        <Button className="flex items-center gap-1.5" onClick={onEditar}>
+                        <Button variant="primary" className="flex items-center gap-1.5" onClick={onEditar}>
                             {r.tieneFicha ? <><Pencil size={14} /> Editar ficha</> : <><Plus size={14} /> Registrar ficha</>}
                         </Button>
                     )}
-                </div>
-            </div>
+                </>
+            ) : undefined}
+        >
+            {pestana === "ficha" && <>
 
             {!r.tieneFicha ? (
                 <Notice tone="error">Esta repetidora todavía no tiene ficha técnica registrada.</Notice>
             ) : (
                 <DetailGrid
                     items={[
-                        { label: "Modelo", value: `${r.marca} ${r.modelo}` },
-                        { label: "Número de serie", value: r.numeroSerie },
-                        { label: "Contrato asociado", value: `${api.codigoContrato(r.idContrato)} · ${r.empresa}`, wide: true },
-                        { label: "Frecuencia de transmisión", value: r.frecuencia },
-                        { label: "Frecuencia de recepción", value: r.frecuenciaRecepcion },
-                        { label: "Potencia", value: r.potencia },
-                        { label: "Accesorios", value: r.accesorios || "Sin accesorios registrados" },
+                        { icon: Radio, label: "Modelo", value: `${r.marca} ${r.modelo}` },
+                        { icon: Tag, label: "Número de serie", value: r.numeroSerie },
+                        { icon: Building2, label: "Contrato asociado", value: `${api.codigoContrato(r.idContrato)} · ${r.empresa}`, wide: true },
+                        { icon: Waves, label: "Frecuencia de transmisión", value: r.frecuencia },
+                        { icon: Waves, label: "Frecuencia de recepción", value: r.frecuenciaRecepcion },
+                        { icon: Gauge, label: "Potencia", value: r.potencia },
+                        { icon: Package, label: "Accesorios", value: r.accesorios || "Sin accesorios registrados" },
                         {
+                            icon: HardHat,
                             label: "Clasificación",
                             value: r.clasificacion ? `${r.clasificacion} · ${textoFacturacion(r)}` : "Sin clasificar",
                             wide: true,
                         },
-                        { label: "Dirección de instalación", value: r.direccionInstalacion, wide: true },
-                        { label: "Instalación", value: textoInstalacion(r.estadoChecklist), wide: true },
+                        { icon: MapPin, label: "Dirección de instalación", value: r.direccionInstalacion, wide: true },
+                        { icon: ClipboardCheck, label: "Instalación", value: textoInstalacion(r.estadoChecklist), wide: true },
                         {
+                            icon: Navigation,
                             label: "Coordenadas GPS",
                             value: r.sinCoordenadas ? "Sin coordenadas registradas" : r.coordenadasGPS,
                             wide: true,
                         },
-                        { label: "Registrada por", value: r.registradoPor ? `${r.registradoPor} · ${fechaHora(r.fechaRegistro)}` : "—", wide: true },
+                        { icon: UserRound, label: "Registrada por", value: r.registradoPor ? `${r.registradoPor} · ${fechaHora(r.fechaRegistro)}` : "—", wide: true },
                     ]}
                 />
             )}
@@ -107,7 +116,9 @@ function FichaRepetidoraModal({ repetidora: r, canEditar, onEditar, onChecklist,
                 </a>
             )}
 
-            <BitacoraMantenimientoSeccion numeroSerie={r.numeroSerie} />
+            </>}
+
+            {pestana === "bitacora" && <BitacoraMantenimientoSeccion numeroSerie={r.numeroSerie} />}
         </Modal>
     );
 }

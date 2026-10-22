@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Building2, CalendarClock, FileText, Mail, Plus, UserCheck, UserCog, UserRound } from "lucide-react";
 import DataTable from "../DataTable";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
@@ -173,6 +173,7 @@ function ContactoDetalleModal({ detalle, canReasignar, onClose, onChanged }) {
     const [error, setError] = useState("");
     const [mensaje, setMensaje] = useState("");
     const [guardando, setGuardando] = useState(false);
+    const [pestana, setPestana] = useState("datos");
 
     useEffect(() => {
         if (!canReasignar) return;
@@ -203,28 +204,40 @@ function ContactoDetalleModal({ detalle, canReasignar, onClose, onChanged }) {
     }
 
     return (
-        <Modal open onClose={onClose} title={contacto.empresa} subtitle="Contacto inicial" width="max-w-2xl">
+        <Modal
+            open
+            onClose={onClose}
+            title={contacto.empresa}
+            subtitle="Contacto inicial"
+            icon={Building2}
+            width="max-w-2xl"
+            headerExtra={<StatusBadge value={contacto.estado} />}
+            tabs={[
+                { key: "datos", label: "Datos del contacto" },
+                ...(canReasignar ? [{ key: "reasignar", label: "Reasignar vendedor" }] : []),
+                { key: "historial", label: "Historial de asignaciones" },
+            ]}
+            activeTab={pestana}
+            onTabChange={setPestana}
+        >
             {mensaje && <Notice>{mensaje}</Notice>}
             {error && <Notice tone="error">{error}</Notice>}
 
-            <div className="flex items-center gap-3 mb-4">
-                <span className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>Estado</span>
-                <StatusBadge value={contacto.estado} />
-            </div>
-
+            {pestana === "datos" && (
             <DetailGrid
                 items={[
-                    { label: "Contacto", value: contacto.contacto },
-                    { label: contacto.medioContacto, value: contacto.datoContacto },
-                    { label: "Vendedor asignado", value: contacto.vendedor ?? "Sin asignar (en espera)" },
-                    { label: "Registrado por", value: contacto.registradoPor },
-                    { label: "Fecha de registro", value: fechaHora(contacto.fechaRegistro) },
-                    { label: "Motivo de la consulta", value: contacto.motivo, wide: true },
+                    { icon: UserRound, label: "Contacto", value: contacto.contacto },
+                    { icon: Mail, label: contacto.medioContacto, value: contacto.datoContacto },
+                    { icon: UserCheck, label: "Vendedor asignado", value: contacto.vendedor ?? "Sin asignar (en espera)" },
+                    { icon: UserCog, label: "Registrado por", value: contacto.registradoPor },
+                    { icon: CalendarClock, label: "Fecha de registro", value: fechaHora(contacto.fechaRegistro) },
+                    { icon: FileText, label: "Motivo de la consulta", value: contacto.motivo, wide: true },
                 ]}
             />
+            )}
 
-            {canReasignar && (
-                <section className="rounded-xl p-4 mb-5" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${COLORS.border}` }}>
+            {pestana === "reasignar" && canReasignar && (
+                <section className="rounded-xl p-4" style={{ backgroundColor: "#FAFAFA", border: `1px solid ${COLORS.border}` }}>
                     <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>Reasignar vendedor</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <FieldLabel label="Vendedor disponible">
@@ -247,8 +260,8 @@ function ContactoDetalleModal({ detalle, canReasignar, onClose, onChanged }) {
                 </section>
             )}
 
+            {pestana === "historial" && (
             <section>
-                <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>Historial de asignaciones</h3>
                 <ol className="relative ml-2" style={{ borderLeft: `2px solid ${COLORS.border}` }}>
                     {historial.map((h, i) => (
                         <li key={i} className="pl-5 pb-4 relative">
@@ -265,6 +278,7 @@ function ContactoDetalleModal({ detalle, canReasignar, onClose, onChanged }) {
                     )}
                 </ol>
             </section>
+            )}
         </Modal>
     );
 }

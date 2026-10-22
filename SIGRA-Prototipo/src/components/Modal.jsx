@@ -204,7 +204,7 @@ export default function Modal({
                     </div>
                 )}
 
-                <div className="modal-body px-6 sm:px-7 py-6 overflow-y-auto">{children}</div>
+                <div className={`modal-body px-6 sm:px-7 py-6 overflow-y-auto${tabs ? " min-h-[min(22rem,38vh)]" : ""}`}>{children}</div>
 
                 {footer && (
                     <div

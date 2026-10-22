@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
-import { Button, DetailGrid, Notice, SubTabs } from "../ui";
+import { Building2, CalendarClock, CalendarPlus, CalendarX, FileText, Radio, ShieldCheck, UserRound, Wallet } from "lucide-react";
+import { Button, DetailGrid, Notice } from "../ui";
 import { COLORS } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
@@ -25,31 +26,37 @@ const ETIQUETAS_ACCION = {
 const ESTADOS_RENOVABLES = ["Por vencer (90 días)", "Por vencer (30 días)", "Vencido"];
 const ESTADOS_NO_CANCELABLES = ["Vencido", "Cancelado"];
 
-function Resumen({ detalle, onAsignarRadio, canAsignarRadio, canEditarAccesorios, onEditarAccesorios }) {
-    const { contrato, equipos, accesorios } = detalle;
+function Resumen({ detalle }) {
+    const { contrato, equipos } = detalle;
     const cancelado = contrato.estado === "Cancelado";
 
     return (
-        <>
-            <DetailGrid
-                items={[
-                    { label: "Empresa cliente", value: contrato.empresa },
-                    { label: "Vendedor", value: contrato.vendedor },
-                    { label: "Fecha de inicio", value: fechaCorta(contrato.fechaInicio) },
-                    { label: "Fecha de vencimiento", value: fechaCorta(contrato.fechaVencimiento) },
-                    { label: "Monto mensual", value: colones(contrato.montoMensual) },
-                    { label: "Cobertura de reparaciones", value: contrato.cubreReparaciones ? "Incluida" : "No incluida" },
-                    { label: "Equipos asociados", value: String(equipos.length) },
-                    { label: "Condiciones", value: contrato.condiciones, wide: true },
-                    ...(cancelado
-                        ? [
-                              { label: "Fecha de cancelación", value: fechaCorta(contrato.fechaCancelacion) },
-                              { label: "Motivo de la cancelación", value: contrato.motivoCancelacion, wide: true },
-                          ]
-                        : []),
-                ]}
-            />
+        <DetailGrid
+            items={[
+                { icon: Building2, label: "Empresa cliente", value: contrato.empresa },
+                { icon: UserRound, label: "Vendedor", value: contrato.vendedor },
+                { icon: CalendarPlus, label: "Fecha de inicio", value: fechaCorta(contrato.fechaInicio) },
+                { icon: CalendarClock, label: "Fecha de vencimiento", value: fechaCorta(contrato.fechaVencimiento) },
+                { icon: Wallet, label: "Monto mensual", value: colones(contrato.montoMensual) },
+                { icon: ShieldCheck, label: "Cobertura de reparaciones", value: contrato.cubreReparaciones ? "Incluida" : "No incluida" },
+                { icon: Radio, label: "Equipos asociados", value: String(equipos.length) },
+                { icon: FileText, label: "Condiciones", value: contrato.condiciones, wide: true },
+                ...(cancelado
+                    ? [
+                          { icon: CalendarX, label: "Fecha de cancelación", value: fechaCorta(contrato.fechaCancelacion) },
+                          { icon: FileText, label: "Motivo de la cancelación", value: contrato.motivoCancelacion, wide: true },
+                      ]
+                    : []),
+            ]}
+        />
+    );
+}
 
+function EquiposAccesorios({ detalle, onAsignarRadio, canAsignarRadio, canEditarAccesorios, onEditarAccesorios }) {
+    const { contrato, equipos, accesorios } = detalle;
+
+    return (
+        <>
             <section>
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>
@@ -205,9 +212,12 @@ export default function ContratoDetalleModal({
 
     if (!detalle) return null;
     const { contrato } = detalle;
+    const mostrarRenovar = canRenovar && ESTADOS_RENOVABLES.includes(contrato.estado);
+    const mostrarCancelar = canCancelar && !ESTADOS_NO_CANCELABLES.includes(contrato.estado);
 
     const tabs = [
         { key: "resumen", label: "Resumen" },
+        { key: "equipos", label: "Equipos y accesorios" },
         ...(canRenovar || canVerAuditoria ? [{ key: "renovaciones", label: "Renovaciones" }] : []),
         ...(canVerAuditoria ? [{ key: "auditoria", label: "Auditoría" }] : []),
     ];
@@ -225,28 +235,28 @@ export default function ContratoDetalleModal({
             onClose={onClose}
             title={`Contrato ${api.codigoContrato(contrato.idContrato)}`}
             subtitle={contrato.empresa}
+            icon={FileText}
             width="max-w-3xl"
+            headerExtra={<StatusBadge value={contrato.estado} />}
+            tabs={tabs}
+            activeTab={tab}
+            onTabChange={setTab}
+            footer={mostrarRenovar || mostrarCancelar ? (
+                <>
+                    {mostrarCancelar && (
+                        <Button variant="danger" onClick={() => setAccion("cancelar")}>Cancelar contrato</Button>
+                    )}
+                    {mostrarRenovar && (
+                        <Button variant="primary" onClick={() => setAccion("renovar")}>Renovar</Button>
+                    )}
+                </>
+            ) : undefined}
         >
             {(mensaje || aviso) && <Notice>{aviso || mensaje}</Notice>}
 
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>Estado</span>
-                <StatusBadge value={contrato.estado} />
-
-                <div className="ml-auto flex gap-2">
-                    {canRenovar && ESTADOS_RENOVABLES.includes(contrato.estado) && (
-                        <Button variant="primary" onClick={() => setAccion("renovar")}>Renovar</Button>
-                    )}
-                    {canCancelar && !ESTADOS_NO_CANCELABLES.includes(contrato.estado) && (
-                        <Button variant="danger" onClick={() => setAccion("cancelar")}>Cancelar contrato</Button>
-                    )}
-                </div>
-            </div>
-
-            <SubTabs tabs={tabs} active={tab} onSelect={setTab} />
-
-            {tab === "resumen" && (
-                <Resumen
+            {tab === "resumen" && <Resumen detalle={detalle} />}
+            {tab === "equipos" && (
+                <EquiposAccesorios
                     detalle={detalle}
                     canAsignarRadio={canAsignarRadio}
                     onAsignarRadio={() => setAccion("radio")}

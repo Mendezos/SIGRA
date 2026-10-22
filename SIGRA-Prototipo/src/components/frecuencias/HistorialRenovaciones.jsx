@@ -21,7 +21,7 @@ export default function HistorialRenovaciones({ idSolicitud, onVerSolicitud }) {
     }, [idSolicitud]);
 
     return (
-        <section className="mt-6">
+        <section>
             <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>
                 Historial de renovaciones
             </h3>
