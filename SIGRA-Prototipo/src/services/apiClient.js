@@ -1,6 +1,6 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5044/api";
 
-const TOKEN_KEY = "sigra_token";
+export const TOKEN_KEY = "sigra_token";
 
 export function getToken() {
     return localStorage.getItem(TOKEN_KEY);
