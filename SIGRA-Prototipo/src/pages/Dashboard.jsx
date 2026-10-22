@@ -29,6 +29,7 @@ import {
     getReportTypes,
 } from "../data/roleCapabilities";
 import ModuleView from "../components/ModuleView";
+import IndicadoresInicio from "../components/inicio/IndicadoresInicio";
 import NotificationsBell from "../components/NotificationsBell";
 import IAChatPanel from "../components/IAChatPanel";
 import BrandLogo from "../components/BrandLogo";
@@ -493,7 +494,7 @@ function Welcome({
 
     return (
         <main className="flex-1 min-w-0 overflow-y-auto">
-            <div className="max-w-6xl mx-auto px-10 py-10">
+            <div className="max-w-6xl mx-auto px-10 pt-10 pb-28">
                 <p
                     className="text-xs uppercase tracking-widest capitalize"
                     style={{ color: COLORS.muted }}
@@ -638,6 +639,8 @@ function Welcome({
                         ))}
                     </div>
                 </section>
+
+                <IndicadoresInicio user={user} onOpenModule={onOpenModule} />
 
                 <SeguimientoTickets />
 

@@ -389,7 +389,7 @@ export default function ModuleView({
 
     if (!canAccessModule(user.permisos, module.id)) {
         return (
-            <main className="flex-1 px-10 py-10">
+            <main className="flex-1 px-10 pt-10 pb-28">
                 <div className="flex items-center gap-3">
                     <div
                         className="w-9 h-9 rounded-lg flex items-center justify-center"
@@ -643,7 +643,7 @@ export default function ModuleView({
     }
 
     return (
-        <main className="flex-1 min-w-0 px-5 pt-24 pb-8 md:p-10 overflow-x-auto">
+        <main className="flex-1 min-w-0 px-5 pt-24 pb-28 md:px-10 md:pt-10 md:pb-28 overflow-x-auto">
             <div className="flex items-start justify-between mb-1">
                 <div className="flex items-center gap-3">
                     <div
