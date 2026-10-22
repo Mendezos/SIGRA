@@ -461,7 +461,7 @@ export default function CuentasPanel({ user, onChanged }) {
     const [filtros, setFiltros] = useState(FILTROS_INICIALES);
     const [textoAplicado, setTextoAplicado] = useState("");
     const [pagina, setPagina] = useState(1);
-    const [tamano, setTamano] = useState(10);
+    const [tamano, setTamano] = useState(12);
     const [datos, setDatos] = useState({ items: [], total: 0 });
     const [cargando, setCargando] = useState(true);
     const [errorLista, setErrorLista] = useState("");

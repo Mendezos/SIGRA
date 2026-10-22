@@ -16,7 +16,7 @@ const inicialFiltro = { texto: "", idCliente: "", idTecnico: "", tipoServicio: "
 export default function TicketsPanel({ user }) {
     const [numeroAuditoria, setNumeroAuditoria] = useState(null);
     const [tab, setTab] = useState("boletas"); const [filtro, setFiltro] = useState(inicialFiltro); const [busqueda, setBusqueda] = useState("");
-    const [pagina, setPagina] = useState(1); const [tamanoPagina, setTamano] = useState(10); const [datos, setDatos] = useState({ items: [], total: 0 });
+    const [pagina, setPagina] = useState(1); const [tamanoPagina, setTamano] = useState(12); const [datos, setDatos] = useState({ items: [], total: 0 });
     const [resumen, setResumen] = useState(null); const [clientes, setClientes] = useState([]); const [tecnicos, setTecnicos] = useState([]);
     const [error, setError] = useState(""); const [aviso, setAviso] = useState(""); const [cargando, setCargando] = useState(false); const [recarga, setRecarga] = useState(0);
     const [creando, setCreando] = useState(false); const [detalle, setDetalle] = useState(null);
@@ -59,7 +59,7 @@ export default function TicketsPanel({ user }) {
             </form>
             {cargando && <p role="status" className="text-sm text-[#6E6E6E]">Cargando boletas...</p>}
             <DataTable columns={columnas} rows={datos.items.map(b => ({ ...b, id: b.idTicket, tecnicoTexto: b.tecnico ?? b.estadoAsignacion ?? "Sin asignar", etapaTexto: b.esReparacion ? <StatusBadge value={b.trabajo.etapa} /> : "—", recepcionTexto: b.fechaRecepcionFisica ? "Confirmada" : "Pendiente", fechaTexto: fecha(b.fechaRecepcion) }))} onRowClick={abrir} pagination={false} showCount={false} showSearch={false} showEstadoFilter={false} hideInactiveToggle initialShowInactive emptyMessage="No se encontraron boletas con esos filtros." tableClassName="min-w-[1100px]" />
-            <Paginacion total={datos.total} page={pagina} pageSize={tamanoPagina} loading={cargando} itemLabel="boletas" onPageChange={setPagina} onPageSizeChange={(n) => { setTamano(n); setPagina(1); }} />
+            <Paginacion sizes={[12, 24, 48]} total={datos.total} page={pagina} pageSize={tamanoPagina} loading={cargando} itemLabel="boletas" onPageChange={setPagina} onPageSizeChange={(n) => { setTamano(n); setPagina(1); }} />
         </> : <TicketsReportes key={tab} tab={tab} numeroInicial={numeroAuditoria} user={user} clientes={clientes} tecnicos={tecnicos} onChanged={actualizar} />}
         {creando && <EntradaTicketModal onClose={() => setCreando(false)} onSaved={guardado} />}
         {detalle && <DetalleTicketModal inicial={detalle} user={user} onClose={() => setDetalle(null)} onChanged={guardado} onVerAuditoria={() => { setNumeroAuditoria(detalle.numeroBoleta); setDetalle(null); setTab("auditoria"); }} />}

@@ -13,6 +13,8 @@ const COLORS = {
 };
 
 const PAGE_SIZES = [5, 10, 25, 50];
+// Múltiplos de 12: llenan filas completas con 1, 2, 3, 4 o 6 tarjetas por fila.
+const CARD_PAGE_SIZES = [12, 24, 48];
 
 function selectClass() {
     return "px-3 py-2 rounded-lg text-sm bg-white";
@@ -133,7 +135,7 @@ export default function DataTable({
     showInactiveToggle = true,
     statusOptions,
     hideInactiveToggle = false,
-    initialPageSize = 10,
+    initialPageSize,
     showSearch = true,
     showEstadoFilter = true,
     serverPagination = null,
@@ -148,12 +150,11 @@ export default function DataTable({
     const [estadoFilter, setEstadoFilter] = useState(initialEstadoFilter);
     const [venceHasta, setVenceHasta] = useState("");
     const [showInactive, setShowInactive] = useState(initialShowInactive);
-    const [localPageSize, setLocalPageSize] = useState(initialPageSize);
+    const comoTarjetas = layout === "cards";
+    const [localPageSize, setLocalPageSize] = useState(initialPageSize ?? (comoTarjetas ? CARD_PAGE_SIZES[0] : 10));
     const [page, setPage] = useState({ number: 1, filtersKey: "" });
 
     const enServidor = !!serverPagination;
-    const comoTarjetas = layout === "cards";
-
     const hasEstadoColumn = !enServidor && showEstadoFilter && columns.some((c) => c.key === "estado");
     const hasVenceColumn = !enServidor && columns.some((c) => c.key === "vence");
     const hasInactiveRows = !enServidor && rows.some((r) => r.activo === false);
@@ -230,7 +231,7 @@ export default function DataTable({
     }
 
     const celda = compact ? "px-3 py-2.5" : "px-4 py-3";
-    const tamanos = [...new Set([...PAGE_SIZES, initialPageSize])].sort((a, b) => a - b);
+    const tamanos = comoTarjetas ? CARD_PAGE_SIZES : [...new Set([...PAGE_SIZES, initialPageSize ?? 10])].sort((a, b) => a - b);
     const hayBarra =
         (showSearch && !enServidor) || hasEstadoColumn || hasVenceColumn || toolbarContent ||
         (hasInactiveRows && showInactiveToggle && !hideInactiveToggle);
@@ -452,7 +453,7 @@ export default function DataTable({
                     pageSize={pageSize}
                     onPageChange={irAPagina}
                     onPageSizeChange={cambiarTamano}
-                    sizes={enServidor ? PAGE_SIZES : tamanos}
+                    sizes={enServidor && !comoTarjetas ? PAGE_SIZES : tamanos}
                     loading={loading}
                 />
             ) : showCount && (
