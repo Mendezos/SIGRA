@@ -414,3 +414,10 @@ FROM Rol r
 CROSS APPLY (SELECT TOP 1 PasswordHash FROM Usuario WHERE Correo = 'kimberly.sanchez@radifaxcr.com') v
 WHERE r.Nombre COLLATE Latin1_General_CI_AI = N'Recepcionista'
   AND NOT EXISTS (SELECT 1 FROM Usuario ex WHERE ex.Correo = 'recepcion@radifaxcr.com');
+
+-- Tomás Díaz (segundo técnico) quedó con una contraseña de relleno que no permite iniciar sesión. Para poder
+-- demostrar el flujo de tickets con dos técnicos usa la misma contraseña que Ricardo Infante: RadifaxCR2026
+UPDATE t SET t.PasswordHash = r.PasswordHash, t.IntentosFallidos = 0
+FROM Usuario t
+CROSS APPLY (SELECT TOP 1 PasswordHash FROM Usuario WHERE Correo = 'ricardo.infante@radifaxcr.com') r
+WHERE t.Correo = 'tomas.diaz@radifaxcr.com' AND t.PasswordHash LIKE '$2a$11$PLACE%';
