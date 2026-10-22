@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, RadioTower } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -93,6 +93,7 @@ export default function FichaRepetidoraFormModal({ repetidora, onClose, onSaved 
         <Modal
             open
             onClose={onClose}
+            icon={RadioTower}
             title={edicion ? "Editar ficha técnica de la repetidora" : "Registrar ficha técnica de repetidora"}
             subtitle="Características técnicas y lugar de instalación de la repetidora asignada a un contrato."
             width="max-w-2xl"

@@ -94,7 +94,7 @@ export function SubTabs({ tabs, active, onSelect }) {
 export function FieldLabel({ label, children }) {
     return (
         <label className="block">
-            <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>
+            <span className="block text-[11px] uppercase tracking-wide mb-1" style={{ color: COLORS.muted, fontWeight: 600 }}>
                 {label}
             </span>
             {children}

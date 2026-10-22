@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Ticket } from "lucide-react";
 import Modal from "../Modal";
 import ConfirmModal from "../ConfirmModal";
 import { Button, FieldLabel, Notice } from "../ui";
@@ -48,7 +48,7 @@ export default function EntradaTicketModal({ boleta, soloAccesorios = false, onC
     }
     const clase = (value, obligatorio = true) => `${inputClass} w-full ${intento && obligatorio && !String(value ?? "").trim() ? "!border-[#C0392B]" : ""}`;
     return (<>
-        <Modal open title={boleta ? `Editar boleta ${boleta.numeroBoleta}` : "Registrar boleta de entrada"} subtitle="Una visita puede incluir varios equipos del mismo cliente." onClose={() => { if (!guardando) { if (confirmacion) setConfirmacion(null); else onClose(); } }} width="max-w-4xl"
+        <Modal open icon={Ticket} title={boleta ? `Editar boleta ${boleta.numeroBoleta}` : "Registrar boleta de entrada"} subtitle="Una visita puede incluir varios equipos del mismo cliente." onClose={() => { if (!guardando) { if (confirmacion) setConfirmacion(null); else onClose(); } }} width="max-w-4xl"
             footer={<><Button variant="ghost" disabled={guardando} onClick={onClose}>Cancelar</Button><Button variant="primary" type="submit" form="entrada-ticket" disabled={guardando}>{guardando ? "Guardando..." : boleta ? "Guardar cambios" : "Registrar boleta"}</Button></>}>
             {error && <Notice tone="error">{error}</Notice>}
             <form id="entrada-ticket" onSubmit={enviar} onInvalid={e => { setIntento(true); setError(e.target.validity.valueMissing ? "Debe completar los campos obligatorios para registrar la boleta" : e.target.type === "tel" ? "El teléfono debe tener 8 dígitos; podés incluir el prefijo +506." : "Revisá el formato de los datos ingresados."); }} className="space-y-6">

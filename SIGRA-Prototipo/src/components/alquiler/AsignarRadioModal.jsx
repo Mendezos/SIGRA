@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Radio } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { inputClass, inputStyle } from "../uiTheme";
@@ -49,6 +50,7 @@ export default function AsignarRadioModal({ idContratoInicial, onClose, onSaved 
         <Modal
             open
             onClose={onClose}
+            icon={Radio}
             title="Asignar radio a un contrato"
             subtitle="Se crea la ficha del radio vinculada al contrato y el equipo pasa a Alquilado."
             width="max-w-lg"

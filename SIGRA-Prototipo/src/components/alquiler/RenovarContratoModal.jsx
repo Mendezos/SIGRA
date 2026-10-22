@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, RefreshCw } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -69,6 +69,7 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
         <Modal
             open
             onClose={onClose}
+            icon={RefreshCw}
             title={`Renovar contrato ${api.codigoContrato(contrato.idContrato)}`}
             subtitle={`${contrato.empresa} · vence el ${fechaCorta(contrato.fechaVencimiento)} · ${colones(contrato.montoMensual)} al mes`}
             width="max-w-2xl"

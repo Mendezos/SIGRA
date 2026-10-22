@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Wrench } from "lucide-react";
 import Modal from "../Modal";
 import ConfirmModal from "../ConfirmModal";
 import { Button, FieldLabel, Notice } from "../ui";
@@ -35,7 +36,7 @@ export default function TrabajoTicketModal({ boleta, onClose, onSaved }) {
         return <FieldLabel label={label}><textarea className={inputClass + " w-full"} style={inputStyle} rows={3} maxLength={5000} value={trabajo[key] ?? ""} required={required} disabled={guardando || facturada} onChange={e => campo(key, e.target.value)} /></FieldLabel>;
     }
     return (<>
-        <Modal open title={`Trabajo técnico - boleta ${boleta.numeroBoleta}`} subtitle="Guardá avances como borrador o confirmá el cierre definitivo." onClose={() => { if (!guardando) { if (confirmar) setConfirmar(null); else onClose(); } }} width="max-w-3xl"
+        <Modal open icon={Wrench} title={`Trabajo técnico - boleta ${boleta.numeroBoleta}`} subtitle="Guardá avances como borrador o confirmá el cierre definitivo." onClose={() => { if (!guardando) { if (confirmar) setConfirmar(null); else onClose(); } }} width="max-w-3xl"
             footer={<><Button variant="ghost" disabled={guardando} onClick={onClose}>Cancelar</Button>{!facturada && <Button disabled={guardando} onClick={() => guardar("borrador")}>Guardar borrador</Button>}<Button variant="primary" disabled={guardando} type="submit" form="trabajo-ticket">{guardando ? "Guardando..." : "Cerrar boleta"}</Button></>}>
             {error && <Notice tone="error">{error}</Notice>}
             {facturada && <Notice>La factura está confirmada. Los datos están protegidos; podés completar el cierre.</Notice>}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X, Package } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -151,6 +151,7 @@ export default function EquipoFormModal({ open, onClose, onSaved }) {
         <Modal
             open={open}
             onClose={onClose}
+            icon={Package}
             title="Registrar equipo"
             subtitle="Se crea la ficha individual del equipo con estado inicial Disponible."
             width="max-w-3xl"

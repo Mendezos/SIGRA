@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, ClipboardCheck } from "lucide-react";
 import Modal from "../Modal";
 import { Button, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -58,6 +58,7 @@ export default function ChecklistInstalacionModal({ repetidora, canEditar, onClo
         <Modal
             open
             onClose={onClose}
+            icon={ClipboardCheck}
             title="Checklist previo a la instalación"
             subtitle={`${repetidora.marca} ${repetidora.modelo} · serie ${repetidora.numeroSerie}`}
             width="max-w-2xl"

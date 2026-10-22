@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Package } from "lucide-react";
 import Modal from "../Modal";
 import { Button, Notice } from "../ui";
 import { ApiError } from "../../services/apiClient";
@@ -42,6 +43,7 @@ export default function AccesoriosContratoModal({ detalle, onClose, onSaved }) {
         <Modal
             open
             onClose={onClose}
+            icon={Package}
             title="Accesorios entregados"
             subtitle={`Contrato ${api.codigoContrato(contrato.idContrato)} · ${contrato.empresa}`}
             width="max-w-2xl"

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Antenna } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -155,6 +156,7 @@ export default function SolicitudFormModal({ user, renovacionDe, onClose, onSave
         <Modal
             open
             onClose={onClose}
+            icon={Antenna}
             title={renovacionDe ? `Renovar frecuencia ${api.codigoSolicitud(renovacionDe.idSolicitud)}` : "Nueva solicitud de frecuencia"}
             subtitle={
                 renovacionDe

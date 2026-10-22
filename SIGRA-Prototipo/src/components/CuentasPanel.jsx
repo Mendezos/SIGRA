@@ -67,14 +67,14 @@ function opcionDeLista(valor, opciones) {
 }
 
 const campos = [
-    { key: "nombre", label: "Nombre completo", required: true, maxLength: 150 },
+    { key: "nombre", label: "Nombre completo", required: true, maxLength: 150, section: "Datos personales" },
     { key: "correo", label: "Correo corporativo", type: "email", required: true, maxLength: 150 },
     { key: "fechaNacimiento", label: "Fecha de nacimiento", type: "date", required: true, max: hoy() },
     { key: "telefono", label: "Teléfono", type: "tel", required: true, maxLength: 20 },
     { key: "direccion", label: "Dirección", type: "textarea", required: true, maxLength: 300 },
-    { key: "estadoCivil", label: "Estado civil", type: "select", options: ESTADOS_CIVILES, required: true },
-    { key: "gradoAcademico", label: "Grado académico", type: "select", options: GRADOS_ACADEMICOS, required: true },
-    { key: "salario", label: "Salario (₡)", type: "number", min: 0, step: "0.01", required: true },
+    { key: "estadoCivil", label: "Estado civil", type: "select", options: ESTADOS_CIVILES, required: true, icon: Heart },
+    { key: "gradoAcademico", label: "Grado académico", type: "select", options: GRADOS_ACADEMICOS, required: true, icon: GraduationCap },
+    { key: "salario", label: "Salario (₡)", type: "number", min: 0, step: "0.01", required: true, section: "Datos laborales" },
 ];
 
 const columnasAuditoria = [
@@ -618,9 +618,9 @@ export default function CuentasPanel({ user, onChanged }) {
     };
 
     const camposFormulario = modo === "crear" ? [
-        { key: "cedula", label: "Cédula", required: true, maxLength: 20 },
+        { key: "cedula", label: "Cédula", required: true, maxLength: 20, section: "Datos personales" },
         ...campos,
-        rolField,
+        { ...rolField, section: "Cuenta y acceso" },
         {
             key: "estado", label: "Estado inicial", type: "select",
             required: true, options: ["Activo", "Inactivo"],

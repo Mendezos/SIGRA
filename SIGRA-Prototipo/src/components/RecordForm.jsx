@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import {
+    Calendar, Wallet, IdCard, Mail, MapPin, Phone, ShieldCheck, UserRound, Hash, FileText, Tag, Activity, KeyRound,
+} from "lucide-react";
 import Modal from "./Modal";
+import { inputClass as claseCampo, inputStyle as estiloCampo } from "./uiTheme";
 import { EQUIPMENT_MODELS } from "../data/modules";
 
 const COLORS = {
@@ -14,7 +18,28 @@ const COLORS = {
 };
 
 function inputClass() {
-    return "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none transition-shadow focus:border-[#5EB453] focus:shadow-[0_0_0_3px_#EAF6E8] disabled:bg-[#F7F7F7] disabled:text-[#9C9C9C]";
+    return claseCampo;
+}
+
+// Ícono sugerido para cada campo según su tipo o su nombre; un campo puede fijarlo con la propiedad icon.
+function iconoDeCampo(f) {
+    if (f.icon === null) return null;
+    if (f.icon) return f.icon;
+    const clave = `${f.key} ${f.label ?? ""}`.toLowerCase();
+    if (f.type === "email" || /correo|email/.test(clave)) return Mail;
+    if (f.type === "tel" || /tel[eé]fono|celular/.test(clave)) return Phone;
+    if (f.type === "date" || /fecha/.test(clave)) return Calendar;
+    if (f.type === "password" || /contrase/.test(clave)) return KeyRound;
+    if (/c[eé]dula/.test(clave)) return IdCard;
+    if (/direcci|ubicaci|zona/.test(clave)) return MapPin;
+    if (/salario|monto|costo|precio/.test(clave)) return Wallet;
+    if (/\brol\b/.test(clave)) return ShieldCheck;
+    if (/estado/.test(clave)) return Activity;
+    if (/nombre|contacto|vendedor|responsable/.test(clave)) return UserRound;
+    if (f.type === "textarea" || /motivo|descripci|observ|nota/.test(clave)) return FileText;
+    if (f.type === "number" || /cantidad|serie|n[uú]mero/.test(clave)) return Hash;
+    if (f.type === "select") return Tag;
+    return null;
 }
 
 function parseSummary(summary) {
@@ -137,8 +162,8 @@ function EquipmentModal({ open, initialSummary, onClose, onSave }) {
                         <div className="grid grid-cols-2 gap-3 mb-3">
                             <label className="block">
                                 <span
-                                    className="block text-xs mb-1.5"
-                                    style={{ color: COLORS.charcoal }}
+                                    className="block text-[11px] uppercase tracking-wide mb-1"
+                                    style={{ color: COLORS.muted, fontWeight: 600 }}
                                 >
                                     Modelo
                                 </span>
@@ -148,10 +173,7 @@ function EquipmentModal({ open, initialSummary, onClose, onSave }) {
                                         updateLine(line.key, { modelo: e.target.value })
                                     }
                                     className={inputClass()}
-                                    style={{
-                                        border: `1px solid ${COLORS.border}`,
-                                        color: COLORS.charcoal,
-                                    }}
+                                    style={estiloCampo}
                                 >
                                     {EQUIPMENT_MODELS.map((m) => (
                                         <option key={m.modelo} value={m.modelo}>
@@ -163,8 +185,8 @@ function EquipmentModal({ open, initialSummary, onClose, onSave }) {
 
                             <label className="block">
                                 <span
-                                    className="block text-xs mb-1.5"
-                                    style={{ color: COLORS.charcoal }}
+                                    className="block text-[11px] uppercase tracking-wide mb-1"
+                                    style={{ color: COLORS.muted, fontWeight: 600 }}
                                 >
                                     Cantidad
                                 </span>
@@ -176,10 +198,7 @@ function EquipmentModal({ open, initialSummary, onClose, onSave }) {
                                         setCantidad(line.key, e.target.value)
                                     }
                                     className={inputClass()}
-                                    style={{
-                                        border: `1px solid ${COLORS.border}`,
-                                        color: COLORS.charcoal,
-                                    }}
+                                    style={estiloCampo}
                                 />
                             </label>
                         </div>
@@ -195,10 +214,7 @@ function EquipmentModal({ open, initialSummary, onClose, onSave }) {
                                         }
                                         placeholder={`Serie del equipo ${i + 1}`}
                                         className={inputClass()}
-                                        style={{
-                                            border: `1px solid ${COLORS.border}`,
-                                            color: COLORS.charcoal,
-                                        }}
+                                        style={estiloCampo}
                                     />
                                 ))}
                             </div>
@@ -221,10 +237,7 @@ function EquipmentModal({ open, initialSummary, onClose, onSave }) {
                     type="button"
                     onClick={addLine}
                     className="self-start px-3.5 py-2 rounded-lg text-xs"
-                    style={{
-                        border: `1px solid ${COLORS.border}`,
-                        color: COLORS.charcoal,
-                    }}
+                    style={estiloCampo}
                 >
                     + Agregar otro modelo
                 </button>
@@ -274,10 +287,7 @@ function EquipmentField({ value, onChange }) {
                 type="button"
                 onClick={() => setOpen(true)}
                 className="px-3.5 py-2 rounded-lg text-xs"
-                style={{
-                    border: `1px solid ${COLORS.border}`,
-                    color: COLORS.charcoal,
-                }}
+                style={estiloCampo}
             >
                 Gestionar equipos incluidos
             </button>
@@ -362,103 +372,110 @@ export default function RecordForm({
     return (
         <form onSubmit={handleSubmit}>
             <fieldset disabled={disabled}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    {fields.map((f) => (
-                        <label
-                            key={f.key}
-                            className={
-                                f.type === "textarea" ||
-                                f.type === "equipment" ||
-                                f.type === "multiselect"
-                                    ? "sm:col-span-2 block"
-                                    : "block"
-                            }
-                        >
-                            <span
-                                className="block text-xs mb-1.5"
-                                style={{ color: COLORS.charcoal }}
-                            >
-                                {f.label}
-                                {f.required && (
-                                    <span style={{ color: COLORS.red }}> *</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 mb-6">
+                    {fields.map((f, indice) => {
+                        const Icono = iconoDeCampo(f);
+                        const ancho = f.type === "textarea" || f.type === "equipment" || f.type === "multiselect";
+                        const nuevaSeccion = f.section && f.section !== fields[indice - 1]?.section;
+                        const conIcono = Icono && !["equipment", "multiselect"].includes(f.type);
+
+                        return (
+                            <Fragment key={f.key}>
+                                {nuevaSeccion && (
+                                    <h3
+                                        className="sm:col-span-2 flex items-center gap-2 text-xs uppercase tracking-wide -mb-1"
+                                        style={{ color: COLORS.greenDark, fontWeight: 600 }}
+                                    >
+                                        <span className="inline-block w-1 h-3.5 rounded-full" style={{ backgroundColor: COLORS.green }} />
+                                        {f.section}
+                                    </h3>
                                 )}
-                            </span>
+                                <label className={ancho ? "sm:col-span-2 block" : "block"}>
+                                    <span
+                                        className="block text-[11px] uppercase tracking-wide mb-1"
+                                        style={{ color: COLORS.muted, fontWeight: 600 }}
+                                    >
+                                        {f.label}
+                                        {f.required && <span style={{ color: COLORS.red }}> *</span>}
+                                    </span>
 
-                            {f.type === "select" ? (
-                                <select
-                                    value={values[f.key]}
-                                    onChange={(e) => update(f.key, e.target.value)}
-                                    required={f.required}
-                                    className={inputClass()}
-                                    style={{
-                                        border: `1px solid ${COLORS.border}`,
-                                        color: COLORS.charcoal,
-                                    }}
-                                >
-                                    <option value="" disabled>
-                                        Seleccionar...
-                                    </option>
-                                    {f.options.map((option) => {
-                                        const value = typeof option === "object"
-                                            ? option.value
-                                            : option;
-                                        const label = typeof option === "object"
-                                            ? option.label
-                                            : option;
-
-                                        return (
-                                            <option key={value} value={value}>
-                                                {label}
+                                    <span className="relative block">
+                                        {conIcono && (
+                                            <Icono
+                                                size={16}
+                                                className={`absolute left-3 pointer-events-none ${f.type === "textarea" ? "top-3.5" : "top-1/2 -translate-y-1/2"}`}
+                                                style={{ color: COLORS.greenDark }}
+                                            />
+                                        )}
+                                    {f.type === "select" ? (
+                                        <select
+                                            value={values[f.key]}
+                                            onChange={(e) => update(f.key, e.target.value)}
+                                            required={f.required}
+                                            className={inputClass()}
+                                            style={conIcono ? { ...estiloCampo, paddingLeft: 38 } : estiloCampo}
+                                        >
+                                            <option value="" disabled>
+                                                Seleccionar...
                                             </option>
-                                        );
-                                    })}
-                                </select>
-                            ) : f.type === "textarea" ? (
-                                <textarea
-                                    value={values[f.key]}
-                                    onChange={(e) => update(f.key, e.target.value)}
-                                    required={f.required}
-                                    maxLength={f.maxLength}
-                                    rows={3}
-                                    className={inputClass()}
-                                    style={{
-                                        border: `1px solid ${COLORS.border}`,
-                                        color: COLORS.charcoal,
-                                    }}
-                                />
-                            ) : f.type === "equipment" ? (
-                                <EquipmentField
-                                    value={values[f.key]}
-                                    onChange={(v) => update(f.key, v)}
-                                />
-                            ) : f.type === "multiselect" ? (
-                                <MultiSelectField
-                                    options={f.options}
-                                    value={values[f.key]}
-                                    onChange={(v) => update(f.key, v)}
-                                />
-                            ) : (
-                                <input
-                                    type={f.type || "text"}
-                                    value={values[f.key]}
-                                    onChange={(e) => update(f.key, e.target.value)}
-                                    required={f.required}
-                                    min={f.min}
-                                    max={f.max}
-                                    step={f.step}
-                                    maxLength={f.maxLength}
-                                    className={inputClass()}
-                                    style={{
-                                        border: `1px solid ${COLORS.border}`,
-                                        color: COLORS.charcoal,
-                                    }}
-                                />
-                            )}
-                        </label>
-                    ))}
+                                            {f.options.map((option) => {
+                                                const value = typeof option === "object"
+                                                    ? option.value
+                                                    : option;
+                                                const label = typeof option === "object"
+                                                    ? option.label
+                                                    : option;
+
+                                                return (
+                                                    <option key={value} value={value}>
+                                                        {label}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    ) : f.type === "textarea" ? (
+                                        <textarea
+                                            value={values[f.key]}
+                                            onChange={(e) => update(f.key, e.target.value)}
+                                            required={f.required}
+                                            maxLength={f.maxLength}
+                                            rows={3}
+                                            className={inputClass()}
+                                            style={conIcono ? { ...estiloCampo, paddingLeft: 38 } : estiloCampo}
+                                        />
+                                    ) : f.type === "equipment" ? (
+                                        <EquipmentField
+                                            value={values[f.key]}
+                                            onChange={(v) => update(f.key, v)}
+                                        />
+                                    ) : f.type === "multiselect" ? (
+                                        <MultiSelectField
+                                            options={f.options}
+                                            value={values[f.key]}
+                                            onChange={(v) => update(f.key, v)}
+                                        />
+                                    ) : (
+                                        <input
+                                            type={f.type || "text"}
+                                            value={values[f.key]}
+                                            onChange={(e) => update(f.key, e.target.value)}
+                                            required={f.required}
+                                            min={f.min}
+                                            max={f.max}
+                                            step={f.step}
+                                            maxLength={f.maxLength}
+                                            className={inputClass()}
+                                            style={conIcono ? { ...estiloCampo, paddingLeft: 38 } : estiloCampo}
+                                        />
+                                    )}
+                                    </span>
+                                </label>
+                            </Fragment>
+                        );
+                    })}
                 </div>
 
-                <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center justify-end gap-3 pt-4" style={{ borderTop: `1px solid ${COLORS.border}` }}>
                     <button
                         type="button"
                         onClick={onCancel}

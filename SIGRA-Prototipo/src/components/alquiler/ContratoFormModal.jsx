@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, FileText } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -110,6 +110,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
         <Modal
             open
             onClose={onClose}
+            icon={FileText}
             title="Registrar contrato de alquiler"
             subtitle="Los equipos seleccionados pasan a estado Alquilado en el inventario."
             width="max-w-3xl"

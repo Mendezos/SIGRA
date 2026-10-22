@@ -10,9 +10,11 @@ export const COLORS = {
     white: "#FFFFFF",
 };
 
-export const inputClass = "w-full px-3.5 py-2.5 rounded-lg text-sm bg-white outline-none transition-shadow focus:shadow-[0_0_0_3px_#EAF6E8] disabled:bg-[#F7F7F7] disabled:text-[#9C9C9C]";
+export const inputClass = "w-full px-3.5 py-2.5 rounded-t-lg text-sm outline-none transition-shadow focus:shadow-[0_3px_0_0_#5EB453] disabled:opacity-60 disabled:cursor-not-allowed";
 
 export const inputStyle = {
-    border: `1px solid ${COLORS.border}`,
+    border: "none",
+    borderBottom: "2px solid #CFE3CB",
+    backgroundColor: "#F6FAF5",
     color: COLORS.charcoal,
 };

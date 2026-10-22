@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BadgeCheck } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
@@ -43,6 +44,7 @@ export default function OtorgamientoFormModal({ solicitud: s, onClose, onSaved }
         <Modal
             open
             onClose={onClose}
+            icon={BadgeCheck}
             title={`Registrar otorgamiento · ${api.codigoSolicitud(s.idSolicitud)}`}
             subtitle={`${s.empresa} · ${s.frecuencia} · repetidora ${s.numeroSerie}`}
             width="max-w-xl"

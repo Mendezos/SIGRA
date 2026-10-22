@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Ban } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { inputClass, inputStyle } from "../uiTheme";
@@ -28,6 +29,8 @@ export default function CancelarContratoModal({ detalle, onClose, onSaved }) {
         <Modal
             open
             onClose={onClose}
+            icon={Ban}
+            tone="danger"
             title={`Cancelar contrato ${api.codigoContrato(contrato.idContrato)}`}
             subtitle={contrato.empresa}
             width="max-w-lg"

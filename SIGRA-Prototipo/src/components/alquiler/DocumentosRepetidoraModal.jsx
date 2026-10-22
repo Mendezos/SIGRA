@@ -117,6 +117,7 @@ export default function DocumentosRepetidoraModal({ repetidora, canAdjuntar, onC
         <Modal
             open
             onClose={onClose}
+            icon={FileText}
             title="Documentos técnicos de la instalación"
             subtitle={`${repetidora.marca} ${repetidora.modelo} · serie ${repetidora.numeroSerie}`}
             width="max-w-3xl"
