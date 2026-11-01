@@ -198,6 +198,7 @@
     <Build Include="dbo\Stored Procedures\sp_Contacto_Reasignar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contacto_RecienteDeEmpresa.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contacto_VendedorPrevio.sql" />
+    <Build Include="dbo\Stored Procedures\sp_ContratoAccesorio_Aplicar.sql" />
     <Build Include="dbo\Stored Procedures\sp_ContratoAccesorio_Guardar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_Accesorios.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_AgregarEquipo.sql" />
@@ -232,6 +233,10 @@
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Existe.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Insertar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Catalogo.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Devolver.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Usar.sql" />
     <Build Include="dbo\Stored Procedures\sp_StockMinimo_Guardar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Stock_PorCategoria.sql" />
     <Build Include="dbo\Stored Procedures\sp_Stock_PorModelo.sql" />
@@ -273,6 +278,7 @@
     <Build Include="dbo\Tables\TicketEsperaRepuesto.sql" />
     <Build Include="dbo\Tables\TicketGestion.sql" />
     <Build Include="dbo\Tables\TicketInventarioEvento.sql" />
+    <Build Include="dbo\Tables\TicketRepuesto.sql" />
     <Build Include="dbo\Tables\UsuarioEspecialidad.sql" />
     <Build Include="dbo\Views\vw_TicketDetalle.sql" />
   </ItemGroup>

@@ -35,4 +35,8 @@ public interface ITicketsFlujo
     Task EnviarComprobanteAsync(int idTicket, EnviarComprobanteDto dto, int idUsuario);
     Task<ArchivoExportadoDto> ExportarHistorialAsync(FiltroHistorialTicketsDto filtro, string formato, int idUsuario);
     Task<ArchivoExportadoDto> ExportarGarantiasAsync(FiltroGarantiasDto filtro, string formato, int idUsuario);
+    Task<List<RepuestoTicketDto>> RepuestosUsadosAsync(int idTicket, int idUsuario);
+    Task<List<RepuestoDisponibleDto>> RepuestosDisponiblesAsync(int idUsuario);
+    Task<List<RepuestoTicketDto>> UsarRepuestoAsync(int idTicket, UsarRepuestoTicketDto dto, int idUsuario);
+    Task<List<RepuestoTicketDto>> DevolverRepuestoAsync(int idTicket, int idTicketRepuesto, int idUsuario);
 }

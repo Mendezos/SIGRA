@@ -8,6 +8,7 @@ import { inputClass, inputStyle } from "../uiTheme";
 import * as api from "../../services/ticketsService";
 import EntradaTicketModal from "./EntradaTicketModal";
 import TrabajoTicketModal from "./TrabajoTicketModal";
+import RepuestosUsados from "./RepuestosUsados";
 import { abierta, fecha, gestion, mensajeError, propio, recepcion, tecnico } from "./helpers";
 
 export default function DetalleTicketModal({ inicial, user, onClose, onChanged, onVerAuditoria }) {
@@ -77,6 +78,7 @@ export default function DetalleTicketModal({ inicial, user, onClose, onChanged, 
             {pestana === "equipos" && (
             <section className="mb-5"><h3 className="text-xs uppercase text-[#6E6E6E] mb-3">Equipos de esta visita</h3><div className="space-y-3">{boleta.equipos.map((e, i) => <div key={e.idTicketEquipo ?? i} className="border border-[#E3E3E3] rounded-lg p-3"><p className="font-medium text-sm">{e.marca} {e.modelo} · {e.numeroSerie}</p><p className="text-xs text-[#6E6E6E] mt-1">{e.tipo} · Accesorios: {e.accesorios.join(", ") || "Sin accesorios"}</p><p className="text-sm mt-2 whitespace-pre-wrap">{e.problema}</p>{e.cubiertoPorContrato && <p className="text-xs text-[#4CA23D] mt-2">Reparación cubierta por contrato</p>}</div>)}</div></section>
             )}
+            {pestana === "trabajo" && boleta.esReparacion && <div className="mb-5"><RepuestosUsados key={boleta.version} boleta={boleta} /></div>}
             {pestana === "trabajo" && boleta.trabajo && <DetailGrid title="Trabajo técnico" items={[{ label: "Etapa", value: boleta.esReparacion ? boleta.trabajo.etapa : boleta.trabajo.servicioRealizado }, { label: "Resolución", value: boleta.trabajo.resolucion }, { label: "Hallazgos", value: boleta.trabajo.hallazgos, wide: true }, { label: "Acciones realizadas", value: boleta.trabajo.acciones, wide: true }, { label: "Detalles del trabajo", value: boleta.trabajo.detallesTrabajo, wide: true }, { label: "Observaciones", value: boleta.trabajo.observaciones, wide: true }, { label: "Repuesto pendiente", value: boleta.trabajo.repuesto }, { label: "Factura", value: boleta.trabajo.numeroFactura }, { label: "Monto", value: boleta.trabajo.monto != null ? new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC" }).format(boleta.trabajo.monto) : null }, { label: "Justificación técnica", value: boleta.trabajo.justificacionTecnica, wide: true }, { label: "Proveedor", value: boleta.trabajo.proveedor }, { label: "Caso de garantía", value: boleta.trabajo.casoProveedor }]} />}
             {pestana === "historial" && <>
             <details open className="mb-4"><summary className="cursor-pointer text-sm font-medium">Historial de estados y asignaciones</summary><div className="mt-3 space-y-2">{boleta.estados.map((e, i) => <p key={`estado-${i}`} className="text-sm">{e.estado} · {e.usuario} · {fecha(e.fecha)}</p>)}{boleta.asignaciones.map((a, i) => <div key={`asignacion-${i}`} className="p-3 rounded-lg bg-[#FAFAFA] text-sm"><p>{a.tecnico} · {a.automatica ? "Asignación automática" : `Asignación por ${a.usuario}`} · {fecha(a.fecha)}</p><p className="text-xs text-[#6E6E6E] mt-1">{a.criterio}</p></div>)}</div></details>

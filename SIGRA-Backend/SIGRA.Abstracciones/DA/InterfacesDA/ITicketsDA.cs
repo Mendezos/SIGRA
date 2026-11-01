@@ -25,4 +25,8 @@ public interface ITicketsDA
     Task<List<AuditoriaTicketDto>> AuditoriaAsync(FiltroAuditoriaTicketsDto filtro);
     Task<List<GarantiaTicketDto>> GarantiasAsync(FiltroGarantiasDto filtro);
     Task AgregarSeguimientoAsync(long idGarantia, AgregarSeguimientoGarantiaDto dto, int idUsuario);
+    Task<List<RepuestoTicketDto>> RepuestosUsadosAsync(int idTicket);
+    Task<List<RepuestoDisponibleDto>> RepuestosDisponiblesAsync();
+    Task UsarRepuestoAsync(int idTicket, UsarRepuestoTicketDto dto, int idUsuario);
+    Task DevolverRepuestoAsync(int idTicket, int idTicketRepuesto);
 }

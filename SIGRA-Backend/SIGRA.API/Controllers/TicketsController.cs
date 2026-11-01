@@ -29,6 +29,10 @@ public class TicketsController(ITicketsFlujo flujo) : ControllerBase
     [HttpPost("{id:int}/iniciar")] public Task<TicketDetalleDto> Iniciar(int id, VersionTicketDto dto) => flujo.IniciarAsync(id, dto, Usuario);
     [HttpPost("{id:int}/cancelar")] public Task<TicketDetalleDto> Cancelar(int id, MotivoTicketDto dto) => flujo.CancelarAsync(id, dto, Usuario);
     [HttpPut("{id:int}/trabajo")] public Task<TicketDetalleDto> Trabajo(int id, GuardarTrabajoTicketDto dto) => flujo.GuardarTrabajoAsync(id, dto, Usuario);
+    [HttpGet("repuestos")] public Task<List<RepuestoDisponibleDto>> RepuestosDisponibles() => flujo.RepuestosDisponiblesAsync(Usuario);
+    [HttpGet("{id:int}/repuestos")] public Task<List<RepuestoTicketDto>> RepuestosUsados(int id) => flujo.RepuestosUsadosAsync(id, Usuario);
+    [HttpPost("{id:int}/repuestos")] public Task<List<RepuestoTicketDto>> UsarRepuesto(int id, UsarRepuestoTicketDto dto) => flujo.UsarRepuestoAsync(id, dto, Usuario);
+    [HttpDelete("{id:int}/repuestos/{idTicketRepuesto:int}")] public Task<List<RepuestoTicketDto>> DevolverRepuesto(int id, int idTicketRepuesto) => flujo.DevolverRepuestoAsync(id, idTicketRepuesto, Usuario);
     [HttpPost("{id:int}/derivar-reparacion")] public Task<TicketDetalleDto> Derivar(int id, VersionTicketDto dto) => flujo.DerivarReparacionAsync(id, dto, Usuario);
     [HttpPost("{id:int}/factura")] public Task<TicketDetalleDto> Factura(int id, ReferenciaFacturaDto dto) => flujo.RegistrarFacturaAsync(id, dto, Usuario);
     [HttpPost("{id:int}/cerrar")] public Task<TicketDetalleDto> Cerrar(int id, GuardarTrabajoTicketDto dto) => flujo.CerrarAsync(id, dto, Usuario);

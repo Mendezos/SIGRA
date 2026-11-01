@@ -202,6 +202,36 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
         return await Cambiar(actual, dto.Version, idUsuario, "Borrador", new { dto.Trabajo }, "Campos técnicos actualizados: hallazgos, acciones, etapa y borrador de cierre");
     }
 
+    // Repuestos usados en la reparación: solo el técnico asignado los registra mientras la boleta está en proceso,
+    // y cada uso sale de las existencias de bodega.
+    public async Task<List<RepuestoTicketDto>> RepuestosUsadosAsync(int idTicket, int idUsuario)
+    { await Actor(idUsuario); await Ticket(idTicket); return await da.RepuestosUsadosAsync(idTicket); }
+
+    public async Task<List<RepuestoDisponibleDto>> RepuestosDisponiblesAsync(int idUsuario)
+    { await Actor(idUsuario); return await da.RepuestosDisponiblesAsync(); }
+
+    private async Task ValidarUsoRepuestosAsync(int idTicket, int idUsuario)
+    {
+        var a = await Actor(idUsuario, "Edicion"); var actual = await Ticket(idTicket); ReglasTickets.Editable(actual); Responsable(a, actual);
+        if (actual.Estado != "En proceso") throw new ReglaNegocioException("Iniciá el trabajo antes de registrar los repuestos usados.");
+    }
+
+    public async Task<List<RepuestoTicketDto>> UsarRepuestoAsync(int idTicket, UsarRepuestoTicketDto dto, int idUsuario)
+    {
+        await ValidarUsoRepuestosAsync(idTicket, idUsuario);
+        if (dto.IdRepuesto < 1) throw new ReglaNegocioException("Seleccioná el repuesto que se usó.");
+        if (dto.Cantidad is < 1 or > 1000) throw new ReglaNegocioException("La cantidad de repuestos debe estar entre 1 y 1000.");
+        await da.UsarRepuestoAsync(idTicket, dto, idUsuario);
+        return await da.RepuestosUsadosAsync(idTicket);
+    }
+
+    public async Task<List<RepuestoTicketDto>> DevolverRepuestoAsync(int idTicket, int idTicketRepuesto, int idUsuario)
+    {
+        await ValidarUsoRepuestosAsync(idTicket, idUsuario);
+        await da.DevolverRepuestoAsync(idTicket, idTicketRepuesto);
+        return await da.RepuestosUsadosAsync(idTicket);
+    }
+
     public async Task<TicketDetalleDto> DerivarReparacionAsync(int idTicket, VersionTicketDto dto, int idUsuario)
     {
         var a = await Actor(idUsuario, "Edicion"); var actual = await Ticket(idTicket); ReglasTickets.Editable(actual); Responsable(a, actual);

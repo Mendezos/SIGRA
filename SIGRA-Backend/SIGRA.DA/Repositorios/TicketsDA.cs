@@ -136,6 +136,18 @@ public class TicketsDA(IConexionFactory conexionFactory) : ITicketsDA
     public async Task AgregarSeguimientoAsync(long idGarantia, AgregarSeguimientoGarantiaDto dto, int idUsuario) =>
         _ = await EscribirAsync("sp_Ticket_GarantiaSeguimiento", new { IdGarantia = idGarantia, IdUsuario = idUsuario, Estado = dto.Estado, Nota = dto.Nota });
 
+    public Task<List<RepuestoTicketDto>> RepuestosUsadosAsync(int idTicket) =>
+        ConsultarAsync<RepuestoTicketDto>("sp_TicketRepuesto_Listar", new { IdTicket = idTicket });
+
+    public Task<List<RepuestoDisponibleDto>> RepuestosDisponiblesAsync() =>
+        ConsultarAsync<RepuestoDisponibleDto>("sp_TicketRepuesto_Catalogo");
+
+    public async Task UsarRepuestoAsync(int idTicket, UsarRepuestoTicketDto dto, int idUsuario) =>
+        _ = await EscribirAsync("sp_TicketRepuesto_Usar", new { IdTicket = idTicket, dto.IdRepuesto, dto.Cantidad, IdUsuario = idUsuario });
+
+    public async Task DevolverRepuestoAsync(int idTicket, int idTicketRepuesto) =>
+        _ = await EscribirAsync("sp_TicketRepuesto_Devolver", new { IdTicket = idTicket, IdTicketRepuesto = idTicketRepuesto });
+
     private static TicketDetalleDto Completar(TicketFilaModel fila)
     {
         fila.Version = Convert.ToBase64String(fila.VersionBytes);
