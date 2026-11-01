@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Plus, X, FileText } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
-import { listarArticulos, obtenerFichaPorSerie } from "../../services/inventarioService";
+import { listarArticulos } from "../../services/inventarioService";
 import AccesoriosPicker from "./AccesoriosPicker";
+import SelectorEquipo from "./SelectorEquipo";
 import { aItemsApi, hoyISO } from "./helpers";
 
 export default function ContratoFormModal({ onClose, onSaved }) {
@@ -20,9 +21,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
     const [cubreReparaciones, setCubreReparaciones] = useState(false);
     const [catalogoAccesorios, setCatalogoAccesorios] = useState([]);
     const [accesorios, setAccesorios] = useState([]);
-    const [validandoSerie, setValidandoSerie] = useState(false);
     const [series, setSeries] = useState([]);
-    const [serieNueva, setSerieNueva] = useState("");
     const [error, setError] = useState("");
     const [errores, setErrores] = useState([]);
     const [guardando, setGuardando] = useState(false);
@@ -42,34 +41,11 @@ export default function ContratoFormModal({ onClose, onSaved }) {
         };
     }, []);
 
-    // Valida contra el inventario antes de agregar el equipo a la lista (INVE-006)
-    async function agregarSerie() {
-        const serie = serieNueva.trim();
-        if (!serie) return;
-        if (series.some((s) => s.toLowerCase() === serie.toLowerCase())) {
-            setError("Ese número de serie ya está en la lista del contrato.");
-            return;
-        }
-
+    // La lista desplegable solo ofrece equipos disponibles del inventario (INVE-006).
+    function agregarSerie(serie) {
+        if (!serie || series.some((s) => s.toLowerCase() === serie.toLowerCase())) return;
         setError("");
-        setValidandoSerie(true);
-        try {
-            const ficha = await obtenerFichaPorSerie(serie);
-            if (ficha.equipo.estado !== "Disponible") {
-                setError(`Este equipo no está disponible actualmente. Estado actual: ${ficha.equipo.estado}.`);
-                return;
-            }
-            if (ficha.equipo.manejaCantidad) {
-                setError("Este artículo se maneja por cantidad; agréguelo en la sección de accesorios.");
-                return;
-            }
-            setSeries((lista) => [...lista, ficha.equipo.numeroSerie]);
-            setSerieNueva("");
-        } catch {
-            setError("El número de serie ingresado no existe en el inventario.");
-        } finally {
-            setValidandoSerie(false);
-        }
+        setSeries((lista) => [...lista, serie]);
     }
 
     function detalleSerie(serie) {
@@ -82,9 +58,6 @@ export default function ContratoFormModal({ onClose, onSaved }) {
         setError("");
         setErrores([]);
 
-        // Si quedó una serie escrita sin agregar, se incluye en el contrato.
-        const todas = serieNueva.trim() ? [...series, serieNueva.trim()] : series;
-
         setGuardando(true);
         try {
             const detalle = await api.registrarContrato({
@@ -94,7 +67,7 @@ export default function ContratoFormModal({ onClose, onSaved }) {
                 montoMensual: monto === "" ? null : Number(monto),
                 condiciones: condiciones || null,
                 cubreReparaciones,
-                series: todas,
+                series,
                 accesorios: aItemsApi(accesorios),
             });
             onSaved(detalle);
@@ -169,27 +142,9 @@ export default function ContratoFormModal({ onClose, onSaved }) {
 
                 <div className="sm:col-span-2">
                     <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>
-                        Equipos del contrato (número de serie) *
+                        Equipos del contrato *
                     </span>
-                    <div className="flex gap-2">
-                        <input
-                            value={serieNueva}
-                            onChange={(e) => setSerieNueva(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregarSerie(); } }}
-                            list="lista-equipos-disponibles"
-                            placeholder="Escriba o elija un número de serie disponible"
-                            className={inputClass}
-                            style={inputStyle}
-                        />
-                        <datalist id="lista-equipos-disponibles">
-                            {disponibles.map((d) => (
-                                <option key={d.idEquipo} value={d.numeroSerie}>{d.marca} {d.modelo} · {d.categoria}</option>
-                            ))}
-                        </datalist>
-                        <Button className="flex items-center gap-1 shrink-0" disabled={validandoSerie} onClick={agregarSerie}>
-                            <Plus size={14} /> Agregar
-                        </Button>
-                    </div>
+                    <SelectorEquipo disponibles={disponibles} excluidas={series} onAgregar={agregarSerie} />
 
                     {series.length > 0 && (
                         <ul className="mt-3 flex flex-col gap-2">

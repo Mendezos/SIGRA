@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react";
-import { Plus, X, RefreshCw } from "lucide-react";
+import { X, RefreshCw } from "lucide-react";
 import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
+import SelectorEquipo from "./SelectorEquipo";
 import { colones, fechaCorta } from "./helpers";
 
 export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
     const { contrato, equipos } = detalle;
     const [disponibles, setDisponibles] = useState([]);
+    // La renovación debe terminar después del vencimiento actual y de hoy.
+    const hoy = new Date();
+    const vencimiento = new Date(contrato.fechaVencimiento);
+    const fechaMinima = vencimiento > hoy ? vencimiento : hoy;
+    const fechaMinimaISO = new Date(fechaMinima.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const [nuevaFecha, setNuevaFecha] = useState("");
     const [nuevoMonto, setNuevoMonto] = useState("");
     const [observacion, setObservacion] = useState("");
     const [retirar, setRetirar] = useState([]);
     const [series, setSeries] = useState([]);
-    const [serieNueva, setSerieNueva] = useState("");
     const [error, setError] = useState("");
     const [guardando, setGuardando] = useState(false);
 
@@ -33,16 +38,9 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
         setRetirar((lista) => (lista.includes(idEquipo) ? lista.filter((x) => x !== idEquipo) : [...lista, idEquipo]));
     }
 
-    function agregarSerie() {
-        const serie = serieNueva.trim();
-        if (!serie) return;
-        if (series.some((s) => s.toLowerCase() === serie.toLowerCase())) {
-            setError("Ese número de serie ya está en la lista.");
-            return;
-        }
-        setError("");
+    function agregarSerie(serie) {
+        if (!serie || series.some((s) => s.toLowerCase() === serie.toLowerCase())) return;
         setSeries((lista) => [...lista, serie]);
-        setSerieNueva("");
     }
 
     async function guardar(e) {
@@ -54,7 +52,7 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
                 nuevaFechaVencimiento: nuevaFecha || null,
                 nuevoMonto: nuevoMonto === "" ? null : Number(nuevoMonto),
                 observacion: observacion || null,
-                seriesAgregar: serieNueva.trim() ? [...series, serieNueva.trim()] : series,
+                seriesAgregar: series,
                 idsRetirar: retirar,
             });
             onSaved(nuevo);
@@ -85,8 +83,13 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
             {error && <Notice tone="error">{error}</Notice>}
 
             <form id="form-renovar" onSubmit={guardar} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2 rounded-lg px-4 py-3 text-sm flex flex-wrap gap-x-6 gap-y-1" style={{ backgroundColor: COLORS.greenTint, color: COLORS.charcoal }}>
+                    <span>Vencimiento actual: <strong>{fechaCorta(contrato.fechaVencimiento)}</strong></span>
+                    <span>Monto mensual actual: <strong>{colones(contrato.montoMensual)}</strong></span>
+                    <span style={{ color: COLORS.muted }}>La nueva fecha debe ser posterior a {fechaCorta(fechaMinima)}.</span>
+                </div>
                 <FieldLabel label="Nueva fecha de vencimiento *">
-                    <input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className={inputClass} style={inputStyle} />
+                    <input type="date" value={nuevaFecha} min={fechaMinimaISO} onChange={(e) => setNuevaFecha(e.target.value)} className={inputClass} style={inputStyle} />
                 </FieldLabel>
                 <FieldLabel label="Nuevo monto mensual (₡), si cambia">
                     <input type="number" min="0" step="0.01" value={nuevoMonto} onChange={(e) => setNuevoMonto(e.target.value)} placeholder={String(contrato.montoMensual)} className={inputClass} style={inputStyle} />
@@ -111,22 +114,8 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
                 </div>
 
                 <div className="sm:col-span-2">
-                    <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Equipos nuevos que se agregan (número de serie)</span>
-                    <div className="flex gap-2">
-                        <input
-                            value={serieNueva}
-                            onChange={(e) => setSerieNueva(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregarSerie(); } }}
-                            list="lista-equipos-renovacion"
-                            placeholder="Escriba o elija un número de serie disponible"
-                            className={inputClass}
-                            style={inputStyle}
-                        />
-                        <datalist id="lista-equipos-renovacion">
-                            {disponibles.map((d) => <option key={d.idEquipo} value={d.numeroSerie}>{d.marca} {d.modelo} · {d.categoria}</option>)}
-                        </datalist>
-                        <Button className="flex items-center gap-1 shrink-0" onClick={agregarSerie}><Plus size={14} /> Agregar</Button>
-                    </div>
+                    <span className="block text-xs mb-1.5" style={{ color: COLORS.charcoal }}>Equipos nuevos que se agregan</span>
+                    <SelectorEquipo disponibles={disponibles} excluidas={series} onAgregar={agregarSerie} />
                     {series.length > 0 && (
                         <ul className="mt-2 flex flex-wrap gap-2">
                             {series.map((s) => (

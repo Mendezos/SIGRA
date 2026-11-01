@@ -5,10 +5,14 @@ import { Button, FieldLabel, Notice } from "../ui";
 import { inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
+import SelectorEquipo from "./SelectorEquipo";
 import { hoyISO } from "./helpers";
+
+const CATEGORIAS_RADIO = ["Radio portátil", "Radio móvil"];
 
 export default function AsignarRadioModal({ idContratoInicial, onClose, onSaved }) {
     const [contratos, setContratos] = useState([]);
+    const [disponibles, setDisponibles] = useState([]);
     const [idContrato, setIdContrato] = useState(idContratoInicial ? String(idContratoInicial) : "");
     const [serie, setSerie] = useState("");
     const [fecha, setFecha] = useState(hoyISO());
@@ -18,9 +22,13 @@ export default function AsignarRadioModal({ idContratoInicial, onClose, onSaved 
 
     useEffect(() => {
         let activo = true;
-        api.listarContratos({ estado: "Activo" })
-            .then((lista) => activo && setContratos(lista))
-            .catch((e) => activo && setError(e.message ?? "No se pudieron cargar los contratos."));
+        Promise.all([api.listarContratos({ estado: "Activo" }), api.listarEquiposDisponibles()])
+            .then(([lista, equipos]) => {
+                if (!activo) return;
+                setContratos(lista);
+                setDisponibles(equipos);
+            })
+            .catch((e) => activo && setError(e.message ?? "No se pudieron cargar los contratos y equipos."));
         return () => {
             activo = false;
         };
@@ -88,9 +96,10 @@ export default function AsignarRadioModal({ idContratoInicial, onClose, onSaved 
                         ))}
                     </select>
                 </FieldLabel>
-                <FieldLabel label="Número de serie del radio *">
-                    <input value={serie} onChange={(e) => setSerie(e.target.value)} maxLength={50} className={inputClass} style={inputStyle} />
-                </FieldLabel>
+                <div>
+                    <span className="block text-[11px] uppercase tracking-wide mb-1" style={{ color: "#6E6E6E", fontWeight: 600 }}>Radio disponible *</span>
+                    <SelectorEquipo disponibles={disponibles} categoriasPermitidas={CATEGORIAS_RADIO} valor={serie} onCambiar={setSerie} />
+                </div>
                 <FieldLabel label="Fecha de asignación *">
                     <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={inputClass} style={inputStyle} />
                 </FieldLabel>

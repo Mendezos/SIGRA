@@ -16,6 +16,9 @@ public class InventarioFlujo : IInventarioFlujo
     };
 
     private static readonly string[] Propietarios = { "Radifax", "Cliente" };
+
+    // Un equipo que es del cliente solo entra a la empresa para revisarse: no se alquila ni se deja disponible.
+    public static readonly string[] EstadosEquipoDeCliente = { "En mantenimiento", "En reparación", "Dado de baja" };
     private static readonly string[] TiposEntrada = { "Compra", "Devolución de cliente", "Equipo reparado" };
     private static readonly string[] TiposSalida = { "Pérdida" };
 
@@ -160,6 +163,10 @@ public class InventarioFlujo : IInventarioFlujo
 
         if (equipo.Estado == "Dado de baja")
             throw new ReglaNegocioException("Un equipo dado de baja no puede cambiar de estado.");
+
+        if (equipo.Propietario == "Cliente" && !EstadosEquipoDeCliente.Contains(dto.Estado))
+            throw new ReglaNegocioException("Un equipo que pertenece a un cliente solo puede estar " +
+                "En mantenimiento, En reparación o Dado de baja.");
 
         if (equipo.Estado == dto.Estado)
             throw new ReglaNegocioException($"El equipo ya se encuentra en estado \"{dto.Estado}\".");

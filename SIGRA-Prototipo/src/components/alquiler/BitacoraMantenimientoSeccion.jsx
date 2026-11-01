@@ -44,7 +44,7 @@ export default function BitacoraMantenimientoSeccion({ numeroSerie }) {
                             </div>
                             <div className="min-w-0">
                                 <p className="text-sm" style={{ fontWeight: 600 }}>
-                                    {e.tipoServicio} · {e.codigoTicket}
+                                    {e.tipoServicio}
                                 </p>
                                 <p className="text-xs" style={{ color: COLORS.muted }}>
                                     {fechaHora(e.fecha)} · Técnico: {e.tecnico ?? "—"} · Resolución: {e.resolucion ?? "—"}

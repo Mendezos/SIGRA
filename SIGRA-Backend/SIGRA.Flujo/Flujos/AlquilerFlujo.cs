@@ -13,6 +13,7 @@ public class AlquilerFlujo : IAlquilerFlujo
     private const string EstadoPorVencer90 = "Por vencer (90 días)";
     private const string EstadoPorVencer30 = "Por vencer (30 días)";
     private const string MensajeEquipoNoDisponible = "El equipo seleccionado no se encuentra disponible en el inventario.";
+    private const string MensajeEquipoDeCliente = "pertenece a un cliente y no se puede alquilar.";
     private const string CategoriaRepetidora = "Repetidora";
     private const string ClasificacionAlquilada = "Alquilada por Radifax";
     private static readonly string[] Clasificaciones = { ClasificacionAlquilada, "Propia del cliente" };
@@ -208,6 +209,9 @@ public class AlquilerFlujo : IAlquilerFlujo
             if (equipo.Estado != "Disponible")
                 throw new ReglaNegocioException($"{MensajeEquipoNoDisponible.TrimEnd('.')} ({serie}: {equipo.Estado}).");
 
+            if (equipo.Propietario == "Cliente")
+                throw new ReglaNegocioException($"El equipo {serie} {MensajeEquipoDeCliente}");
+
             if (equipo.ManejaCantidad)
                 throw new ReglaNegocioException($"El equipo {serie} se maneja por cantidad; los accesorios se asocian al contrato por separado.");
 
@@ -276,6 +280,9 @@ public class AlquilerFlujo : IAlquilerFlujo
 
         if (equipo.Estado != "Disponible")
             throw new ReglaNegocioException($"{MensajeEquipoNoDisponible.TrimEnd('.')} (estado actual: {equipo.Estado}).");
+
+        if (equipo.Propietario == "Cliente")
+            throw new ReglaNegocioException($"El equipo {serie} {MensajeEquipoDeCliente}");
 
         var fecha = dto.FechaAsignacion!.Value.Date;
         if (fecha < contrato.FechaInicio.Date || fecha > contrato.FechaVencimiento.Date)
@@ -380,6 +387,9 @@ public class AlquilerFlujo : IAlquilerFlujo
 
             if (equipo.Estado != "Disponible")
                 throw new ReglaNegocioException($"{MensajeEquipoNoDisponible.TrimEnd('.')} ({serie}: {equipo.Estado}).");
+
+            if (equipo.Propietario == "Cliente")
+                throw new ReglaNegocioException($"El equipo {serie} {MensajeEquipoDeCliente}");
 
             if (equipo.ManejaCantidad)
                 throw new ReglaNegocioException($"El equipo {serie} se maneja por cantidad; los accesorios se asocian al contrato por separado.");

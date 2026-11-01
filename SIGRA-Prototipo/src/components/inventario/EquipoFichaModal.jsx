@@ -101,6 +101,7 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
     if (!ficha) return null;
     const { equipo, historial } = ficha;
     const dadoDeBaja = equipo.estado === "Dado de baja";
+    const deCliente = equipo.propietario === "Cliente";
     const esBaja = nuevoEstado === "Dado de baja";
 
     async function cambiarEstado() {
@@ -194,11 +195,16 @@ export default function EquipoFichaModal({ ficha, onClose, onChanged, canWrite }
                     <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>
                         Cambiar estado
                     </h3>
+                    {deCliente && (
+                        <p className="text-xs mb-3" style={{ color: COLORS.muted }}>
+                            Este equipo pertenece a un cliente: solo puede pasar a mantenimiento, reparación o baja, y no se puede alquilar.
+                        </p>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <FieldLabel label="Nuevo estado">
                             <select value={nuevoEstado} onChange={(e) => setNuevoEstado(e.target.value)} className={inputClass} style={inputStyle}>
                                 <option value="">Seleccionar...</option>
-                                {api.ESTADOS_EQUIPO.filter((e) => e !== equipo.estado).map((e) => (
+                                {(deCliente ? api.ESTADOS_EQUIPO_DE_CLIENTE : api.ESTADOS_EQUIPO).filter((e) => e !== equipo.estado).map((e) => (
                                     <option key={e} value={e}>{e}</option>
                                 ))}
                             </select>
