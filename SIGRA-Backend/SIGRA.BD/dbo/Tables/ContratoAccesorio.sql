@@ -3,6 +3,7 @@ CREATE TABLE [dbo].[ContratoAccesorio] (
     [IdContrato]          INT NOT NULL,
     [IdAccesorioModelo]   INT NOT NULL,
     [Cantidad]            INT NOT NULL,
+    [DescontadoDeStock]   BIT CONSTRAINT [DF_ContratoAccesorio_Descontado] DEFAULT ((0)) NOT NULL,
     CONSTRAINT [PK_ContratoAccesorio] PRIMARY KEY CLUSTERED ([IdContratoAccesorio] ASC),
     CONSTRAINT [CK_ContratoAccesorio_Cantidad] CHECK ([Cantidad]>(0)),
     CONSTRAINT [FK_ContratoAccesorio_Contrato] FOREIGN KEY ([IdContrato]) REFERENCES [dbo].[Contrato] ([IdContrato]),

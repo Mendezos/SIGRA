@@ -50,9 +50,7 @@ BEGIN
     SELECT @IdContrato, IdEquipo, @FechaInicio FROM @Equipos;
 
     IF @AccesoriosJson IS NOT NULL
-        INSERT INTO ContratoAccesorio (IdContrato, IdAccesorioModelo, Cantidad)
-        SELECT @IdContrato, j.IdAccesorioModelo, j.Cantidad
-        FROM OPENJSON(@AccesoriosJson) WITH (IdAccesorioModelo INT '$.idAccesorioModelo', Cantidad INT '$.cantidad') j;
+        EXEC sp_ContratoAccesorio_Aplicar @IdContrato = @IdContrato, @ItemsJson = @AccesoriosJson;
 
     INSERT INTO MovimientoInventario (IdEquipo, IdUsuario, TipoMovimiento, EstadoAnterior, EstadoNuevo, Observacion)
     SELECT IdEquipo, @IdUsuario, N'Asignación a contrato', 'Disponible', 'Alquilado',

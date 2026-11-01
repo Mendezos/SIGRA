@@ -19,13 +19,22 @@ BEGIN
     UPDATE Contrato SET Estado = 'Cancelado', MotivoCancelacion = @Motivo, FechaCancelacion = @Hoy
     WHERE IdContrato = @IdContrato;
 
-    UPDATE ContratoEquipo SET FechaDevolucion = @Hoy
+    -- Si el contrato aún no había empezado, la devolución queda en la fecha de asignación (no puede ser anterior).
+    UPDATE ContratoEquipo SET FechaDevolucion = CASE WHEN FechaAsignacion > @Hoy THEN FechaAsignacion ELSE @Hoy END
     WHERE IdContrato = @IdContrato AND FechaDevolucion IS NULL;
 
     UPDATE e SET Estado = 'Disponible'
     FROM Equipo e
     INNER JOIN @Equipos q ON q.IdEquipo = e.IdEquipo
     WHERE e.Estado = 'Alquilado';
+
+    -- Los accesorios que se habían descontado de bodega regresan al stock.
+    UPDATE a SET a.Cantidad = a.Cantidad + ca.Cantidad
+    FROM AccesorioModelo a
+    INNER JOIN ContratoAccesorio ca ON ca.IdAccesorioModelo = a.IdAccesorioModelo
+    WHERE ca.IdContrato = @IdContrato AND ca.DescontadoDeStock = 1;
+
+    UPDATE ContratoAccesorio SET DescontadoDeStock = 0 WHERE IdContrato = @IdContrato;
 
     INSERT INTO MovimientoInventario (IdEquipo, IdUsuario, TipoMovimiento, EstadoAnterior, EstadoNuevo, Observacion)
     SELECT IdEquipo, @IdUsuario, N'Devolución de cliente', 'Alquilado', 'Disponible', N'Cancelación del contrato ' + @Etiqueta
