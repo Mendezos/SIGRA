@@ -54,7 +54,7 @@ BEGIN
         OUTER APPLY (
             SELECT TOP (1) c.IdContrato, c.IdCliente,
                 CAST(CASE WHEN c.CubreReparaciones = 1 AND c.Estado IN ('Activo','Renovado')
-                       AND c.FechaInicio <= CONVERT(DATE,DATEADD(HOUR,-6,SYSUTCDATETIME()))
+                       AND (c.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,SYSUTCDATETIME())) OR c.IdContratoOrigen IS NOT NULL)
                        AND c.FechaVencimiento >= CONVERT(DATE,DATEADD(HOUR,-6,SYSUTCDATETIME())) THEN 1 ELSE 0 END AS BIT) AS CubreReparaciones
             FROM ContratoEquipo ce INNER JOIN Contrato c ON c.IdContrato = ce.IdContrato
             WHERE ce.IdEquipo = e.IdEquipo AND ce.FechaDevolucion IS NULL AND c.Estado IN ('Activo','Renovado','Vencido')

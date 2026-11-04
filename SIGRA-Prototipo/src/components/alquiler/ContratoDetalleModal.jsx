@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
-import { Building2, CalendarClock, CalendarPlus, CalendarX, FileText, Radio, ShieldCheck, UserRound, Wallet } from "lucide-react";
+import { Building2, CalendarClock, CalendarPlus, CalendarX, Download, FileText, MapPin, Phone, Radio, ShieldCheck, UserRound, Wallet } from "lucide-react";
 import { Button, DetailGrid, Notice } from "../ui";
 import { COLORS } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
 import AsignarRadioModal from "./AsignarRadioModal";
 import AccesoriosContratoModal from "./AccesoriosContratoModal";
+import ActivarContratoModal from "./ActivarContratoModal";
+import ContratoFormModal from "./ContratoFormModal";
 import CancelarContratoModal from "./CancelarContratoModal";
 import RenovarContratoModal from "./RenovarContratoModal";
-import { colones, fechaCorta, fechaHora } from "./helpers";
+import { dinero, fechaCorta, fechaHora } from "./helpers";
 
 const ETIQUETAS_ACCION = {
-    CONTRATO_REGISTRADO: "Contrato registrado",
+    CONTRATO_REGISTRADO: "Contrato registrado (borrador)",
+    CONTRATO_EDITADO: "Borrador editado",
+    CONTRATO_ACTIVADO: "Contrato activado con documento firmado",
+    RENOVACION_REGISTRADA: "Borrador de renovación creado",
     CONTRATO_RENOVADO: "Contrato renovado",
     CONTRATO_CANCELADO: "Contrato cancelado",
     CONTRATO_ALERTA: "Alerta de vencimiento enviada",
@@ -24,31 +29,53 @@ const ETIQUETAS_ACCION = {
 };
 
 const ESTADOS_RENOVABLES = ["Por vencer (90 días)", "Por vencer (30 días)", "Vencido"];
-const ESTADOS_NO_CANCELABLES = ["Vencido", "Cancelado"];
+const ESTADOS_CANCELABLES = ["Activo", "Por vencer (90 días)", "Por vencer (30 días)"];
 
 function Resumen({ detalle }) {
     const { contrato, equipos } = detalle;
     const cancelado = contrato.estado === "Cancelado";
 
     return (
-        <DetailGrid
-            items={[
-                { icon: Building2, label: "Empresa cliente", value: contrato.empresa },
-                { icon: UserRound, label: "Vendedor", value: contrato.vendedor },
-                { icon: CalendarPlus, label: "Fecha de inicio", value: fechaCorta(contrato.fechaInicio) },
-                { icon: CalendarClock, label: "Fecha de vencimiento", value: fechaCorta(contrato.fechaVencimiento) },
-                { icon: Wallet, label: "Monto mensual", value: colones(contrato.montoMensual) },
-                { icon: ShieldCheck, label: "Cobertura de reparaciones", value: contrato.cubreReparaciones ? "Incluida" : "No incluida" },
-                { icon: Radio, label: "Equipos asociados", value: String(equipos.length) },
-                { icon: FileText, label: "Condiciones", value: contrato.condiciones, wide: true },
-                ...(cancelado
-                    ? [
-                          { icon: CalendarX, label: "Fecha de cancelación", value: fechaCorta(contrato.fechaCancelacion) },
-                          { icon: FileText, label: "Motivo de la cancelación", value: contrato.motivoCancelacion, wide: true },
-                      ]
-                    : []),
-            ]}
-        />
+        <>
+            <DetailGrid
+                title="Cliente"
+                items={[
+                    { icon: Building2, label: "Empresa cliente", value: contrato.empresa },
+                    { icon: UserRound, label: "Contacto", value: contrato.contacto },
+                    { icon: Phone, label: "Teléfono y correo", value: [contrato.telefono, contrato.correo].filter(Boolean).join(" · ") },
+                    { icon: MapPin, label: "Dirección física", value: contrato.direccion },
+                ]}
+            />
+            <DetailGrid
+                title="Condiciones"
+                items={[
+                    { icon: UserRound, label: "Responsable", value: contrato.vendedor },
+                    { icon: FileText, label: "Plantilla", value: contrato.plantillaNombre ? `${contrato.plantillaNombre} · versión ${contrato.versionPlantilla}` : null },
+                    { icon: CalendarPlus, label: "Fecha de inicio", value: fechaCorta(contrato.fechaInicio) },
+                    { icon: CalendarClock, label: "Fecha de vencimiento", value: fechaCorta(contrato.fechaVencimiento) },
+                    { icon: CalendarPlus, label: "Fecha de firma", value: contrato.fechaFirma ? fechaCorta(contrato.fechaFirma) : "Pendiente" },
+                    { icon: Wallet, label: "Precio mensual", value: dinero(contrato.montoMensual, contrato.moneda) },
+                    { icon: ShieldCheck, label: "Cobertura de reparaciones", value: contrato.cubreReparaciones ? "Incluida" : "No incluida" },
+                    { icon: Radio, label: "Equipos asociados", value: String(equipos.length) },
+                    { icon: FileText, label: "Cláusulas adicionales", value: contrato.clausulasAdicionales, wide: true },
+                    { icon: FileText, label: "Responsabilidades del cliente", value: contrato.responsabilidades, wide: true },
+                    { icon: FileText, label: "Condición de penalización", value: contrato.penalizacion, wide: true },
+                    { icon: FileText, label: "Otras condiciones", value: contrato.condiciones, wide: true },
+                ]}
+            />
+            {cancelado && (
+                <DetailGrid
+                    title="Cancelación"
+                    items={[
+                        { icon: CalendarX, label: "Fecha de cancelación", value: fechaCorta(contrato.fechaCancelacion) },
+                        { icon: Wallet, label: "Penalización", value: contrato.penalizacionMonto > 0 ? dinero(contrato.penalizacionMonto, contrato.moneda) : "Sin penalización" },
+                        { icon: FileText, label: "Motivo de la cancelación", value: contrato.motivoCancelacion, wide: true },
+                        { icon: FileText, label: "Justificación de la penalización", value: contrato.penalizacionJustificacion, wide: true },
+                        { icon: FileText, label: "Observaciones", value: contrato.observacionesCancelacion, wide: true },
+                    ]}
+                />
+            )}
+        </>
     );
 }
 
@@ -62,7 +89,7 @@ function EquiposAccesorios({ detalle, onAsignarRadio, canAsignarRadio, canEditar
                     <h3 className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>
                         Equipos del contrato
                     </h3>
-                    {canAsignarRadio && ["Activo", "Renovado"].includes(contrato.estadoRegistrado) && (
+                    {canAsignarRadio && contrato.estadoRegistrado === "Activo" && (
                         <Button onClick={onAsignarRadio}>Asignar radio</Button>
                     )}
                 </div>
@@ -99,7 +126,7 @@ function EquiposAccesorios({ detalle, onAsignarRadio, canAsignarRadio, canEditar
                     <h3 className="text-xs uppercase tracking-wide" style={{ color: COLORS.muted, fontWeight: 600 }}>
                         Accesorios entregados
                     </h3>
-                    {canEditarAccesorios && ["Activo", "Renovado"].includes(contrato.estadoRegistrado) && (
+                    {canEditarAccesorios && contrato.estadoRegistrado === "Activo" && (
                         <Button onClick={onEditarAccesorios}>Editar accesorios</Button>
                     )}
                 </div>
@@ -116,6 +143,81 @@ function EquiposAccesorios({ detalle, onAsignarRadio, canAsignarRadio, canEditar
                         ))}
                     </ul>
                 )}
+            </section>
+        </>
+    );
+}
+
+// Documentos firmados y versiones: la plantilla usada, el contrato que renueva y el que lo renovó.
+function Documentos({ detalle, onAbrir }) {
+    const { contrato, documentos } = detalle;
+    const [error, setError] = useState("");
+
+    async function descargar(doc) {
+        setError("");
+        try {
+            const blob = await api.descargarDocumentoContrato(contrato.idContrato, doc.idDocumento);
+            const url = URL.createObjectURL(blob);
+            const enlace = document.createElement("a");
+            enlace.href = url;
+            enlace.download = doc.nombre;
+            enlace.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            setError(e instanceof ApiError ? e.message : "No se pudo descargar el documento.");
+        }
+    }
+
+    return (
+        <>
+            {error && <Notice tone="error">{error}</Notice>}
+            <section className="mb-6">
+                <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>Documentos firmados</h3>
+                {documentos.length === 0 ? (
+                    <p className="text-sm" style={{ color: COLORS.muted }}>
+                        {contrato.estadoRegistrado === "Borrador" ? "Todavía no hay documento firmado: se adjunta al activar el contrato." : "Este contrato no tiene documentos guardados."}
+                    </p>
+                ) : (
+                    <ul className="space-y-2">
+                        {documentos.map((d) => (
+                            <li key={d.idDocumento} className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm" style={{ border: `1px solid ${COLORS.border}` }}>
+                                <span>
+                                    <strong>{d.tipo}</strong> · {d.nombre}
+                                    <span className="block text-xs" style={{ color: COLORS.muted }}>
+                                        Firmado el {fechaCorta(d.fechaFirma)} · cargado por {d.usuario} el {fechaHora(d.fecha)} · {(d.bytes / 1024).toFixed(0)} KB
+                                    </span>
+                                </span>
+                                <Button className="flex items-center gap-1.5 shrink-0" onClick={() => descargar(d)}><Download size={14} /> Descargar</Button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
+
+            <section>
+                <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>Versiones</h3>
+                <ul className="space-y-2 text-sm">
+                    {contrato.plantillaNombre && (
+                        <li className="rounded-lg px-4 py-3" style={{ border: `1px solid ${COLORS.border}` }}>
+                            Redactado con la plantilla <strong>{contrato.plantillaNombre}</strong>, versión {contrato.versionPlantilla}.
+                        </li>
+                    )}
+                    {contrato.idContratoOrigen && (
+                        <li className="flex items-center justify-between gap-3 rounded-lg px-4 py-3" style={{ border: `1px solid ${COLORS.border}` }}>
+                            <span>Renueva al contrato <strong>{api.codigoContrato(contrato.idContratoOrigen)}</strong>.</span>
+                            <Button onClick={() => onAbrir(contrato.idContratoOrigen)}>Ver contrato</Button>
+                        </li>
+                    )}
+                    {contrato.idContratoSucesor && (
+                        <li className="flex items-center justify-between gap-3 rounded-lg px-4 py-3" style={{ border: `1px solid ${COLORS.border}` }}>
+                            <span>Fue renovado por el contrato <strong>{api.codigoContrato(contrato.idContratoSucesor)}</strong>.</span>
+                            <Button onClick={() => onAbrir(contrato.idContratoSucesor)}>Ver contrato</Button>
+                        </li>
+                    )}
+                    {!contrato.idContratoOrigen && !contrato.idContratoSucesor && !contrato.plantillaNombre && (
+                        <li style={{ color: COLORS.muted }}>Este contrato no tiene versiones registradas.</li>
+                    )}
+                </ul>
             </section>
         </>
     );
@@ -138,7 +240,7 @@ function Renovaciones({ idContrato }) {
     if (error) return <Notice tone="error">{error}</Notice>;
     if (!lista) return <p className="text-sm" style={{ color: COLORS.muted }}>Cargando historial...</p>;
     if (lista.length === 0) {
-        return <p className="text-sm" style={{ color: COLORS.muted }}>Este contrato todavía no ha sido renovado.</p>;
+        return <p className="text-sm" style={{ color: COLORS.muted }}>Este contrato no tiene renovaciones registradas en el historial anterior.</p>;
     }
 
     return (
@@ -150,7 +252,7 @@ function Renovaciones({ idContrato }) {
                         Renovado hasta el {fechaCorta(r.nuevaFechaVencimiento)}
                     </p>
                     <p className="text-sm" style={{ color: COLORS.charcoal }}>
-                        Vencimiento anterior: {fechaCorta(r.fechaVencimientoAnterior) || "sin registro"} · Monto mensual vigente: {colones(r.montoMensual)}
+                        Vencimiento anterior: {fechaCorta(r.fechaVencimientoAnterior) || "sin registro"} · Monto mensual vigente: {dinero(r.montoMensual)}
                     </p>
                     {r.observacion && <p className="text-xs mt-0.5" style={{ color: COLORS.muted }}>{r.observacion}</p>}
                     <p className="text-xs mt-0.5" style={{ color: COLORS.muted }}>{fechaCorta(r.fechaRenovacion)} · {r.usuario ?? "Sin registro"}</p>
@@ -199,8 +301,10 @@ function Auditoria({ idContrato }) {
 export default function ContratoDetalleModal({
     detalle,
     mensaje,
+    esAdmin,
     canAsignarRadio,
     canRenovar,
+    canEditar,
     canCancelar,
     canVerAuditoria,
     onClose,
@@ -212,13 +316,28 @@ export default function ContratoDetalleModal({
 
     if (!detalle) return null;
     const { contrato } = detalle;
-    const mostrarRenovar = canRenovar && ESTADOS_RENOVABLES.includes(contrato.estado);
-    const mostrarCancelar = canCancelar && !ESTADOS_NO_CANCELABLES.includes(contrato.estado);
+    const esBorrador = contrato.estadoRegistrado === "Borrador";
+    const mostrarRenovar = canRenovar && !contrato.idContratoSucesor && ESTADOS_RENOVABLES.includes(contrato.estado);
+    const mostrarCancelar = canCancelar && ESTADOS_CANCELABLES.includes(contrato.estado);
+    const mostrarEditar = canEditar && esBorrador;
+    const mostrarActivar = canRenovar && esBorrador;
+
+    async function abrirContrato(id) {
+        try {
+            const nuevo = await api.obtenerContrato(id);
+            setTab("resumen");
+            setAviso("");
+            onChanged(nuevo);
+        } catch (e) {
+            setAviso(e instanceof ApiError ? e.message : "No se pudo abrir el contrato.");
+        }
+    }
 
     const tabs = [
         { key: "resumen", label: "Resumen" },
         { key: "equipos", label: "Equipos y accesorios" },
-        ...(canRenovar || canVerAuditoria ? [{ key: "renovaciones", label: "Renovaciones" }] : []),
+        { key: "documentos", label: "Documentos y versiones" },
+        ...((canRenovar || canVerAuditoria) && !esBorrador ? [{ key: "renovaciones", label: "Renovaciones" }] : []),
         ...(canVerAuditoria ? [{ key: "auditoria", label: "Auditoría" }] : []),
     ];
 
@@ -241,10 +360,16 @@ export default function ContratoDetalleModal({
             tabs={tabs}
             activeTab={tab}
             onTabChange={setTab}
-            footer={mostrarRenovar || mostrarCancelar ? (
+            footer={mostrarRenovar || mostrarCancelar || mostrarEditar || mostrarActivar ? (
                 <>
                     {mostrarCancelar && (
                         <Button variant="danger" onClick={() => setAccion("cancelar")}>Cancelar contrato</Button>
+                    )}
+                    {mostrarEditar && (
+                        <Button onClick={() => setAccion("editar")}>Editar borrador</Button>
+                    )}
+                    {mostrarActivar && (
+                        <Button variant="primary" onClick={() => setAccion("activar")}>Activar con documento firmado</Button>
                     )}
                     {mostrarRenovar && (
                         <Button variant="primary" onClick={() => setAccion("renovar")}>Renovar</Button>
@@ -264,9 +389,25 @@ export default function ContratoDetalleModal({
                     onEditarAccesorios={() => setAccion("accesorios")}
                 />
             )}
+            {tab === "documentos" && <Documentos key={`${contrato.idContrato}-${detalle.documentos.length}`} detalle={detalle} onAbrir={abrirContrato} />}
             {tab === "renovaciones" && <Renovaciones key={`${contrato.idContrato}-${contrato.fechaVencimiento}`} idContrato={contrato.idContrato} />}
             {tab === "auditoria" && <Auditoria key={`${contrato.idContrato}-${contrato.estado}-${contrato.fechaVencimiento}-${detalle.equipos.length}`} idContrato={contrato.idContrato} />}
 
+            {accion === "editar" && (
+                <ContratoFormModal
+                    detalle={detalle}
+                    esAdmin={esAdmin}
+                    onClose={() => setAccion(null)}
+                    onSaved={(nuevo) => terminar(nuevo, "El borrador se actualizó y los cambios quedaron en la bitácora.")}
+                />
+            )}
+            {accion === "activar" && (
+                <ActivarContratoModal
+                    detalle={detalle}
+                    onClose={() => setAccion(null)}
+                    onSaved={(nuevo) => terminar(nuevo, "El contrato se activó: los equipos quedaron asignados y el documento firmado se guardó.")}
+                />
+            )}
             {accion === "radio" && (
                 <AsignarRadioModal
                     idContratoInicial={contrato.idContrato}
@@ -285,14 +426,14 @@ export default function ContratoDetalleModal({
                 <RenovarContratoModal
                     detalle={detalle}
                     onClose={() => setAccion(null)}
-                    onSaved={(nuevo) => terminar(nuevo, "El contrato se renovó correctamente y el historial quedó registrado.")}
+                    onSaved={(nuevo) => terminar(nuevo, `Se creó el borrador de renovación ${api.codigoContrato(nuevo.contrato.idContrato)}. Actívelo con el documento firmado para completar la renovación.`)}
                 />
             )}
             {accion === "cancelar" && (
                 <CancelarContratoModal
                     detalle={detalle}
                     onClose={() => setAccion(null)}
-                    onSaved={(nuevo) => terminar(nuevo, "El contrato se canceló y sus equipos quedaron disponibles en el inventario.")}
+                    onSaved={(nuevo) => terminar(nuevo, "El contrato se canceló: sus equipos quedaron disponibles y se avisó al equipo técnico para verificar la devolución.")}
                 />
             )}
         </Modal>

@@ -52,9 +52,9 @@ BEGIN
         SELECT @IdTicket,e.IdEquipo,JSON_VALUE(j.value,'$.marca'),JSON_VALUE(j.value,'$.modelo'),JSON_VALUE(j.value,'$.tipo'),JSON_VALUE(j.value,'$.especialidad'),
                JSON_VALUE(j.value,'$.numeroSerie'),COALESCE(JSON_QUERY(j.value,'$.accesorios'),N'[]'),(SELECT Texto FROM OPENJSON(j.value) WITH(Texto NVARCHAR(MAX) '$.problema')),contrato.IdContrato,
                CASE WHEN contrato.IdCliente=@IdCliente AND contrato.CubreReparaciones=1 AND contrato.Estado IN ('Activo','Renovado')
-                          AND contrato.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) AND contrato.FechaVencimiento>=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) THEN 1 ELSE 0 END
+                          AND (contrato.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) OR contrato.IdContratoOrigen IS NOT NULL) AND contrato.FechaVencimiento>=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) THEN 1 ELSE 0 END
         FROM OPENJSON(@Datos,'$.equipos') j LEFT JOIN Equipo e ON e.NumeroSerie=JSON_VALUE(j.value,'$.numeroSerie')
-        OUTER APPLY (SELECT TOP (1) c.IdContrato,c.IdCliente,c.CubreReparaciones,c.Estado,c.FechaInicio,c.FechaVencimiento
+        OUTER APPLY (SELECT TOP (1) c.IdContrato,c.IdCliente,c.CubreReparaciones,c.Estado,c.FechaInicio,c.FechaVencimiento,c.IdContratoOrigen
                      FROM ContratoEquipo ce INNER JOIN Contrato c ON c.IdContrato=ce.IdContrato
                      WHERE ce.IdEquipo=e.IdEquipo AND ce.FechaDevolucion IS NULL AND c.Estado IN ('Activo','Renovado','Vencido') ORDER BY c.IdContrato DESC) contrato;
         INSERT TicketEstadoHistorial (IdTicket,IdUsuario,Estado,FechaInicio) VALUES (@IdTicket,@IdUsuario,'Creada',@Fecha);

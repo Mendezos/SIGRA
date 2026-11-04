@@ -8,7 +8,9 @@ import RepetidorasTab from "./RepetidorasTab";
 import {
     puedeAdministrarPlantillas,
     puedeAsignarRadio,
+    esAdministrador,
     puedeCancelarContrato,
+    puedeEditarContrato,
     puedeVerAuditoria,
     puedeReasignarContacto,
     puedeRegistrarContacto,
@@ -43,6 +45,8 @@ export default function AlquilerPanel({ user }) {
                     canRegister={puedeRegistrarContrato(user)}
                     canAsignarRadio={puedeAsignarRadio(user)}
                     canRenovar={puedeRegistrarContrato(user)}
+                    canEditar={puedeEditarContrato(user)}
+                    esAdmin={esAdministrador(user)}
                     canCancelar={puedeCancelarContrato(user)}
                     canVerAuditoria={puedeVerAuditoria(user)}
                 />

@@ -171,6 +171,142 @@ public class AlquilerFlujoPruebas
         await _auditoriaDA.Received(1).RegistrarAsync(6, "Alquiler", "Contrato", 3, "CONTRATO_REGISTRADO", Arg.Any<string?>());
     }
 
+    // ---------- GCFS-007 y GCFS-008: editar y activar un borrador ----------
+    private static ContratoDto Borrador(DateTime? inicio = null) => new()
+    {
+        IdContrato = 3,
+        Empresa = "Hotel Los Sueños",
+        Estado = "Borrador",
+        EstadoRegistrado = "Borrador",
+        FechaInicio = inicio ?? DateTime.Today.AddDays(10),
+        FechaVencimiento = DateTime.Today.AddYears(1),
+        MontoMensual = 85000,
+        Moneda = "CRC",
+        IdVendedor = 6
+    };
+
+    private static readonly byte[] Pdf = System.Text.Encoding.ASCII.GetBytes("%PDF-1.4 contrato firmado");
+
+    [Fact]
+    public async Task Editar_un_contrato_activo_se_rechaza_y_ofrece_la_renovacion()
+    {
+        PrepararContrato(Contrato("Activo", DateTime.Today.AddDays(200)));
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.EditarContratoAsync(3, ContratoValido(), 6, true));
+
+        Assert.Contains("no se puede editar directamente", ex.Message);
+        Assert.Contains("renovación", ex.Message);
+    }
+
+    [Fact]
+    public async Task Activar_sin_documento_mantiene_el_borrador()
+    {
+        PrepararContrato(Borrador());
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.ActivarContratoAsync(3, DateTime.Today, null, null, null, 6, true));
+
+        Assert.Contains("Adjunte el documento firmado", ex.Message);
+        await _alquilerDA.DidNotReceiveWithAnyArgs().ActivarContratoAsync(default, default, default, default!, default!, default);
+    }
+
+    [Theory]
+    [InlineData("contrato.docx")]
+    [InlineData("contrato")]
+    public async Task Activar_con_un_archivo_que_no_es_pdf_se_rechaza(string nombre)
+    {
+        PrepararContrato(Borrador());
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.ActivarContratoAsync(3, DateTime.Today, null, nombre, Pdf, 6, true));
+
+        Assert.Contains("solo se aceptan documentos PDF", ex.Message);
+    }
+
+    [Fact]
+    public async Task Activar_con_extension_pdf_pero_contenido_distinto_se_rechaza()
+    {
+        PrepararContrato(Borrador());
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.ActivarContratoAsync(3, DateTime.Today, null, "falso.pdf", new byte[] { 1, 2, 3, 4, 5, 6 }, 6, true));
+
+        Assert.Contains("solo se aceptan documentos PDF", ex.Message);
+    }
+
+    [Fact]
+    public async Task Activar_con_fecha_de_inicio_pasada_pide_confirmar_la_fecha_real()
+    {
+        PrepararContrato(Borrador(DateTime.Today.AddDays(-20)));
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.ActivarContratoAsync(3, DateTime.Today, null, "firmado.pdf", Pdf, 6, true));
+
+        Assert.Contains("fecha real de vigencia", ex.Message);
+    }
+
+    [Fact]
+    public async Task Activar_un_contrato_que_no_es_borrador_se_rechaza()
+    {
+        PrepararContrato(Contrato("Activo", DateTime.Today.AddDays(200)));
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.ActivarContratoAsync(3, DateTime.Today, null, "firmado.pdf", Pdf, 6, true));
+
+        Assert.Contains("solo se activan contratos en borrador", ex.Message);
+    }
+
+    [Fact]
+    public async Task Activar_valido_guarda_el_documento_y_deja_auditoria()
+    {
+        PrepararContrato(Borrador());
+
+        await _flujo.ActivarContratoAsync(3, DateTime.Today, null, "firmado.pdf", Pdf, 6, true);
+
+        await _alquilerDA.Received(1).ActivarContratoAsync(3, DateTime.Today, null, "firmado.pdf", Pdf, 6);
+        await _auditoriaDA.Received().RegistrarAsync(6, "Alquiler", "Contrato", 3, "CONTRATO_ACTIVADO", Arg.Any<string?>());
+    }
+
+    // ---------- GCFS-010: cancelar con penalización ----------
+    [Fact]
+    public async Task Cancelar_con_condicion_de_penalizacion_sin_monto_ni_justificacion_se_rechaza()
+    {
+        var contrato = Contrato("Activo", DateTime.Today.AddDays(200));
+        contrato.Penalizacion = "Un mes de renta";
+        PrepararContrato(contrato);
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.CancelarContratoAsync(3, new CancelarContratoDto { Motivo = "Cierre" }, 1, true));
+
+        Assert.Contains("penalización", ex.Message);
+        await _alquilerDA.DidNotReceiveWithAnyArgs().CancelarContratoAsync(default, default!, default);
+    }
+
+    [Fact]
+    public async Task Cancelar_con_fecha_posterior_al_vencimiento_se_rechaza()
+    {
+        var contrato = Contrato("Activo", DateTime.Today.AddDays(30));
+        PrepararContrato(contrato);
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.CancelarContratoAsync(3, new CancelarContratoDto { Motivo = "Cierre", FechaCancelacion = DateTime.Today.AddDays(60) }, 1, true));
+
+        Assert.Contains("posterior al vencimiento", ex.Message);
+    }
+
+    [Fact]
+    public async Task Cancelar_un_contrato_renovado_se_rechaza_y_muestra_su_estado()
+    {
+        var contrato = Contrato("Renovado");
+        contrato.EstadoRegistrado = "Renovado";
+        PrepararContrato(contrato);
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _flujo.CancelarContratoAsync(3, new CancelarContratoDto { Motivo = "x" }, 1, true));
+
+        Assert.Contains("renovado", ex.Message);
+    }
+
     // ---------- CARR-003: renovar ----------
     private void PrepararContrato(ContratoDto contrato)
     {

@@ -6,16 +6,17 @@ import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
 import SelectorEquipo from "./SelectorEquipo";
-import { colones, fechaCorta } from "./helpers";
+import { dinero, fechaCorta } from "./helpers";
 
 export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
     const { contrato, equipos } = detalle;
     const [disponibles, setDisponibles] = useState([]);
-    // La renovación debe terminar después del vencimiento actual y de hoy.
-    const hoy = new Date();
-    const vencimiento = new Date(contrato.fechaVencimiento);
-    const fechaMinima = vencimiento > hoy ? vencimiento : hoy;
-    const fechaMinimaISO = new Date(fechaMinima.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    // La renovación empieza después de que termine el contrato vigente (por defecto, al día siguiente).
+    const vencimiento = new Date(String(contrato.fechaVencimiento).slice(0, 10) + "T00:00:00");
+    const diaSiguiente = new Date(vencimiento.getTime() + 24 * 60 * 60 * 1000);
+    const aISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const fechaMinimaISO = aISO(diaSiguiente);
+    const [nuevoInicio, setNuevoInicio] = useState(fechaMinimaISO);
     const [nuevaFecha, setNuevaFecha] = useState("");
     const [nuevoMonto, setNuevoMonto] = useState("");
     const [observacion, setObservacion] = useState("");
@@ -49,6 +50,7 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
         setGuardando(true);
         try {
             const nuevo = await api.renovarContrato(contrato.idContrato, {
+                nuevaFechaInicio: nuevoInicio || null,
                 nuevaFechaVencimiento: nuevaFecha || null,
                 nuevoMonto: nuevoMonto === "" ? null : Number(nuevoMonto),
                 observacion: observacion || null,
@@ -69,13 +71,13 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
             onClose={onClose}
             icon={RefreshCw}
             title={`Renovar contrato ${api.codigoContrato(contrato.idContrato)}`}
-            subtitle={`${contrato.empresa} · vence el ${fechaCorta(contrato.fechaVencimiento)} · ${colones(contrato.montoMensual)} al mes`}
+            subtitle={`${contrato.empresa} · vence el ${fechaCorta(contrato.fechaVencimiento)} · ${dinero(contrato.montoMensual, contrato.moneda)} al mes`}
             width="max-w-2xl"
             footer={
                 <div className="flex justify-end gap-3">
                     <Button variant="ghost" onClick={onClose}>Cancelar</Button>
                     <Button variant="primary" type="submit" form="form-renovar" disabled={guardando}>
-                        {guardando ? "Renovando..." : "Confirmar renovación"}
+                        {guardando ? "Creando..." : "Crear borrador de renovación"}
                     </Button>
                 </div>
             }
@@ -83,15 +85,22 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
             {error && <Notice tone="error">{error}</Notice>}
 
             <form id="form-renovar" onSubmit={guardar} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2 rounded-lg px-4 py-3 text-sm flex flex-wrap gap-x-6 gap-y-1" style={{ backgroundColor: COLORS.greenTint, color: COLORS.charcoal }}>
-                    <span>Vencimiento actual: <strong>{fechaCorta(contrato.fechaVencimiento)}</strong></span>
-                    <span>Monto mensual actual: <strong>{colones(contrato.montoMensual)}</strong></span>
-                    <span style={{ color: COLORS.muted }}>La nueva fecha debe ser posterior a {fechaCorta(fechaMinima)}.</span>
+                <div className="sm:col-span-2 rounded-lg px-4 py-3 text-sm space-y-1" style={{ backgroundColor: COLORS.greenTint, color: COLORS.charcoal }}>
+                    <p className="flex flex-wrap gap-x-6 gap-y-1">
+                        <span>Vencimiento actual: <strong>{fechaCorta(contrato.fechaVencimiento)}</strong></span>
+                        <span>Precio mensual actual: <strong>{dinero(contrato.montoMensual, contrato.moneda)}</strong></span>
+                    </p>
+                    <p style={{ color: COLORS.muted }}>
+                        La renovación crea un contrato nuevo en borrador. Se completa al activarlo con el documento firmado: entonces este contrato pasa a Renovado.
+                    </p>
                 </div>
-                <FieldLabel label="Nueva fecha de vencimiento *">
-                    <input type="date" value={nuevaFecha} min={fechaMinimaISO} onChange={(e) => setNuevaFecha(e.target.value)} className={inputClass} style={inputStyle} />
+                <FieldLabel label="Inicio de la renovación *">
+                    <input type="date" value={nuevoInicio} min={fechaMinimaISO} onChange={(e) => setNuevoInicio(e.target.value)} className={inputClass} style={inputStyle} />
                 </FieldLabel>
-                <FieldLabel label="Nuevo monto mensual (₡), si cambia">
+                <FieldLabel label="Nueva fecha de vencimiento *">
+                    <input type="date" value={nuevaFecha} min={nuevoInicio || fechaMinimaISO} onChange={(e) => setNuevaFecha(e.target.value)} className={inputClass} style={inputStyle} />
+                </FieldLabel>
+                <FieldLabel label={`Nuevo precio mensual (${contrato.moneda}), si cambia`}>
                     <input type="number" min="0" step="0.01" value={nuevoMonto} onChange={(e) => setNuevoMonto(e.target.value)} placeholder={String(contrato.montoMensual)} className={inputClass} style={inputStyle} />
                 </FieldLabel>
 
@@ -129,7 +138,7 @@ export default function RenovarContratoModal({ detalle, onClose, onSaved }) {
                 </div>
 
                 <div className="sm:col-span-2">
-                    <FieldLabel label="Observación">
+                    <FieldLabel label="Motivo o observación (obligatorio si cambian los equipos)">
                         <textarea value={observacion} onChange={(e) => setObservacion(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                     </FieldLabel>
                 </div>

@@ -84,9 +84,9 @@ BEGIN
                        JSON_VALUE(j.value,'$.numeroSerie') AS NumeroSerie,COALESCE(JSON_QUERY(j.value,'$.accesorios'),N'[]') AS Accesorios,
                        (SELECT Texto FROM OPENJSON(j.value) WITH(Texto NVARCHAR(MAX) '$.problema')) AS Problema,contrato.IdContrato,
                        CASE WHEN contrato.IdCliente=@Cliente AND contrato.CubreReparaciones=1 AND contrato.Estado IN ('Activo','Renovado')
-                              AND contrato.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) AND contrato.FechaVencimiento>=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) THEN 1 ELSE 0 END AS Cubierto
+                              AND (contrato.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) OR contrato.IdContratoOrigen IS NOT NULL) AND contrato.FechaVencimiento>=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) THEN 1 ELSE 0 END AS Cubierto
                 FROM OPENJSON(@Datos,'$.equipos') j LEFT JOIN Equipo e ON e.NumeroSerie=JSON_VALUE(j.value,'$.numeroSerie')
-                OUTER APPLY (SELECT TOP (1) c.IdContrato,c.IdCliente,c.CubreReparaciones,c.Estado,c.FechaInicio,c.FechaVencimiento
+                OUTER APPLY (SELECT TOP (1) c.IdContrato,c.IdCliente,c.CubreReparaciones,c.Estado,c.FechaInicio,c.FechaVencimiento,c.IdContratoOrigen
                              FROM ContratoEquipo ce INNER JOIN Contrato c ON c.IdContrato=ce.IdContrato
                              WHERE ce.IdEquipo=e.IdEquipo AND ce.FechaDevolucion IS NULL AND c.Estado IN ('Activo','Renovado','Vencido') ORDER BY c.IdContrato DESC) contrato
             ) AS origen ON destino.IdTicket=@IdTicket AND destino.NumeroSerie=origen.NumeroSerie
@@ -138,7 +138,7 @@ BEGIN
                     OR (@Resolucion=N'Reparado' AND EXISTS (SELECT 1 FROM Reparacion WHERE IdTicket=@IdTicket)
                         AND EXISTS (SELECT 1 FROM TicketEquipo te WHERE te.IdTicket=@IdTicket
                                     AND NOT EXISTS (SELECT 1 FROM Contrato c WHERE c.IdContrato=te.IdContrato AND c.IdCliente=(SELECT IdCliente FROM Ticket WHERE IdTicket=@IdTicket)
-                                         AND c.CubreReparaciones=1 AND c.Estado IN ('Activo','Renovado') AND c.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) AND c.FechaVencimiento>=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha))))))
+                                         AND c.CubreReparaciones=1 AND c.Estado IN ('Activo','Renovado') AND (c.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha)) OR c.IdContratoOrigen IS NOT NULL) AND c.FechaVencimiento>=CONVERT(DATE,DATEADD(HOUR,-6,@Fecha))))))
                 BEGIN
                     IF NULLIF(JSON_VALUE(@Trabajo,'$.numeroFactura'),N'') IS NULL THROW 50001, 'Debe indicar el número de factura cuando aplica cobro.', 1;
                     IF COALESCE(TRY_CONVERT(DECIMAL(12,2),JSON_VALUE(@Trabajo,'$.monto')),0)<=0 THROW 50001, 'El monto debe ser un valor numérico mayor a cero', 1;

@@ -11,7 +11,7 @@ import { COLORS, inputClass, inputStyle } from "../uiTheme";
  * - Con `onAgregar` muestra el botón Agregar (para armar una lista de equipos).
  * - Con `valor` y `onCambiar` funciona como una selección simple (sin botón).
  */
-export default function SelectorEquipo({ disponibles, excluidas = [], categoriasPermitidas, onAgregar, valor, onCambiar, textoBoton = "Agregar" }) {
+export default function SelectorEquipo({ disponibles, excluidas = [], categoriasPermitidas, onAgregar, valor, onCambiar, textoBoton = "Agregar", textoPie = "Al guardar, el inventario los marca como Alquilados." }) {
     const [categoria, setCategoria] = useState("");
     const [elegida, setElegida] = useState("");
     const serieElegida = onAgregar ? elegida : (valor ?? "");
@@ -76,7 +76,7 @@ export default function SelectorEquipo({ disponibles, excluidas = [], categorias
             </div>
             <p className="text-xs mt-1.5" style={{ color: COLORS.muted }}>
                 {opciones.length} equipo{opciones.length === 1 ? "" : "s"} disponible{opciones.length === 1 ? "" : "s"}
-                {categoria ? ` de tipo ${categoria}` : ""}. Al guardar, el inventario los marca como Alquilados.
+                {categoria ? ` de tipo ${categoria}` : ""}. {textoPie}
             </p>
         </div>
     );

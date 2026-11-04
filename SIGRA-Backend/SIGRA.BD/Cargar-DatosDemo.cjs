@@ -126,42 +126,87 @@ const EQUIPOS = () => [
 const CONTRATOS = [
     {
         clave: "taxis", empresa: "Cooperativa de Taxis Escazú", inicio: "2026-06-01", vence: "2027-06-01", monto: 180000, cubre: true,
+        contacto: "Mario Jiménez", telefono: "2228-1100", correo: "mario@taxisescazu.example", direccion: "Escazú, San José, 200 m sur de la iglesia", plantilla: "Alquiler de radios móviles",
         series: ["SN-64001", "SN-64002", "SN-64003", "SN-64004", "SN-64005"], accesorios: [],
         condiciones: "Cinco radios móviles instalados en vehículos de la cooperativa. Incluye cobertura de reparaciones.",
     },
     {
         clave: "atlas", empresa: "Seguridad Atlas S.A.", inicio: "2025-11-01", vence: dias(60), monto: 240000, cubre: false,
+        contacto: "Karla Solano", telefono: "2290-4400", correo: "karla@seguridadatlas.example", direccion: "Pavas, San José, Zona Industrial", plantilla: "Alquiler de radios portátiles",
         series: ["SN-62001", "SN-62002", "SN-62003", "SN-62004", "SN-78005"], accesorios: [["Kenwood TK-3170", "Audífono con micrófono", 4], ["Kenwood TK-3170", "Cargador de escritorio", 2]],
         condiciones: "Cuatro radios portátiles para oficiales de seguridad y una repetidora de enlace. Vence pronto: sirve para probar la renovación.",
     },
     {
-        clave: "tamarindo", empresa: "Hacienda Tamarindo", inicio: hace({ m: 11, d: -5 }), vence: dias(20), monto: 95000, cubre: false,
+        clave: "tamarindo", empresa: "Hacienda Tamarindo", inicio: hace({ m: 11, d: -5 }), vence: dias(20), monto: 190, moneda: "USD", cubre: false,
+        contacto: "Pedro Alvarado", telefono: "2653-2020", correo: "pedro@haciendatamarindo.example", direccion: "Tamarindo, Santa Cruz, Guanacaste", plantilla: "Alquiler de radios portátiles",
         series: ["SN-63001", "SN-63002", "SN-78003"], accesorios: [["Kenwood TK-3401", "Antena UHF", 2]],
         condiciones: "Radios y repetidora para la hacienda. Está por vencer en menos de 30 días.",
     },
     {
         clave: "clinica", empresa: "Clínica Santa Fe", inicio: "2025-01-10", vence: dias(-12), monto: 110000, cubre: false,
+        contacto: "Dra. Lucía Brenes", telefono: "2282-7000", correo: "lbrenes@clinicasantafe.example", direccion: "Santa Ana, San José, frente al Hospital", plantilla: "Alquiler de radios portátiles",
         series: ["SN-62005", "SN-78004"], accesorios: [],
         condiciones: "Contrato que ya venció: sirve para ver el estado Vencido y la renovación de un contrato vencido.",
     },
     {
         clave: "mirador", empresa: "Restaurante El Mirador", inicio: "2025-11-05", vence: dias(25), monto: 70000, cubre: true,
+        contacto: "Ana Villalobos", telefono: "2440-3030", correo: "ana@elmirador.example", direccion: "Atenas, Alajuela, carretera a Orotina", plantilla: "Alquiler de radios portátiles",
         series: ["SN-61001", "SN-61002"], accesorios: [["Motorola CP200", "Cargador de escritorio", 2], ["Motorola CP200", "Clip de cinturón", 2]],
         condiciones: "Dos radios portátiles para el personal del restaurante. Se renueva en esta carga para mostrar el estado Renovado.",
         renovar: { nuevaFechaVencimiento: dias(390), nuevoMonto: 76000, observacion: "Renovación por un año con ajuste del 8 %." },
     },
     {
         clave: "marina", empresa: "Marina Pez Vela", inicio: "2026-03-01", vence: "2027-03-01", monto: 60000, cubre: false,
+        contacto: "Daniela Rojas", telefono: "2777-0101", correo: "daniela@pezvela.example", direccion: "Quepos, Puntarenas, Marina Pez Vela", plantilla: "Alquiler de radios portátiles",
         series: ["SN-61005", "SN-61006"], accesorios: [],
         condiciones: "Contrato que se cancela en esta carga para mostrar el estado Cancelado.",
-        cancelar: "El cliente cerró la operación en la marina y devolvió los equipos.",
+        cancelar: { motivo: "El cliente cerró la operación en la marina y devolvió los equipos.", penalizacionMonto: 30000, observaciones: "El cliente pagó la penalización en efectivo." },
     },
     {
         clave: "heredia", empresa: "Municipalidad de Heredia", inicio: "2026-08-01", vence: "2028-08-01", monto: 420000, cubre: true,
+        contacto: "Ing. Roberto Campos", telefono: "2237-6000", correo: "rcampos@heredia.example", direccion: "Heredia centro, Palacio Municipal", plantilla: "Alquiler de repetidoras",
         series: ["SN-78001", "SN-78002"], accesorios: [],
         condiciones: "Dos repetidoras para la red de comunicaciones de la policía municipal. Incluye reparaciones.",
     },
+    {
+        clave: "autobuses", empresa: "Autobuses San José", inicio: dias(15), vence: dias(380), monto: 125000, cubre: false, borrador: true,
+        contacto: "Fernando Quirós", telefono: "2221-5050", correo: "fquiros@autobusessj.example", direccion: "San José, Barrio México, 100 m este del Mercado", plantilla: "Alquiler de radios portátiles",
+        series: ["SN-61003", "SN-61004"], accesorios: [],
+        condiciones: "Contrato en borrador, pendiente de firma: sirve para probar editar el borrador y activarlo con el documento firmado.",
+    },
 ];
+
+// Plantillas de contrato aprobadas por Radifax (GCFS-001)
+const PLANTILLAS = [
+    {
+        nombre: "Alquiler de radios portátiles", tipo: "portatil",
+        clausulas: "1. Radifax entrega los radios en buen estado y con su batería. 2. El cliente paga el precio mensual dentro de los primeros cinco días de cada mes. 3. El contrato no se puede ceder a terceros.",
+        responsabilidades: "El cliente cuida los equipos, no los abre ni los repara, y avisa de inmediato si se pierden o se dañan. Las baterías se cambian según el ciclo de Radifax.",
+        condicionesCancelacion: "Si el cliente cancela antes del vencimiento, paga una penalización equivalente a un mes de alquiler.",
+    },
+    {
+        nombre: "Alquiler de radios móviles", tipo: "movil",
+        clausulas: "1. Radifax instala los radios en los vehículos indicados. 2. El cliente paga el precio mensual por adelantado. 3. Los cambios de vehículo se informan por escrito.",
+        responsabilidades: "El cliente mantiene los vehículos con energía estable y permite la revisión periódica de los equipos.",
+        condicionesCancelacion: "La cancelación anticipada tiene una penalización de un mes de alquiler.",
+    },
+    {
+        nombre: "Alquiler de repetidoras", tipo: "repetidora",
+        clausulas: "1. Radifax instala la repetidora y su duplexor en el sitio acordado. 2. La frecuencia asignada es la que consta en la solicitud aprobada. 3. El mantenimiento preventivo es semestral.",
+        responsabilidades: "El cliente da acceso al sitio, garantiza energía eléctrica y no modifica la instalación.",
+        condicionesCancelacion: "La cancelación anticipada tiene una penalización de tres meses de alquiler.",
+    },
+];
+
+// Un PDF mínimo que hace de documento firmado (el sistema valida que sea un PDF).
+const pdfFirmado = (titulo) => new Blob([`%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 100]>>endobj\n% ${titulo}\ntrailer<</Root 1 0 R>>\n%%EOF`], { type: "application/pdf" });
+function formularioActivacion(titulo, fechaFirma, fechaInicioReal) {
+    const f = new FormData();
+    f.append("Archivo", pdfFirmado(titulo), `contrato-firmado-${titulo.replace(/\W+/g, "-").toLowerCase()}.pdf`);
+    f.append("FechaFirma", fechaFirma);
+    if (fechaInicioReal) f.append("FechaInicioReal", fechaInicioReal);
+    return f;
+}
 
 // Cambios de batería (cada radio con una situación distinta). 11 meses es el ciclo.
 const BATERIAS = [
@@ -266,38 +311,75 @@ async function etapaInventario() {
     await equipos();
 }
 
+async function etapaPlantillas() {
+    titulo("Alquiler: plantillas de contrato");
+    await resolverCatalogos();
+    const existentes = await llamar("admin", "GET", "/alquiler/plantillas");
+    for (const p of PLANTILLAS) {
+        await paso(`Plantilla «${p.nombre}»`, async () => {
+            if (existentes.some((x) => x.nombre === p.nombre)) return "omitido";
+            await llamar("admin", "POST", "/alquiler/plantillas", {
+                nombre: p.nombre, idCategoria: CATEGORIA[p.tipo], clausulas: p.clausulas, responsabilidades: p.responsabilidades,
+                condicionesCancelacion: p.condicionesCancelacion, activa: true,
+            });
+        });
+    }
+}
+
 async function etapaContratos() {
+    await etapaPlantillas();
     titulo("Alquiler: contratos");
     await equipos();
     const catalogo = await llamar("vendedor", "GET", "/inventario/accesorios");
     const idAccesorio = (modelo, nombre) => catalogo.find((a) => a.modelo === modelo && a.nombre === nombre)?.id;
+    const plantillas = await llamar("vendedor", "GET", "/alquiler/plantillas");
+    const idPlantilla = (nombre) => plantillas.find((p) => p.nombre === nombre)?.id;
+    const buscar = async (c) => (await llamar("vendedor", "GET", "/alquiler/contratos")).find((x) => x.empresa === c.empresa && String(x.fechaInicio).startsWith(c.inicio));
+    const hoyIso = iso(hoy);
+
     for (const c of CONTRATOS) {
-        const lista = await llamar("vendedor", "GET", "/alquiler/contratos");
-        let existente = lista.find((x) => x.empresa === c.empresa && String(x.fechaInicio).startsWith(c.inicio));
-        await paso(`Contrato de ${c.empresa}`, async () => {
+        let existente = await buscar(c);
+        await paso(`Contrato de ${c.empresa}${c.borrador ? " (borrador)" : ""}`, async () => {
             if (existente) return "omitido";
             const accesorios = c.accesorios.map(([m, n, cant]) => ({ idAccesorioModelo: idAccesorio(m, n), cantidad: cant }));
             if (accesorios.some((a) => !a.idAccesorioModelo)) throw new Error("No se encontró un accesorio del catálogo");
+            if (!idPlantilla(c.plantilla)) throw new Error(`No existe la plantilla ${c.plantilla}`);
+            const modelo = PLANTILLAS.find((p) => p.nombre === c.plantilla);
             const r = await llamar("vendedor", "POST", "/alquiler/contratos", {
-                empresa: c.empresa, fechaInicio: c.inicio, fechaVencimiento: c.vence, montoMensual: c.monto,
-                condiciones: c.condiciones, cubreReparaciones: c.cubre, series: c.series, accesorios,
+                empresa: c.empresa, contacto: c.contacto, telefono: c.telefono, correo: c.correo, direccion: c.direccion,
+                responsabilidades: modelo.responsabilidades, penalizacion: modelo.condicionesCancelacion,
+                idPlantilla: idPlantilla(c.plantilla), fechaInicio: c.inicio, fechaVencimiento: c.vence, montoMensual: c.monto,
+                moneda: c.moneda ?? "CRC", condiciones: c.condiciones, cubreReparaciones: c.cubre, series: c.series, accesorios,
             });
             existente = r.contrato;
         });
-        if (!existente) existente = (await llamar("vendedor", "GET", "/alquiler/contratos")).find((x) => x.empresa === c.empresa && String(x.fechaInicio).startsWith(c.inicio));
+        existente = existente ?? await buscar(c);
         if (!existente) continue;
+
+        // El contrato nace en borrador: se activa con su documento firmado (salvo el que se deja para probar la firma).
+        if (!c.borrador) {
+            await paso(`Activar el contrato de ${c.empresa} con el documento firmado`, async () => {
+                const det = await llamar("vendedor", "GET", `/alquiler/contratos/${existente.idContrato}`);
+                if (det.contrato.estadoRegistrado !== "Borrador") return "omitido";
+                const inicioPasado = c.inicio < hoyIso;
+                await llamar("vendedor", "POST", `/alquiler/contratos/${existente.idContrato}/activar`,
+                    formularioActivacion(c.empresa, inicioPasado ? c.inicio : hoyIso, inicioPasado ? c.inicio : ""));
+            });
+        }
+
         if (c.renovar) {
             await paso(`Renovar el contrato de ${c.empresa}`, async () => {
                 const det = await llamar("vendedor", "GET", `/alquiler/contratos/${existente.idContrato}`);
-                if (det.contrato.estadoRegistrado === "Renovado" || String(det.contrato.fechaVencimiento).startsWith(c.renovar.nuevaFechaVencimiento)) return "omitido";
-                await llamar("vendedor", "POST", `/alquiler/contratos/${existente.idContrato}/renovar`, c.renovar);
+                if (det.contrato.estadoRegistrado === "Renovado" || det.contrato.idContratoSucesor) return "omitido";
+                const nuevo = await llamar("vendedor", "POST", `/alquiler/contratos/${existente.idContrato}/renovar`, c.renovar);
+                await llamar("vendedor", "POST", `/alquiler/contratos/${nuevo.contrato.idContrato}/activar`, formularioActivacion(`Renovación ${c.empresa}`, hoyIso, ""));
             });
         }
         if (c.cancelar) {
             await paso(`Cancelar el contrato de ${c.empresa}`, async () => {
                 const det = await llamar("vendedor", "GET", `/alquiler/contratos/${existente.idContrato}`);
                 if (det.contrato.estadoRegistrado === "Cancelado") return "omitido";
-                await llamar("admin", "POST", `/alquiler/contratos/${existente.idContrato}/cancelar`, { motivo: c.cancelar });
+                await llamar("vendedor", "POST", `/alquiler/contratos/${existente.idContrato}/cancelar`, { ...c.cancelar, fechaCancelacion: hoyIso });
             });
         }
     }

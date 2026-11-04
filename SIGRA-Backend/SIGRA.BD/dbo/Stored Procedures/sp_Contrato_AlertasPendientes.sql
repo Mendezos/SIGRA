@@ -16,5 +16,6 @@ BEGIN
         SELECT '3 anios' WHERE DATEADD(YEAR, 3, c.FechaInicio) <= @Hoy
     ) t
     WHERE c.Estado IN ('Activo', 'Renovado')
+      AND NOT (c.Estado = 'Renovado' AND EXISTS (SELECT 1 FROM Contrato s WHERE s.IdContratoOrigen = c.IdContrato))
       AND NOT EXISTS (SELECT 1 FROM AlertaContrato a WHERE a.IdContrato = c.IdContrato AND a.Tipo = t.Tipo);
 END

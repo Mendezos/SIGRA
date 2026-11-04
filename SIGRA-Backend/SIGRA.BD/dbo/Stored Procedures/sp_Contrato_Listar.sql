@@ -13,7 +13,8 @@ BEGIN
     SELECT x.*
     FROM (
         SELECT c.IdContrato, cl.Empresa, c.Estado AS EstadoRegistrado, CASE
-        WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento < CAST(GETDATE() AS DATE) THEN 'Vencido'
+        WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento < CAST(GETDATE() AS DATE)
+             AND NOT (c.Estado = 'Renovado' AND EXISTS (SELECT 1 FROM Contrato s WHERE s.IdContratoOrigen = c.IdContrato)) THEN 'Vencido'
         WHEN c.Estado = 'Activo' AND c.FechaVencimiento <= DATEADD(DAY, 30, CAST(GETDATE() AS DATE)) THEN N'Por vencer (30 días)'
         WHEN c.Estado = 'Activo' AND c.FechaVencimiento <= DATEADD(DAY, 90, CAST(GETDATE() AS DATE)) THEN N'Por vencer (90 días)'
         ELSE c.Estado
