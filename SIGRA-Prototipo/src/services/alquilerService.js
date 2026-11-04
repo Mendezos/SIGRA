@@ -19,6 +19,15 @@ export const ESTADOS_CONTRATO = [
 ];
 
 export const codigoContrato = (id) => `CT-${String(id).padStart(4, "0")}`;
+export const codigoPlantilla = (id) => `PL-${String(id).padStart(3, "0")}`;
+
+// Plantillas de contrato (GCFS-001 a 004)
+export const listarPlantillas = (filtro = {}) => apiRequest(`/alquiler/plantillas${query(filtro)}`);
+export const obtenerPlantilla = (id, version) => apiRequest(`/alquiler/plantillas/${id}${query({ version })}`);
+export const registrarPlantilla = (datos) => apiRequest("/alquiler/plantillas", { method: "POST", body: datos });
+export const editarPlantilla = (id, datos) => apiRequest(`/alquiler/plantillas/${id}`, { method: "PUT", body: datos });
+export const cambiarEstadoPlantilla = (id, activa, motivo) =>
+    apiRequest(`/alquiler/plantillas/${id}/estado`, { method: "PATCH", body: { activa, motivo } });
 
 // Contactos iniciales
 export const listarVendedores = () => apiRequest("/alquiler/vendedores");

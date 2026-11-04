@@ -470,9 +470,9 @@ export const MODULES = [
 
 export const STATUS_STYLES = {
 
-    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Otorgada", "Renovada", "Atendida", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
+    positive: ["Activo", "Activa", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Otorgada", "Renovada", "Atendida", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
     warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "En solicitud", "Por renovar", "En renovación", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto", "En mantenimiento", "En reparación", "En garantía", "En espera", "Por vencer (90 días)", "Por vencer (30 días)", "Próxima a vencer"],
-    negative: ["Vencido", "Vencida", "Cancelado", "Cancelada", "Inactivo", "Escalado", "Anulada", "Descartado", "Dado de baja"],
+    negative: ["Vencido", "Vencida", "Inactiva", "Cancelado", "Cancelada", "Inactivo", "Escalado", "Anulada", "Descartado", "Dado de baja"],
 };
 
 export const NOTIFICATIONS_BY_ROLE = {

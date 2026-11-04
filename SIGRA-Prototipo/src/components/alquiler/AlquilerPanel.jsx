@@ -2,9 +2,11 @@ import { useState } from "react";
 import { SubTabs } from "../ui";
 import ContactosTab from "./ContactosTab";
 import ContratosTab from "./ContratosTab";
+import PlantillasTab from "./PlantillasTab";
 import RadiosTab from "./RadiosTab";
 import RepetidorasTab from "./RepetidorasTab";
 import {
+    puedeAdministrarPlantillas,
     puedeAsignarRadio,
     puedeCancelarContrato,
     puedeVerAuditoria,
@@ -14,6 +16,7 @@ import {
     puedeRegistrarFichaRepetidora,
     puedeVerContactos,
     puedeVerContratos,
+    puedeVerPlantillas,
 } from "./helpers";
 
 export default function AlquilerPanel({ user }) {
@@ -22,6 +25,7 @@ export default function AlquilerPanel({ user }) {
         ...(puedeVerContratos(user)
             ? [
                   { key: "contratos", label: "Contratos" },
+                  ...(puedeVerPlantillas(user) ? [{ key: "plantillas", label: "Plantillas de contrato" }] : []),
                   { key: "radios", label: "Radios en alquiler" },
                   { key: "repetidoras", label: "Repetidoras" },
               ]
@@ -43,6 +47,7 @@ export default function AlquilerPanel({ user }) {
                     canVerAuditoria={puedeVerAuditoria(user)}
                 />
             )}
+            {tab === "plantillas" && <PlantillasTab canAdministrar={puedeAdministrarPlantillas(user)} />}
             {tab === "radios" && <RadiosTab canAsignar={puedeAsignarRadio(user)} />}
             {tab === "repetidoras" && <RepetidorasTab canRegistrar={puedeRegistrarFichaRepetidora(user)} />}
             {tab === "contactos" && (

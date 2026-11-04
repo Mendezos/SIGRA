@@ -229,6 +229,11 @@
     <Build Include="dbo\Stored Procedures\sp_Proveedor_Listar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Radio_ContratoActivo.sql" />
     <Build Include="dbo\Stored Procedures\sp_Radio_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_CambiarEstado.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Editar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Obtener.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Editar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Existe.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Insertar.sql" />
@@ -273,6 +278,9 @@
     <Build Include="dbo\Tables\GarantiaSeguimiento.sql" />
     <Build Include="dbo\Tables\GarantiaTicket.sql" />
     <Build Include="dbo\Tables\Notificacion.sql" />
+    <Build Include="dbo\Tables\PlantillaContrato.sql" />
+    <Build Include="dbo\Tables\PlantillaContratoEstado.sql" />
+    <Build Include="dbo\Tables\PlantillaContratoVersion.sql" />
     <Build Include="dbo\Tables\TicketAsignacion.sql" />
     <Build Include="dbo\Tables\TicketEdicion.sql" />
     <Build Include="dbo\Tables\TicketEsperaRepuesto.sql" />

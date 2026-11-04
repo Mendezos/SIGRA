@@ -99,6 +99,7 @@ builder.Services.AddScoped<IRolDA, RolDA>();
 builder.Services.AddScoped<IModuloDA, ModuloDA>();
 builder.Services.AddScoped<IInventarioDA, InventarioDA>();
 builder.Services.AddScoped<IAlquilerDA, AlquilerDA>();
+builder.Services.AddScoped<IPlantillaContratoDA, PlantillaContratoDA>();
 builder.Services.AddScoped<IFrecuenciaDA, FrecuenciaDA>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
@@ -113,6 +114,7 @@ builder.Services.AddScoped<IRolFlujo, RolFlujo>();
 builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
 builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
 builder.Services.AddScoped<IAlquilerFlujo, AlquilerFlujo>();
+builder.Services.AddScoped<IPlantillaContratoFlujo, PlantillaContratoFlujo>();
 if (!builder.Configuration.GetValue<bool>("Pruebas:DesactivarServiciosEnSegundoPlano"))
 {
     // Contratos: marca vencidos y envía las alertas por correo (CARR-005).
