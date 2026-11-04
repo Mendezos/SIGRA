@@ -97,10 +97,21 @@ public class EquipoDisponibleDto
 public class RegistrarContratoDto
 {
     public string? Empresa { get; set; }
+    public string? Contacto { get; set; }
+    public string? Telefono { get; set; }
+    public string? Correo { get; set; }
+    public string? Direccion { get; set; }
+    public int? IdPlantilla { get; set; }
     public DateTime? FechaInicio { get; set; }
     public DateTime? FechaVencimiento { get; set; }
+    public DateTime? FechaFirma { get; set; }
     public decimal? MontoMensual { get; set; }
+    public string? Moneda { get; set; }
     public string? Condiciones { get; set; }
+    public string? ClausulasAdicionales { get; set; }
+    public string? Responsabilidades { get; set; }
+    public string? Penalizacion { get; set; }
+    public int? IdVendedor { get; set; }
     public bool CubreReparaciones { get; set; }
     public List<string>? Series { get; set; }
     public List<AccesorioContratoItemDto>? Accesorios { get; set; }
@@ -115,14 +126,61 @@ public class ContratoDto
     public DateTime FechaInicio { get; set; }
     public DateTime FechaVencimiento { get; set; }
     public decimal MontoMensual { get; set; }
+    public string Moneda { get; set; } = "CRC";
     public string? Condiciones { get; set; }
     public bool CubreReparaciones { get; set; }
     public int? IdVendedor { get; set; }
     public string? Vendedor { get; set; }
     public string? MotivoCancelacion { get; set; }
     public DateTime? FechaCancelacion { get; set; }
+    public int? IdPlantilla { get; set; }
+    public int? VersionPlantilla { get; set; }
+    public string? PlantillaNombre { get; set; }
+    public DateTime? FechaFirma { get; set; }
+    public string? ClausulasAdicionales { get; set; }
+    public string? Responsabilidades { get; set; }
+    public string? Penalizacion { get; set; }
+    public int? IdContratoOrigen { get; set; }
+    public int? IdContratoSucesor { get; set; }
+    public decimal? PenalizacionMonto { get; set; }
+    public string? PenalizacionJustificacion { get; set; }
+    public string? ObservacionesCancelacion { get; set; }
+    public string? Contacto { get; set; }
+    public string? Telefono { get; set; }
+    public string? Correo { get; set; }
+    public string? Direccion { get; set; }
+    public bool TieneDocumento { get; set; }
     public int CantidadEquipos { get; set; }
     public string Series { get; set; } = string.Empty;
+}
+
+/// <summary>Filtros de la lista de contratos (GCFS-006).</summary>
+public class FiltroContratosDto
+{
+    public string? Texto { get; set; }
+    public string? Estado { get; set; }
+    public string? Moneda { get; set; }
+    public int? IdCategoria { get; set; }
+    public DateTime? VenceDesde { get; set; }
+    public DateTime? VenceHasta { get; set; }
+    public int? IdVendedor { get; set; }
+}
+
+public class DocumentoContratoDto
+{
+    public int IdDocumento { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public DateTime FechaFirma { get; set; }
+    public string Usuario { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+    public long Bytes { get; set; }
+}
+
+public class ArchivoContratoDto
+{
+    public string Nombre { get; set; } = string.Empty;
+    public byte[] Contenido { get; set; } = Array.Empty<byte>();
 }
 
 public class ContratoEquipoDto
@@ -141,6 +199,7 @@ public class DetalleContratoDto
     public ContratoDto Contrato { get; set; } = new();
     public List<ContratoEquipoDto> Equipos { get; set; } = new();
     public List<ContratoAccesorioDto> Accesorios { get; set; } = new();
+    public List<DocumentoContratoDto> Documentos { get; set; } = new();
 }
 
 public class AgregarRadioDto
@@ -170,6 +229,7 @@ public class RadioDto
 
 public class RenovarContratoDto
 {
+    public DateTime? NuevaFechaInicio { get; set; }
     public DateTime? NuevaFechaVencimiento { get; set; }
     public decimal? NuevoMonto { get; set; }
     public string? Observacion { get; set; }
@@ -180,6 +240,11 @@ public class RenovarContratoDto
 public class CancelarContratoDto
 {
     public string? Motivo { get; set; }
+    public DateTime? FechaCancelacion { get; set; }
+    public decimal? PenalizacionMonto { get; set; }
+    public string? PenalizacionMoneda { get; set; }
+    public string? PenalizacionJustificacion { get; set; }
+    public string? Observaciones { get; set; }
 }
 
 public class RenovacionDto

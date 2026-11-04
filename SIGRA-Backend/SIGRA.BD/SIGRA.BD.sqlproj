@@ -92,7 +92,9 @@
     <Build Include="dbo\Tables\DocumentoTecnico.sql" />
     <Build Include="dbo\Tables\DocumentoFrecuencia.sql" />
     <Build Include="dbo\Tables\Cotizacion.sql" />
+    <Build Include="dbo\Tables\ContratoDocumento.sql" />
     <Build Include="dbo\Tables\ContratoEquipo.sql" />
+    <Build Include="dbo\Tables\ContratoEquipoBorrador.sql" />
     <Build Include="dbo\Tables\Contrato.sql" />
     <Build Include="dbo\Tables\Cliente.sql" />
     <Build Include="dbo\Tables\ChecklistInstalacion.sql" />
@@ -201,6 +203,10 @@
     <Build Include="dbo\Stored Procedures\sp_ContratoAccesorio_Aplicar.sql" />
     <Build Include="dbo\Stored Procedures\sp_ContratoAccesorio_Guardar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_Accesorios.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_Activar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_DocumentoContenido.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_Documentos.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_EditarBorrador.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_AgregarEquipo.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_AlertaRegistrar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_AlertasPendientes.sql" />
@@ -212,7 +218,6 @@
     <Build Include="dbo\Stored Procedures\sp_Contrato_MarcarVencidos.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_Obtener.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_Renovaciones.sql" />
-    <Build Include="dbo\Stored Procedures\sp_Contrato_Renovar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Equipo_AjustarCantidad.sql" />
     <Build Include="dbo\Stored Procedures\sp_Equipo_Bitacora.sql" />
     <Build Include="dbo\Stored Procedures\sp_Equipo_CambiarEstado.sql" />

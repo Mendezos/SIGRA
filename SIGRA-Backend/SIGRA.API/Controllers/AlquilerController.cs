@@ -72,8 +72,8 @@ public class AlquilerController : ControllerBase
 
     [HttpGet("contratos")]
     [RolesPermitidos(RolesLectura)]
-    public async Task<ActionResult<List<ContratoDto>>> Contratos([FromQuery] string? texto, [FromQuery] string? estado) =>
-        Ok(await _flujo.ListarContratosAsync(texto, estado));
+    public async Task<ActionResult<List<ContratoDto>>> Contratos([FromQuery] FiltroContratosDto filtro) =>
+        Ok(await _flujo.ListarContratosAsync(filtro));
 
     [HttpGet("contratos/{idContrato:int}")]
     [RolesPermitidos(RolesLectura)]
@@ -89,6 +89,38 @@ public class AlquilerController : ControllerBase
         return Ok(await _flujo.RegistrarContratoAsync(dto, idVendedor, idUsuario));
     }
 
+    // GCFS-007: edición de un contrato en borrador.
+    [HttpPut("contratos/{idContrato:int}")]
+    [RolesPermitidos(RolesContactos)]
+    public async Task<ActionResult<DetalleContratoDto>> EditarContrato(int idContrato, [FromBody] RegistrarContratoDto dto) =>
+        Ok(await _flujo.EditarContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.TieneRol(RolAdministrador)));
+
+    // GCFS-008: activación con el documento firmado (PDF).
+    [HttpPost("contratos/{idContrato:int}/activar")]
+    [RolesPermitidos(RolesContactos)]
+    [RequestSizeLimit(LimiteSolicitudBytes)]
+    public async Task<ActionResult<DetalleContratoDto>> ActivarContrato(int idContrato, [FromForm] ActivarContratoForm form)
+    {
+        byte[]? contenido = null;
+        if (form.Archivo is { Length: > 0 })
+        {
+            using var memoria = new MemoryStream();
+            await form.Archivo.CopyToAsync(memoria);
+            contenido = memoria.ToArray();
+        }
+
+        return Ok(await _flujo.ActivarContratoAsync(idContrato, form.FechaFirma, form.FechaInicioReal, form.Archivo?.FileName, contenido,
+            User.ObtenerIdUsuario(), User.TieneRol(RolAdministrador)));
+    }
+
+    [HttpGet("contratos/{idContrato:int}/documentos/{idDocumento:int}")]
+    [RolesPermitidos(RolesLectura)]
+    public async Task<IActionResult> DescargarDocumento(int idContrato, int idDocumento)
+    {
+        var archivo = await _flujo.ObtenerDocumentoContratoAsync(idContrato, idDocumento);
+        return File(archivo.Contenido, "application/pdf", archivo.Nombre);
+    }
+
     [HttpPut("contratos/{idContrato:int}/accesorios")]
     [RolesPermitidos(RolesContactos)]
     public async Task<ActionResult<DetalleContratoDto>> GuardarAccesorios(int idContrato, [FromBody] GuardarAccesoriosContratoDto dto) =>
@@ -100,9 +132,9 @@ public class AlquilerController : ControllerBase
         Ok(await _flujo.RenovarContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.TieneRol(RolAdministrador)));
 
     [HttpPost("contratos/{idContrato:int}/cancelar")]
-    [RolesPermitidos(RolAdministrador)]
+    [RolesPermitidos(RolesContactos)]
     public async Task<ActionResult<DetalleContratoDto>> Cancelar(int idContrato, [FromBody] CancelarContratoDto dto) =>
-        Ok(await _flujo.CancelarContratoAsync(idContrato, dto, User.ObtenerIdUsuario()));
+        Ok(await _flujo.CancelarContratoAsync(idContrato, dto, User.ObtenerIdUsuario(), User.TieneRol(RolAdministrador)));
 
     [HttpGet("contratos/{idContrato:int}/renovaciones")]
     [RolesPermitidos(RolesContactos)]
@@ -237,4 +269,11 @@ public class SubirDocumentoFormulario
     public IFormFile? Archivo { get; set; }
     public string? TipoDocumento { get; set; }
     public string? NombreDocumento { get; set; }
+}
+
+public class ActivarContratoForm
+{
+    public IFormFile? Archivo { get; set; }
+    public DateTime? FechaFirma { get; set; }
+    public DateTime? FechaInicioReal { get; set; }
 }

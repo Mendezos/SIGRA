@@ -2,11 +2,23 @@
 -- lo que se agrega sale de bodega y lo que se quita regresa. Debe llamarse dentro de una transacción.
 CREATE PROCEDURE sp_ContratoAccesorio_Aplicar
     @IdContrato INT,
-    @ItemsJson  NVARCHAR(MAX)
+    @ItemsJson  NVARCHAR(MAX),
+    @Descontar  BIT = 1   -- 0 = contrato en borrador: se guarda la lista sin mover el stock de bodega
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+
+    IF @Descontar = 0
+    BEGIN
+        DELETE FROM ContratoAccesorio WHERE IdContrato = @IdContrato;
+        INSERT INTO ContratoAccesorio (IdContrato, IdAccesorioModelo, Cantidad, DescontadoDeStock)
+        SELECT @IdContrato, j.IdAccesorioModelo, SUM(j.Cantidad), 0
+        FROM OPENJSON(ISNULL(@ItemsJson, '[]'))
+             WITH (IdAccesorioModelo INT '$.idAccesorioModelo', Cantidad INT '$.cantidad') j
+        GROUP BY j.IdAccesorioModelo;
+        RETURN;
+    END
 
     DECLARE @Nuevo TABLE (IdAccesorioModelo INT PRIMARY KEY, Cantidad INT NOT NULL);
     INSERT INTO @Nuevo (IdAccesorioModelo, Cantidad)

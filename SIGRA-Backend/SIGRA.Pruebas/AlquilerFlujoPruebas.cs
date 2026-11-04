@@ -13,11 +13,13 @@ public class AlquilerFlujoPruebas
     private readonly IInventarioDA _inventarioDA = Substitute.For<IInventarioDA>();
     private readonly IAuditoriaDA _auditoriaDA = Substitute.For<IAuditoriaDA>();
     private readonly IEmailService _email = Substitute.For<IEmailService>();
+    private readonly IPlantillaContratoDA _plantillaDA = Substitute.For<IPlantillaContratoDA>();
     private readonly AlquilerFlujo _flujo;
 
     public AlquilerFlujoPruebas()
     {
-        _flujo = new AlquilerFlujo(_alquilerDA, _inventarioDA, _auditoriaDA, _email);
+        _plantillaDA.ObtenerAsync(1, null).Returns(new DetallePlantillaContratoDto { Id = 1, Activa = true, VersionActual = 1 });
+        _flujo = new AlquilerFlujo(_alquilerDA, _inventarioDA, _auditoriaDA, _email, _plantillaDA);
     }
 
     private static EquipoDetalleDto Equipo(string serie, string estado = "Disponible", bool porCantidad = false) => new()
@@ -38,15 +40,23 @@ public class AlquilerFlujoPruebas
         FechaInicio = DateTime.Today.AddYears(-1),
         FechaVencimiento = vence ?? DateTime.Today.AddDays(20),
         MontoMensual = 85000,
+        Moneda = "CRC",
         IdVendedor = vendedor
     };
 
     private static RegistrarContratoDto ContratoValido() => new()
     {
         Empresa = "Hotel Los Sueños",
+        Contacto = "Laura Vargas",
+        Telefono = "8888-1111",
+        Correo = "laura@hotel.example",
+        Direccion = "Jacó, Puntarenas",
+        IdPlantilla = 1,
         FechaInicio = DateTime.Today,
         FechaVencimiento = DateTime.Today.AddYears(1),
         MontoMensual = 50000,
+        Moneda = "CRC",
+        IdVendedor = 6,
         Series = new List<string> { "SN-1" }
     };
 
@@ -58,7 +68,8 @@ public class AlquilerFlujoPruebas
 
         Assert.Equal("Debe completar los campos obligatorios para registrar el contrato.", ex.Message);
         Assert.Contains("Empresa cliente", ex.Errores);
-        Assert.Contains("Monto mensual", ex.Errores);
+        Assert.Contains("Precio mensual", ex.Errores);
+        Assert.Contains("Plantilla de contrato", ex.Errores);
         Assert.Contains("Fecha de inicio", ex.Errores);
     }
 
@@ -83,7 +94,40 @@ public class AlquilerFlujoPruebas
 
         var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.RegistrarContratoAsync(dto, null, 1));
 
-        Assert.Equal("El monto mensual debe ser un valor numérico mayor a cero.", ex.Message);
+        Assert.Equal("El precio mensual debe ser un valor numérico mayor a cero.", ex.Message);
+    }
+
+    [Fact]
+    public async Task RegistrarContrato_con_moneda_no_permitida_se_rechaza()
+    {
+        var dto = ContratoValido();
+        dto.Moneda = "EUR";
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.RegistrarContratoAsync(dto, null, 1));
+
+        Assert.Contains("moneda", ex.Message);
+    }
+
+    [Fact]
+    public async Task RegistrarContrato_con_serie_repetida_identifica_el_equipo()
+    {
+        var dto = ContratoValido();
+        dto.Series = new List<string> { "SN-1", "sn-1" };
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.RegistrarContratoAsync(dto, null, 1));
+
+        Assert.Contains("SN-1", ex.Message);
+        Assert.Contains("más de una vez", ex.Message);
+    }
+
+    [Fact]
+    public async Task RegistrarContrato_con_plantilla_inactiva_se_rechaza()
+    {
+        _plantillaDA.ObtenerAsync(1, null).Returns(new DetallePlantillaContratoDto { Id = 1, Activa = false, VersionActual = 1 });
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.RegistrarContratoAsync(ContratoValido(), null, 1));
+
+        Assert.Contains("inactiva", ex.Message);
     }
 
     [Fact]
@@ -94,7 +138,7 @@ public class AlquilerFlujoPruebas
         var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.RegistrarContratoAsync(ContratoValido(), null, 1));
 
         Assert.Contains("no existe en el inventario", ex.Message);
-        await _alquilerDA.DidNotReceiveWithAnyArgs().InsertarContratoAsync(default!, default, default, default, default, default, default!, default, default);
+        await _alquilerDA.DidNotReceiveWithAnyArgs().InsertarContratoAsync(default!, default!, default!, default);
     }
 
     [Theory]
@@ -116,8 +160,7 @@ public class AlquilerFlujoPruebas
     public async Task RegistrarContrato_valido_guarda_y_deja_bitacora()
     {
         _inventarioDA.ObtenerEquipoAsync(null, "SN-1").Returns(Equipo("SN-1"));
-        _alquilerDA.InsertarContratoAsync(default!, default, default, default, default, default, default!, default, default)
-            .ReturnsForAnyArgs(3);
+        _alquilerDA.InsertarContratoAsync(default!, default!, default!, default).ReturnsForAnyArgs(3);
         _alquilerDA.ObtenerContratoAsync(3).Returns(Contrato("Activo"));
         _alquilerDA.ListarEquiposDeContratoAsync(3).Returns(new List<ContratoEquipoDto> { new() { IdEquipo = 1, NumeroSerie = "SN-1" } });
         _alquilerDA.ListarAccesoriosDeContratoAsync(3).Returns(new List<ContratoAccesorioDto>());
@@ -168,7 +211,7 @@ public class AlquilerFlujoPruebas
         var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
             _flujo.RenovarContratoAsync(3, new RenovarContratoDto { NuevaFechaVencimiento = contrato.FechaVencimiento }, 1, true));
 
-        Assert.Contains("posterior a la fecha de vencimiento actual", ex.Message);
+        Assert.Contains("posterior a la fecha de inicio de la renovación", ex.Message);
     }
 
     [Fact]
@@ -187,11 +230,14 @@ public class AlquilerFlujoPruebas
     {
         PrepararContrato(Contrato("Por vencer (30 días)", DateTime.Today.AddDays(10)));
 
+        _alquilerDA.InsertarContratoAsync(default!, default!, default!, default).ReturnsForAnyArgs(3);
+
         await _flujo.RenovarContratoAsync(3, new RenovarContratoDto { NuevaFechaVencimiento = DateTime.Today.AddYears(1) }, 1, true);
 
-        await _alquilerDA.Received(1).RenovarContratoAsync(3, Arg.Any<DateTime>(), null, Arg.Any<IEnumerable<int>>(),
-            Arg.Any<IEnumerable<int>>(), null, 1);
-        await _auditoriaDA.Received().RegistrarAsync(1, "Alquiler", "Contrato", 3, "CONTRATO_RENOVADO", Arg.Any<string?>());
+        // La renovación crea un borrador vinculado al contrato actual; no cambia el contrato hasta activarlo con el PDF firmado.
+        await _alquilerDA.Received(1).InsertarContratoAsync(Arg.Is<SIGRA.Abstracciones.Modelos.DatosContratoModel>(d => d.IdContratoOrigen == 3),
+            Arg.Any<IEnumerable<int>>(), Arg.Any<IEnumerable<AccesorioContratoItemDto>>(), 1);
+        await _auditoriaDA.Received().RegistrarAsync(1, "Alquiler", "Contrato", 3, "RENOVACION_REGISTRADA", Arg.Any<string?>());
     }
 
     [Fact]
@@ -215,7 +261,7 @@ public class AlquilerFlujoPruebas
     {
         PrepararContrato(Contrato("Activo", DateTime.Today.AddDays(200)));
 
-        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.CancelarContratoAsync(3, new CancelarContratoDto(), 1));
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() => _flujo.CancelarContratoAsync(3, new CancelarContratoDto(), 1, true));
 
         Assert.Equal("Debe indicar el motivo de la cancelación.", ex.Message);
     }
@@ -228,9 +274,9 @@ public class AlquilerFlujoPruebas
         PrepararContrato(Contrato(estado));
 
         var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
-            _flujo.CancelarContratoAsync(3, new CancelarContratoDto { Motivo = "x" }, 1));
+            _flujo.CancelarContratoAsync(3, new CancelarContratoDto { Motivo = "x" }, 1, true));
 
-        Assert.Equal("El contrato no puede cancelarse porque ya no se encuentra activo.", ex.Message);
+        Assert.Equal($"El contrato no puede cancelarse porque su estado actual es {estado.ToLowerInvariant()}.", ex.Message);
     }
 
     [Fact]
@@ -238,9 +284,9 @@ public class AlquilerFlujoPruebas
     {
         PrepararContrato(Contrato("Activo", DateTime.Today.AddDays(200)));
 
-        await _flujo.CancelarContratoAsync(3, new CancelarContratoDto { Motivo = "El cliente no continúa" }, 1);
+        await _flujo.CancelarContratoAsync(3, new CancelarContratoDto { Motivo = "El cliente no continúa" }, 1, true);
 
-        await _alquilerDA.Received(1).CancelarContratoAsync(3, "El cliente no continúa", 1);
+        await _alquilerDA.Received(1).CancelarContratoAsync(3, Arg.Is<CancelarContratoDto>(d => d.Motivo == "El cliente no continúa"), 1);
         await _auditoriaDA.Received().RegistrarAsync(1, "Alquiler", "Contrato", 3, "CONTRATO_CANCELADO", Arg.Any<string?>());
     }
 
