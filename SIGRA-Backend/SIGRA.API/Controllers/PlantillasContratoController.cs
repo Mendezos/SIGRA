@@ -8,8 +8,8 @@ using SIGRA.API.Filters;
 namespace SIGRA.API.Controllers;
 
 [ApiController]
-[Route("api/alquiler/plantillas")]
-[PermisoModulo(3)]
+[Route("api/contratos/plantillas")]
+[PermisoModulo(7)]
 public class PlantillasContratoController(IPlantillaContratoFlujo flujo) : ControllerBase
 {
     private const string RolAdministrador = "Administrador del sistema";

@@ -287,6 +287,8 @@ export const MODULES = [
         metricsRoles: ["Administrador del sistema", "Gerente", "Vendedor / Ejecutivo de cuenta"],
 
         tabs: [
+            // Pestañas reales (GCFS): se dibujan con componentes propios en ModuleView; Facturas y Notas de crédito siguen de ejemplo hasta que se desarrollen.
+            { key: "contratos", label: "Contratos", columns: [], fields: [], seed: [] },
             {
                 key: "facturas",
                 label: "Facturas",

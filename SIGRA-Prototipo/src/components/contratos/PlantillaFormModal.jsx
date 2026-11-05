@@ -4,7 +4,7 @@ import Modal from "../Modal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
-import * as api from "../../services/alquilerService";
+import * as api from "../../services/contratosService";
 
 /**
  * Con `plantilla` edita: el nombre y el tipo no cambian, y guardar crea una versión nueva con su motivo.

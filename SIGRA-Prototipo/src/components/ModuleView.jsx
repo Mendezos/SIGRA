@@ -19,6 +19,17 @@ import RolesPanel from "./RolesPanel";
 import CuentasPanel from "./CuentasPanel";
 import InventarioPanel from "./inventario/InventarioPanel";
 import AlquilerPanel from "./alquiler/AlquilerPanel";
+import ContratosTab from "./alquiler/ContratosTab";
+import PlantillasTab from "./contratos/PlantillasTab";
+import { puedeAdministrarPlantillas } from "./contratos/helpers";
+import {
+    esAdministrador,
+    puedeAsignarRadio,
+    puedeCancelarContrato,
+    puedeEditarContrato,
+    puedeRegistrarContrato,
+    puedeVerAuditoria,
+} from "./alquiler/helpers";
 import TicketsPanel from "./tickets/TicketsPanel";
 import FrecuenciasPanel from "./frecuencias/FrecuenciasPanel";
 import FrecuenciasDashboardWidget from "./frecuencias/FrecuenciasDashboardWidget";
@@ -808,6 +819,20 @@ export default function ModuleView({
                         <RolesPanel
                             user={user}
                             onChanged={() => setResumenVersion((v) => v + 1)}
+                        />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "plantillas" ? (
+                        <PlantillasTab canAdministrar={puedeAdministrarPlantillas(user)} />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "contratos" ? (
+                        <ContratosTab
+                            canRegister={puedeRegistrarContrato(user)}
+                            canAsignarRadio={puedeAsignarRadio(user)}
+                            canRenovar={puedeRegistrarContrato(user)}
+                            canEditar={puedeEditarContrato(user)}
+                            canCancelar={puedeCancelarContrato(user)}
+                            canVerAuditoria={puedeVerAuditoria(user)}
+                            esAdmin={esAdministrador(user)}
                         />
                     ) : module.id === "usuarios" &&
                       currentTab.key === "cuentas" ? (

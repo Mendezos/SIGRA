@@ -4,11 +4,11 @@ import DataTable from "../DataTable";
 import { Button, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
-import * as api from "../../services/alquilerService";
+import * as api from "../../services/contratosService";
 import { listarCategorias } from "../../services/inventarioService";
 import PlantillaDetalleModal from "./PlantillaDetalleModal";
 import PlantillaFormModal from "./PlantillaFormModal";
-import { fechaCorta } from "./helpers";
+import { fechaCorta } from "../alquiler/helpers";
 
 const columnas = [
     { key: "codigo", label: "Plantilla" },

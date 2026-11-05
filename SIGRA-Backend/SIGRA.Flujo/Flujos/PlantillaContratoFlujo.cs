@@ -8,7 +8,7 @@ namespace SIGRA.Flujo.Flujos;
 // GCFS-001 a GCFS-004: plantillas de contrato con versiones.
 public class PlantillaContratoFlujo(IPlantillaContratoDA da, IAuditoriaDA auditoriaDA) : IPlantillaContratoFlujo
 {
-    private const string Modulo = "Alquiler";
+    private const string Modulo = "Contratos";
     private const int LimiteTexto = 20000;
 
     private static string? Limpio(string? texto) => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();

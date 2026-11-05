@@ -45,7 +45,7 @@ public class PlantillaContratoFlujoPruebas
         await _flujo.RegistrarAsync(Valida(), 1);
 
         await _da.Received(1).InsertarAsync(Arg.Is<GuardarPlantillaContratoDto>(d => d.Nombre == "Radios portátiles"), 1);
-        await _auditoria.Received(1).RegistrarAsync(1, "Alquiler", "PlantillaContrato", 5, "PLANTILLA_REGISTRADA", Arg.Any<string?>());
+        await _auditoria.Received(1).RegistrarAsync(1, "Contratos", "PlantillaContrato", 5, "PLANTILLA_REGISTRADA", Arg.Any<string?>());
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class PlantillaContratoFlujoPruebas
 
         await _flujo.EditarAsync(5, dto, 1);
 
-        await _auditoria.Received(1).RegistrarAsync(1, "Alquiler", "PlantillaContrato", 5, "PLANTILLA_EDITADA", Arg.Is<string?>(s => s!.Contains("Versión 3")));
+        await _auditoria.Received(1).RegistrarAsync(1, "Contratos", "PlantillaContrato", 5, "PLANTILLA_EDITADA", Arg.Is<string?>(s => s!.Contains("Versión 3")));
     }
 
     [Fact]

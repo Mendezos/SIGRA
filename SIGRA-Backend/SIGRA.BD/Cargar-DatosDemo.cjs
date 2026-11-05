@@ -314,11 +314,11 @@ async function etapaInventario() {
 async function etapaPlantillas() {
     titulo("Alquiler: plantillas de contrato");
     await resolverCatalogos();
-    const existentes = await llamar("admin", "GET", "/alquiler/plantillas");
+    const existentes = await llamar("admin", "GET", "/contratos/plantillas");
     for (const p of PLANTILLAS) {
         await paso(`Plantilla «${p.nombre}»`, async () => {
             if (existentes.some((x) => x.nombre === p.nombre)) return "omitido";
-            await llamar("admin", "POST", "/alquiler/plantillas", {
+            await llamar("admin", "POST", "/contratos/plantillas", {
                 nombre: p.nombre, idCategoria: CATEGORIA[p.tipo], clausulas: p.clausulas, responsabilidades: p.responsabilidades,
                 condicionesCancelacion: p.condicionesCancelacion, activa: true,
             });
@@ -332,7 +332,7 @@ async function etapaContratos() {
     await equipos();
     const catalogo = await llamar("vendedor", "GET", "/inventario/accesorios");
     const idAccesorio = (modelo, nombre) => catalogo.find((a) => a.modelo === modelo && a.nombre === nombre)?.id;
-    const plantillas = await llamar("vendedor", "GET", "/alquiler/plantillas");
+    const plantillas = await llamar("vendedor", "GET", "/contratos/plantillas");
     const idPlantilla = (nombre) => plantillas.find((p) => p.nombre === nombre)?.id;
     const buscar = async (c) => (await llamar("vendedor", "GET", "/alquiler/contratos")).find((x) => x.empresa === c.empresa && String(x.fechaInicio).startsWith(c.inicio));
     const hoyIso = iso(hoy);

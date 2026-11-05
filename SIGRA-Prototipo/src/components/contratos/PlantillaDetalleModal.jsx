@@ -5,9 +5,9 @@ import StatusBadge from "../StatusBadge";
 import { Button, DetailGrid, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
-import * as api from "../../services/alquilerService";
+import * as api from "../../services/contratosService";
 import PlantillaFormModal from "./PlantillaFormModal";
-import { fechaHora } from "./helpers";
+import { fechaHora } from "../alquiler/helpers";
 
 const TABS = [
     { key: "contenido", label: "Contenido" },

@@ -5,6 +5,7 @@ import { Button, FieldLabel, Notice } from "../ui";
 import { COLORS, inputClass, inputStyle } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/alquilerService";
+import * as plantillasApi from "../../services/contratosService";
 import { listarArticulos } from "../../services/inventarioService";
 import AccesoriosPicker from "./AccesoriosPicker";
 import SelectorEquipo from "./SelectorEquipo";
@@ -63,7 +64,7 @@ export default function ContratoFormModal({ detalle, esAdmin, onClose, onSaved }
             api.listarClientes(),
             api.listarEquiposDisponibles(),
             listarArticulos("accesorios"),
-            api.listarPlantillas({ estado: "Activa" }),
+            plantillasApi.listarPlantillas({ estado: "Activa" }),
             esAdmin ? api.listarVendedores() : Promise.resolve([]),
         ])
             .then(([cl, eq, acc, pl, ve]) => {
@@ -82,7 +83,7 @@ export default function ContratoFormModal({ detalle, esAdmin, onClose, onSaved }
     useEffect(() => {
         if (!form.idPlantilla) return;
         let activo = true;
-        api.obtenerPlantilla(Number(form.idPlantilla))
+        plantillasApi.obtenerPlantilla(Number(form.idPlantilla))
             .then((p) => {
                 if (!activo) return;
                 setClausulasPlantilla(p.clausulas);

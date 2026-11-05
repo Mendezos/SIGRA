@@ -24,9 +24,6 @@ export const puedeRegistrarContacto = (user) => permitido(user, [ADMIN, VENDEDOR
 export const puedeReasignarContacto = (user) => permitido(user, [ADMIN], "edicion");
 export const puedeVerContactos = (user) => permitido(user, [ADMIN, VENDEDOR, RECEPCION, "gerente"], "lectura");
 export const puedeCancelarContrato = (user) => permitido(user, [ADMIN, VENDEDOR], "escritura");
-// Las plantillas las administra el administrador; vendedores y gerencia las consultan.
-export const puedeAdministrarPlantillas = (user) => permitido(user, [ADMIN], "escritura");
-export const puedeVerPlantillas = (user) => permitido(user, [ADMIN, VENDEDOR, "gerente"], "lectura");
 export const puedeVerAuditoria = (user) => permitido(user, [ADMIN], "lectura");
 export const puedeAsignarRadio = (user) => permitido(user, [ADMIN, ...TECNICOS], "escritura");
 export const puedeRegistrarFichaRepetidora = (user) => permitido(user, [ADMIN, ...TECNICOS], "escritura");
