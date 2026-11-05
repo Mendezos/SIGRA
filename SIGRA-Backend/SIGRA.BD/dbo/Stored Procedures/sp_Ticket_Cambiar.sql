@@ -34,6 +34,10 @@ BEGIN
             IF @NuevaFecha IS NOT NULL UPDATE TicketGestion SET FechaEstimada=@NuevaFecha WHERE IdTicket=@IdTicket;
             EXEC sp_Ticket_AsignarInterno @IdTicket,@IdUsuario,@NuevoTecnico,0,@Confirmar;
         END
+        ELSE IF @Operacion='Tomar'
+        BEGIN
+            EXEC sp_Ticket_AsignarInterno @IdTicket,@IdUsuario,@IdUsuario,0,0,N'Tomada por el técnico desde las boletas disponibles',1;
+        END
         ELSE IF @Operacion='Iniciar'
         BEGIN
             IF @Estado<>'Asignada' THROW 50001, 'Solo se puede iniciar una boleta asignada.', 1;
@@ -163,7 +167,7 @@ BEGIN
         ELSE THROW 50001, 'La operación solicitada no es válida.', 1;
 
         DECLARE @EstadoNuevo VARCHAR(30)=(SELECT Estado FROM Ticket WHERE IdTicket=@IdTicket);
-        IF @EstadoNuevo<>@Estado AND NOT (@Operacion IN ('Asignar','Editar') AND @EstadoNuevo='Asignada')
+        IF @EstadoNuevo<>@Estado AND NOT (@Operacion IN ('Asignar','Tomar','Editar') AND @EstadoNuevo='Asignada')
         BEGIN
             UPDATE TicketEstadoHistorial SET FechaFin=@Fecha WHERE IdTicket=@IdTicket AND FechaFin IS NULL;
             INSERT TicketEstadoHistorial (IdTicket,IdUsuario,Estado,FechaInicio) VALUES (@IdTicket,@IdUsuario,@EstadoNuevo,@Fecha);

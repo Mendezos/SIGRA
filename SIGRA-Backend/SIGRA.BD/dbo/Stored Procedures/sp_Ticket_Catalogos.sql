@@ -46,7 +46,8 @@ BEGIN
     END
     ELSE IF @Operacion = 'Configuracion'
         SELECT COALESCE((SELECT CargaMaxima FROM ConfiguracionTickets WHERE Id = 1),5) AS CargaMaxima,
-               COALESCE((SELECT DiasHabilesEstimados FROM ConfiguracionTickets WHERE Id = 1),5) AS DiasHabilesEstimados;
+               COALESCE((SELECT DiasHabilesEstimados FROM ConfiguracionTickets WHERE Id = 1),5) AS DiasHabilesEstimados,
+               COALESCE((SELECT AsignacionAutomatica FROM ConfiguracionTickets WHERE Id = 1),0) AS AsignacionAutomatica;
     ELSE IF @Operacion = 'EquiposContratos'
         SELECT e.IdEquipo, e.NumeroSerie, e.Estado, contrato.IdContrato, contrato.IdCliente,
                COALESCE(contrato.CubreReparaciones,0) AS CubreReparaciones

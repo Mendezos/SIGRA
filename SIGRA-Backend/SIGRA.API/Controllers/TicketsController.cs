@@ -26,6 +26,7 @@ public class TicketsController(ITicketsFlujo flujo) : ControllerBase
     [HttpPut("{id:int}")] public Task<TicketDetalleDto> Editar(int id, EditarTicketDto dto) => flujo.EditarAsync(id, dto, Usuario);
     [HttpPost("{id:int}/recepcion-fisica")] public Task<TicketDetalleDto> Recibir(int id, VersionTicketDto dto) => flujo.RecibirAsync(id, dto, Usuario);
     [HttpPost("{id:int}/asignacion")] public Task<TicketDetalleDto> Asignar(int id, AsignarTicketDto dto) => flujo.AsignarAsync(id, dto, Usuario);
+    [HttpPost("{id:int}/tomar")] public Task<TicketDetalleDto> Tomar(int id, VersionTicketDto dto) => flujo.TomarAsync(id, dto, Usuario);
     [HttpPost("{id:int}/iniciar")] public Task<TicketDetalleDto> Iniciar(int id, VersionTicketDto dto) => flujo.IniciarAsync(id, dto, Usuario);
     [HttpPost("{id:int}/cancelar")] public Task<TicketDetalleDto> Cancelar(int id, MotivoTicketDto dto) => flujo.CancelarAsync(id, dto, Usuario);
     [HttpPut("{id:int}/trabajo")] public Task<TicketDetalleDto> Trabajo(int id, GuardarTrabajoTicketDto dto) => flujo.GuardarTrabajoAsync(id, dto, Usuario);

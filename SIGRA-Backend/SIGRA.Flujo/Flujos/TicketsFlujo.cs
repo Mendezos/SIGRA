@@ -42,7 +42,13 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
             throw new ReglaNegocioException("La paginación indicada no es válida.");
         if (!string.IsNullOrWhiteSpace(filtro.Estado)) filtro.Estado = ReglasTickets.Canonico(filtro.Estado, ReglasTickets.Estados, "estado");
         if (!string.IsNullOrWhiteSpace(filtro.TipoServicio)) filtro.TipoServicio = ReglasTickets.Canonico(filtro.TipoServicio, ReglasTickets.TiposServicio, "tipo de servicio");
-        if (ReglasTickets.Tecnico(actor) && !filtro.SinRecepcionFisica) filtro.IdTecnico = idUsuario;
+        if (ReglasTickets.Tecnico(actor))
+        {
+            // El técnico ve sus boletas; en "disponibles" ve las que puede tomar según sus especialidades.
+            if (filtro.Disponibles) { filtro.IdTecnico = null; filtro.ParaTecnico = idUsuario; }
+            else if (!filtro.SinRecepcionFisica) filtro.IdTecnico = idUsuario;
+        }
+        else filtro.ParaTecnico = null;
         filtro.Texto = ReglasTickets.Limpio(filtro.Texto);
         return await da.ListarAsync(filtro);
     }
@@ -175,6 +181,16 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
         if (actual.Estado == "En proceso" && !actual.EsReparacion) throw new ReglaNegocioException("El mantenimiento solo puede reasignarse antes de iniciar el trabajo.");
         return await Cambiar(actual, dto.Version, idUsuario, "Asignar", new { dto.IdTecnico, dto.ConfirmarSobrecarga,
             fechaEstimada = dto.FechaEstimada.HasValue ? ReglasTickets.FechaManual(dto.FechaEstimada.Value) : (DateTimeOffset?)null });
+    }
+
+    // El técnico toma una boleta disponible (nadie la ha tomado): queda asignada a él y sigue el flujo normal.
+    public async Task<TicketDetalleDto> TomarAsync(int idTicket, VersionTicketDto dto, int idUsuario)
+    {
+        var a = await Actor(idUsuario, "Edicion"); var actual = await Ticket(idTicket); ReglasTickets.Editable(actual);
+        ReglasTickets.Exigir(ReglasTickets.Tecnico(a), "Solo un técnico puede tomar una boleta disponible.");
+        if (actual.IdTecnicoAsignado.HasValue) throw new ReglaNegocioException("Esta boleta ya fue tomada por otro técnico.");
+        if (actual.Estado is not ("Creada" or "En proceso")) throw new ReglaNegocioException("La boleta no está disponible para tomar.");
+        return await Cambiar(actual, dto.Version, idUsuario, "Tomar", new { }, "El técnico tomó la boleta");
     }
 
     public async Task<TicketDetalleDto> IniciarAsync(int idTicket, VersionTicketDto dto, int idUsuario)

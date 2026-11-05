@@ -12,6 +12,8 @@ BEGIN
         @Hasta DATE = TRY_CONVERT(DATE, JSON_VALUE(@Filtro, '$.hasta')),
         @Inactivos BIT = CASE WHEN JSON_VALUE(@Filtro, '$.incluirInactivos') = 'true' THEN 1 ELSE 0 END,
         @SinRecepcion BIT = CASE WHEN JSON_VALUE(@Filtro, '$.sinRecepcionFisica') = 'true' THEN 1 ELSE 0 END,
+        @Disponibles BIT = CASE WHEN JSON_VALUE(@Filtro, '$.disponibles') = 'true' THEN 1 ELSE 0 END,
+        @ParaTecnico INT = TRY_CONVERT(INT, JSON_VALUE(@Filtro, '$.paraTecnico')),
         @Pagina INT = COALESCE(TRY_CONVERT(INT, JSON_VALUE(@Filtro, '$.pagina')), 1),
         @Tamano INT = COALESCE(TRY_CONVERT(INT, JSON_VALUE(@Filtro, '$.tamanoPagina')), 10);
     IF @Pagina < 1 OR @Tamano < 1 OR @Tamano > 100 THROW 50001, 'La paginación indicada no es válida.', 1;
@@ -25,6 +27,10 @@ BEGIN
       AND (@Desde IS NULL OR CONVERT(DATE, SWITCHOFFSET(v.FechaRecepcion, '-06:00')) >= @Desde)
       AND (@Hasta IS NULL OR CONVERT(DATE, SWITCHOFFSET(v.FechaRecepcion, '-06:00')) <= @Hasta)
       AND (@SinRecepcion = 0 OR (v.FechaRecepcionFisica IS NULL AND v.Estado IN ('Creada', 'Asignada')))
+      -- Boletas disponibles: nadie las ha tomado; para un técnico, solo las de equipos de sus especialidades.
+      AND (@Disponibles = 0 OR (v.IdTecnicoAsignado IS NULL AND v.Estado IN ('Creada', 'En proceso')))
+      AND (@ParaTecnico IS NULL OR NOT EXISTS (SELECT 1 FROM TicketEquipo te WHERE te.IdTicket = v.IdTicket
+              AND NOT EXISTS (SELECT 1 FROM UsuarioEspecialidad ue WHERE ue.IdUsuario = @ParaTecnico AND ue.Especialidad = te.Especialidad)))
       AND (NULLIF(@Texto, '') IS NULL OR v.Empresa LIKE '%' + @Texto + '%'
            OR v.Contacto LIKE '%' + @Texto + '%' OR CONVERT(VARCHAR(20), v.NumeroBoleta) LIKE '%' + @Texto + '%'
            OR v.CodigoSeguimiento LIKE '%' + @Texto + '%'

@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[sp_Ticket_AsignarInterno]
     @IdTicket INT, @IdUsuario INT, @IdTecnico INT = NULL,
-    @Automatica BIT = 0, @ConfirmarSobrecarga BIT = 0
+    @Automatica BIT = 0, @ConfirmarSobrecarga BIT = 0,
+    @CriterioToma NVARCHAR(500) = NULL, @EsToma BIT = 0   -- @EsToma: el propio técnico toma una boleta disponible
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -17,8 +18,11 @@ BEGIN
     IF @Estado IS NULL OR @Estado IN ('Cerrada','Cancelada') THROW 50001, 'Esta boleta no admite asignaciones.', 1;
     IF @Estado='En proceso' AND NOT EXISTS (SELECT 1 FROM Reparacion WHERE IdTicket=@IdTicket)
         THROW 50001, 'El mantenimiento solo puede reasignarse antes de iniciar el trabajo.', 1;
+    -- Con la asignación automática apagada, la boleta queda disponible para que los técnicos la tomen.
+    DECLARE @Auto BIT = COALESCE((SELECT AsignacionAutomatica FROM ConfiguracionTickets WHERE Id=1),0);
     IF @Automatica=1
     BEGIN
+        IF @Auto=1
         SELECT TOP (1) @IdTecnico = u.IdUsuario
         FROM Usuario u INNER JOIN Rol r ON r.IdRol=u.IdRol
         OUTER APPLY (SELECT COUNT(*) AS Carga FROM TicketGestion g INNER JOIN Ticket t ON t.IdTicket=g.IdTicket
@@ -32,7 +36,29 @@ BEGIN
         SET @Criterio=N'Especialidades de todos los equipos, menor carga y mayor tiempo desde la última asignación';
         IF @IdTecnico IS NULL
         BEGIN
-            IF NOT EXISTS (SELECT 1 FROM TicketGestion WHERE IdTicket=@IdTicket AND EstadoAsignacion=N'Pendiente de asignación')
+            IF @Auto=0 AND NOT EXISTS (SELECT 1 FROM TicketGestion WHERE IdTicket=@IdTicket AND EstadoAsignacion=N'Pendiente de asignación')
+            BEGIN
+                -- Se avisa a los técnicos que pueden tomarla (tienen las especialidades y carga disponible).
+                DECLARE @Elegible INT;
+                DECLARE elegibles CURSOR LOCAL FAST_FORWARD FOR
+                    SELECT u.IdUsuario FROM Usuario u INNER JOIN Rol r ON r.IdRol=u.IdRol
+                    OUTER APPLY (SELECT COUNT(*) AS Carga FROM TicketGestion g INNER JOIN Ticket t ON t.IdTicket=g.IdTicket
+                                 WHERE g.IdTecnicoAsignado=u.IdUsuario AND t.Activo=1 AND t.Estado IN ('Asignada','En proceso') AND t.IdTicket<>@IdTicket) carga
+                    WHERE u.Activo=1 AND r.Activo=1 AND u.IdCliente IS NULL AND r.Nombre COLLATE Latin1_General_100_CI_AI='Tecnico'
+                      AND carga.Carga < @Limite
+                      AND NOT EXISTS (SELECT 1 FROM TicketEquipo te WHERE te.IdTicket=@IdTicket
+                                      AND NOT EXISTS (SELECT 1 FROM UsuarioEspecialidad ue WHERE ue.IdUsuario=u.IdUsuario AND ue.Especialidad=te.Especialidad));
+                OPEN elegibles; FETCH NEXT FROM elegibles INTO @Elegible;
+                SET @Titulo=CONCAT(N'Boleta ',@Numero,N' disponible para tomar');
+                SET @Mensaje=CONCAT(N'Cliente: ',@Empresa,N'. Servicio: ',@Servicio,N'. Podés tomarla desde las boletas disponibles.');
+                WHILE @@FETCH_STATUS=0
+                BEGIN
+                    EXEC sp_Notificacion_Registrar @Elegible,2,@Titulo,@Mensaje,N'Ticket',@IdTicket;
+                    FETCH NEXT FROM elegibles INTO @Elegible;
+                END;
+                CLOSE elegibles; DEALLOCATE elegibles;
+            END;
+            IF @Auto=1 AND NOT EXISTS (SELECT 1 FROM TicketGestion WHERE IdTicket=@IdTicket AND EstadoAsignacion=N'Pendiente de asignación')
             BEGIN
                 DECLARE @Coordinador INT;
                 DECLARE coordinadores CURSOR LOCAL FAST_FORWARD FOR
@@ -66,11 +92,21 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM Usuario u INNER JOIN Rol r ON r.IdRol=u.IdRol
                        WHERE u.IdUsuario=@IdTecnico AND u.Activo=1 AND r.Activo=1 AND u.IdCliente IS NULL AND r.Nombre COLLATE Latin1_General_100_CI_AI='Tecnico')
             THROW 50001, 'Seleccione un técnico activo.', 1;
+        IF @EsToma=1
+        BEGIN
+            IF @Anterior IS NOT NULL THROW 50001, 'Esta boleta ya fue tomada por otro técnico.', 1;
+            IF EXISTS (SELECT 1 FROM TicketEquipo te WHERE te.IdTicket=@IdTicket
+                          AND NOT EXISTS (SELECT 1 FROM UsuarioEspecialidad ue WHERE ue.IdUsuario=@IdTecnico AND ue.Especialidad=te.Especialidad))
+                THROW 50001, 'La boleta incluye equipos de una especialidad que no tenés registrada.', 1;
+            IF (SELECT COUNT(*) FROM TicketGestion g INNER JOIN Ticket t ON t.IdTicket=g.IdTicket
+                WHERE g.IdTecnicoAsignado=@IdTecnico AND t.Activo=1 AND t.Estado IN ('Asignada','En proceso') AND t.IdTicket<>@IdTicket)>=@Limite
+                THROW 50001, 'Alcanzaste tu carga máxima de boletas abiertas. Terminá alguna antes de tomar otra.', 1;
+        END;
         IF @Anterior=@IdTecnico THROW 50001, 'Este técnico ya es responsable de la boleta.', 1;
         IF @ConfirmarSobrecarga=0 AND (SELECT COUNT(*) FROM TicketGestion g INNER JOIN Ticket t ON t.IdTicket=g.IdTicket
                                       WHERE g.IdTecnicoAsignado=@IdTecnico AND t.Activo=1 AND t.Estado IN ('Asignada','En proceso') AND t.IdTicket<>@IdTicket)>=@Limite
             THROW 50003, 'Este técnico ya alcanzó su carga máxima de boletas abiertas. ¿Desea continuar de todas formas?', 1;
-        SET @Criterio=N'Selección manual del coordinador';
+        SET @Criterio=COALESCE(@CriterioToma,N'Selección manual del coordinador');
     END;
     UPDATE TicketGestion SET IdTecnicoAsignado=@IdTecnico,FechaAsignacion=@Fecha,EstadoAsignacion=N'Asignada' WHERE IdTicket=@IdTicket;
     INSERT TicketAsignacion (IdTicket,IdTecnico,IdUsuario,Automatica,Criterio,Fecha)

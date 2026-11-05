@@ -22,6 +22,7 @@ public interface ITicketsFlujo
     Task<TicketDetalleDto> IniciarAsync(int idTicket, VersionTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> CancelarAsync(int idTicket, MotivoTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> GuardarTrabajoAsync(int idTicket, GuardarTrabajoTicketDto dto, int idUsuario);
+    Task<TicketDetalleDto> TomarAsync(int idTicket, VersionTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> DerivarReparacionAsync(int idTicket, VersionTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> RegistrarFacturaAsync(int idTicket, ReferenciaFacturaDto dto, int idUsuario);
     Task<TicketDetalleDto> CerrarAsync(int idTicket, GuardarTrabajoTicketDto dto, int idUsuario);

@@ -577,9 +577,9 @@ async function etapaTickets() {
             }
             if (b.hasta === "creada") return hizoAlgo ? undefined : "omitido";
 
-            // Las reparaciones se asignan solas por especialidad y carga; el resto lo asigna la coordinadora.
+            // Los técnicos toman las boletas disponibles (el sistema ya no las asigna solo).
             if (!t.idTecnicoAsignado) {
-                await llamar("coordinador", "POST", `/tickets/${id}/asignacion`, { version: t.version, idTecnico: idTecnico[b.tecnico], confirmarSobrecarga: true, fechaEstimada: dias(5) });
+                await llamar(b.tecnico, "POST", `/tickets/${id}/tomar`, { version: t.version });
                 hizoAlgo = true;
                 t = await ver(id);
             }
@@ -618,6 +618,11 @@ async function etapaTickets() {
                 t = await ver(id);
                 const nueva = (await llamar("admin", "GET", `/tickets?Pagina=1&TamanoPagina=20&IncluirInactivos=true&Texto=${encodeURIComponent(serie)}`)).items;
                 t = await ver(nueva.find((x) => x.estado !== "Cerrada")?.idTicket ?? id);
+                // La reparación derivada vuelve a las boletas disponibles: el técnico la toma otra vez.
+                if (!t.idTecnicoAsignado) {
+                    await llamar(tecnico, "POST", `/tickets/${t.idTicket}/tomar`, { version: t.version });
+                    t = await ver(t.idTicket);
+                }
             }
             await llamar(tecnico, "POST", `/tickets/${t.idTicket}/cerrar`, {
                 version: t.version,

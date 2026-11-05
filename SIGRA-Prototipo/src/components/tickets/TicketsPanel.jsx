@@ -11,7 +11,7 @@ import TicketsReportes from "./TicketsReportes";
 import { ESTADOS, fecha, gestion, mensajeError, recepcion, tecnico, TIPOS_SERVICIO } from "./helpers";
 
 const columnas = [{ key: "numeroBoleta", label: "Boleta", render: (b) => `Boleta ${b.numeroBoleta}` }, { key: "empresa", label: "Cliente" }, { key: "tecnicoTexto", label: "Técnico responsable" }, { key: "tipoServicio", label: "Servicio" }, { key: "estado", label: "Estado" }, { key: "etapaTexto", label: "Etapa de reparación" }, { key: "recepcionTexto", label: "Recepción física" }, { key: "fechaTexto", label: "Fecha de ingreso" }];
-const inicialFiltro = { texto: "", idCliente: "", idTecnico: "", tipoServicio: "", estado: "", resolucion: "", desde: "", hasta: "", sinRecepcionFisica: false, incluirInactivos: false };
+const inicialFiltro = { texto: "", idCliente: "", idTecnico: "", tipoServicio: "", estado: "", resolucion: "", desde: "", hasta: "", sinRecepcionFisica: false, disponibles: false, incluirInactivos: false };
 
 export default function TicketsPanel({ user }) {
     const [numeroAuditoria, setNumeroAuditoria] = useState(null);
@@ -53,6 +53,7 @@ export default function TicketsPanel({ user }) {
                 {[["estado", "Todos los estados", ESTADOS.map(v => [v, v])], ["tipoServicio", "Todos los servicios", TIPOS_SERVICIO.map(v => [v, v])], ["idCliente", "Todos los clientes", clientes.map(c => [c.idCliente, c.empresa])], ["idTecnico", "Todos los técnicos", tecnicos.map(t => [t.idUsuario, t.nombre])], ["resolucion", "Todas las resoluciones", ["Reparado", "No reparado", "Garantía", "Mantenimiento realizado"].map(v => [v, v])]].map(([key, label, opciones]) => <select key={key} aria-label={label} className={inputClass + " min-w-0 px-3 py-2 text-xs"} style={inputStyle} value={filtro[key]} disabled={key === "idTecnico" && tecnico(user) && !filtro.sinRecepcionFisica} onChange={e => cambiarFiltro(key, e.target.value)}><option value="">{label}</option>{opciones.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select>)}
                 <div className="sm:col-span-2 xl:col-span-4 flex flex-wrap items-end gap-x-4 gap-y-2">
                     {[["desde", "Desde"], ["hasta", "Hasta"]].map(([key, label]) => <label key={key} className="text-[11px] text-[#6E6E6E]">{label}<input aria-label={label} type="date" className={inputClass + " mt-1 px-3 py-2 text-xs"} style={inputStyle} value={filtro[key]} onChange={e => cambiarFiltro(key, e.target.value)} /></label>)}
+                    {(tecnico(user) || gestion(user)) && <label className="flex items-center gap-2 pb-2 text-xs text-[#6E6E6E]"><input type="checkbox" checked={filtro.disponibles} onChange={e => cambiarFiltro("disponibles", e.target.checked)} />Boletas disponibles para tomar</label>}
                     {tecnico(user) && <label className="flex items-center gap-2 pb-2 text-xs text-[#6E6E6E]"><input type="checkbox" checked={filtro.sinRecepcionFisica} onChange={e => cambiarFiltro("sinRecepcionFisica", e.target.checked)} />Pendientes de recepción física</label>}
                     {gestion(user) && <label className="flex items-center gap-2 pb-2 text-xs text-[#6E6E6E]"><input type="checkbox" checked={filtro.incluirInactivos} onChange={e => cambiarFiltro("incluirInactivos", e.target.checked)} />Incluir inactivas</label>}
                 </div>

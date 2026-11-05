@@ -10,9 +10,10 @@ BEGIN
         BEGIN
             DECLARE @Carga INT=TRY_CONVERT(INT,JSON_VALUE(@Datos,'$.cargaMaxima')), @Dias INT=TRY_CONVERT(INT,JSON_VALUE(@Datos,'$.diasHabilesEstimados'));
             IF @Carga IS NULL OR @Carga<1 OR @Dias IS NULL OR @Dias<1 THROW 50001, 'La carga y el plazo deben ser mayores a cero.', 1;
+            DECLARE @Automatica BIT=CASE WHEN JSON_VALUE(@Datos,'$.asignacionAutomatica')='true' THEN 1 ELSE 0 END;
             IF EXISTS (SELECT 1 FROM ConfiguracionTickets WHERE Id=1)
-                UPDATE ConfiguracionTickets SET CargaMaxima=@Carga,DiasHabilesEstimados=@Dias WHERE Id=1;
-            ELSE INSERT ConfiguracionTickets (Id,CargaMaxima,DiasHabilesEstimados) VALUES (1,@Carga,@Dias);
+                UPDATE ConfiguracionTickets SET CargaMaxima=@Carga,DiasHabilesEstimados=@Dias,AsignacionAutomatica=@Automatica WHERE Id=1;
+            ELSE INSERT ConfiguracionTickets (Id,CargaMaxima,DiasHabilesEstimados,AsignacionAutomatica) VALUES (1,@Carga,@Dias,@Automatica);
         END
         ELSE IF @Operacion='Especialidades'
         BEGIN
