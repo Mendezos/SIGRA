@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
+using SIGRA.Abstracciones.Modelos;
 using System.Data;
 
 namespace SIGRA.DA.Repositorios;
@@ -96,24 +97,73 @@ public class AlquilerDA : IAlquilerDA
     public Task<List<EquipoDisponibleDto>> ListarEquiposParaContratoAsync() =>
         ConsultarAsync<EquipoDisponibleDto>("sp_Equipo_ListarParaContrato");
 
-    public Task<int> InsertarContratoAsync(string empresa, DateTime fechaInicio, DateTime fechaVencimiento, decimal montoMensual,
-        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null, bool cubreReparaciones = false) =>
-        EscalarAsync<int>("sp_Contrato_Insertar", new
+    private static object ParametrosContrato(DatosContratoModel d, IEnumerable<int> idsEquipo, IEnumerable<AccesorioContratoItemDto> accesorios) => new
+    {
+        Empresa = d.Empresa,
+        d.Contacto,
+        d.Telefono,
+        d.Correo,
+        d.Direccion,
+        d.IdPlantilla,
+        d.VersionPlantilla,
+        d.FechaInicio,
+        d.FechaVencimiento,
+        d.FechaFirma,
+        d.MontoMensual,
+        d.Moneda,
+        d.Condiciones,
+        d.ClausulasAdicionales,
+        d.Responsabilidades,
+        d.Penalizacion,
+        d.CubreReparaciones,
+        d.IdVendedor,
+        IdsEquipo = string.Join(",", idsEquipo),
+        AccesoriosJson = System.Text.Json.JsonSerializer.Serialize(accesorios, JsonCamel)
+    };
+
+    public Task<int> InsertarContratoAsync(DatosContratoModel datos, IEnumerable<int> idsEquipo, IEnumerable<AccesorioContratoItemDto> accesorios, int idUsuario)
+    {
+        var p = new Dapper.DynamicParameters(ParametrosContrato(datos, idsEquipo, accesorios));
+        p.Add("IdUsuario", idUsuario);
+        p.Add("IdContratoOrigen", datos.IdContratoOrigen);
+        return EscalarAsync<int>("sp_Contrato_Insertar", p);
+    }
+
+    public Task EditarContratoBorradorAsync(int idContrato, DatosContratoModel datos, IEnumerable<int> idsEquipo, IEnumerable<AccesorioContratoItemDto> accesorios)
+    {
+        var p = new Dapper.DynamicParameters(ParametrosContrato(datos, idsEquipo, accesorios));
+        p.Add("IdContrato", idContrato);
+        return EjecutarAsync("sp_Contrato_EditarBorrador", p);
+    }
+
+    public Task ActivarContratoAsync(int idContrato, DateTime fechaFirma, DateTime? fechaInicioReal, string nombreArchivo, byte[] contenido, int idUsuario) =>
+        EjecutarAsync("sp_Contrato_Activar", new
         {
-            Empresa = empresa,
-            FechaInicio = fechaInicio,
-            FechaVencimiento = fechaVencimiento,
-            MontoMensual = montoMensual,
-            Condiciones = condiciones,
-            CubreReparaciones = cubreReparaciones,
-            IdVendedor = idVendedor,
-            IdsEquipo = string.Join(",", idsEquipo),
-            IdUsuario = idUsuario,
-            AccesoriosJson = accesorios is null ? null : System.Text.Json.JsonSerializer.Serialize(accesorios, JsonCamel)
+            IdContrato = idContrato,
+            FechaFirma = fechaFirma,
+            FechaInicioReal = fechaInicioReal,
+            NombreArchivo = nombreArchivo,
+            Contenido = contenido,
+            IdUsuario = idUsuario
         });
 
-    public Task<List<ContratoDto>> ListarContratosAsync(string? texto, string? estado) =>
-        ConsultarAsync<ContratoDto>("sp_Contrato_Listar", new { Texto = texto, Estado = estado });
+    public Task<List<DocumentoContratoDto>> ListarDocumentosDeContratoAsync(int idContrato) =>
+        ConsultarAsync<DocumentoContratoDto>("sp_Contrato_Documentos", new { IdContrato = idContrato });
+
+    public Task<ArchivoContratoDto?> ObtenerDocumentoDeContratoAsync(int idContrato, int idDocumento) =>
+        PrimeroAsync<ArchivoContratoDto>("sp_Contrato_DocumentoContenido", new { IdContrato = idContrato, IdDocumento = idDocumento });
+
+    public Task<List<ContratoDto>> ListarContratosAsync(FiltroContratosDto filtro) =>
+        ConsultarAsync<ContratoDto>("sp_Contrato_Listar", new
+        {
+            filtro.Texto,
+            filtro.Estado,
+            filtro.Moneda,
+            filtro.IdCategoria,
+            filtro.VenceDesde,
+            filtro.VenceHasta,
+            filtro.IdVendedor
+        });
 
     private static readonly System.Text.Json.JsonSerializerOptions JsonCamel = new() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
 
@@ -148,24 +198,20 @@ public class AlquilerDA : IAlquilerDA
     public Task<bool> TieneContratoActivoAsync(int idEquipo) =>
         EscalarAsync<bool>("sp_Radio_ContratoActivo", new { IdEquipo = idEquipo });
 
-    public Task RenovarContratoAsync(int idContrato, DateTime nuevaFecha, decimal? nuevoMonto, IEnumerable<int> idsAgregar,
-        IEnumerable<int> idsRetirar, string? observacion, int idUsuario) =>
-        EjecutarAsync("sp_Contrato_Renovar", new
-        {
-            IdContrato = idContrato,
-            NuevaFecha = nuevaFecha,
-            NuevoMonto = nuevoMonto,
-            IdsAgregar = string.Join(",", idsAgregar),
-            IdsRetirar = string.Join(",", idsRetirar),
-            Observacion = observacion,
-            IdUsuario = idUsuario
-        });
-
     public Task<List<RenovacionDto>> ListarRenovacionesAsync(int idContrato) =>
         ConsultarAsync<RenovacionDto>("sp_Contrato_Renovaciones", new { IdContrato = idContrato });
 
-    public Task CancelarContratoAsync(int idContrato, string motivo, int idUsuario) =>
-        EjecutarAsync("sp_Contrato_Cancelar", new { IdContrato = idContrato, Motivo = motivo, IdUsuario = idUsuario });
+    public Task CancelarContratoAsync(int idContrato, CancelarContratoDto datos, int idUsuario) =>
+        EjecutarAsync("sp_Contrato_Cancelar", new
+        {
+            IdContrato = idContrato,
+            Motivo = datos.Motivo,
+            IdUsuario = idUsuario,
+            FechaCancelacion = datos.FechaCancelacion,
+            PenalizacionMonto = datos.PenalizacionMonto,
+            PenalizacionJustificacion = datos.PenalizacionJustificacion,
+            Observaciones = datos.Observaciones
+        });
 
     public Task<List<AuditoriaContratoDto>> ListarAuditoriaContratoAsync(int idContrato) =>
         ConsultarAsync<AuditoriaContratoDto>("sp_Contrato_Auditoria", new { IdContrato = idContrato });

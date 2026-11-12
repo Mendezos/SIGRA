@@ -22,6 +22,7 @@ public interface ITicketsFlujo
     Task<TicketDetalleDto> IniciarAsync(int idTicket, VersionTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> CancelarAsync(int idTicket, MotivoTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> GuardarTrabajoAsync(int idTicket, GuardarTrabajoTicketDto dto, int idUsuario);
+    Task<TicketDetalleDto> TomarAsync(int idTicket, VersionTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> DerivarReparacionAsync(int idTicket, VersionTicketDto dto, int idUsuario);
     Task<TicketDetalleDto> RegistrarFacturaAsync(int idTicket, ReferenciaFacturaDto dto, int idUsuario);
     Task<TicketDetalleDto> CerrarAsync(int idTicket, GuardarTrabajoTicketDto dto, int idUsuario);
@@ -35,4 +36,8 @@ public interface ITicketsFlujo
     Task EnviarComprobanteAsync(int idTicket, EnviarComprobanteDto dto, int idUsuario);
     Task<ArchivoExportadoDto> ExportarHistorialAsync(FiltroHistorialTicketsDto filtro, string formato, int idUsuario);
     Task<ArchivoExportadoDto> ExportarGarantiasAsync(FiltroGarantiasDto filtro, string formato, int idUsuario);
+    Task<List<RepuestoTicketDto>> RepuestosUsadosAsync(int idTicket, int idUsuario);
+    Task<List<RepuestoDisponibleDto>> RepuestosDisponiblesAsync(int idUsuario);
+    Task<List<RepuestoTicketDto>> UsarRepuestoAsync(int idTicket, UsarRepuestoTicketDto dto, int idUsuario);
+    Task<List<RepuestoTicketDto>> DevolverRepuestoAsync(int idTicket, int idTicketRepuesto, int idUsuario);
 }

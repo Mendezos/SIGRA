@@ -14,10 +14,16 @@ const permitido = (user, roles, accion) =>
     tiene(user.role, roles) && tienePermiso(user, MODULO_ALQUILER, accion);
 
 export const puedeRegistrarContrato = (user) => permitido(user, [ADMIN, VENDEDOR], "escritura");
+export const puedeEditarContrato = (user) => permitido(user, [ADMIN, VENDEDOR], "edicion");
+export const esAdministrador = (user) => tiene(user.role, [ADMIN]);
+
+// Monto en la moneda del contrato (colones o dólares).
+export const dinero = (monto, moneda = "CRC") =>
+    new Intl.NumberFormat("es-CR", { style: "currency", currency: moneda === "USD" ? "USD" : "CRC", maximumFractionDigits: 2 }).format(monto ?? 0);
 export const puedeRegistrarContacto = (user) => permitido(user, [ADMIN, VENDEDOR, RECEPCION], "escritura");
 export const puedeReasignarContacto = (user) => permitido(user, [ADMIN], "edicion");
 export const puedeVerContactos = (user) => permitido(user, [ADMIN, VENDEDOR, RECEPCION, "gerente"], "lectura");
-export const puedeCancelarContrato = (user) => permitido(user, [ADMIN], "escritura");
+export const puedeCancelarContrato = (user) => permitido(user, [ADMIN, VENDEDOR], "escritura");
 export const puedeVerAuditoria = (user) => permitido(user, [ADMIN], "lectura");
 export const puedeAsignarRadio = (user) => permitido(user, [ADMIN, ...TECNICOS], "escritura");
 export const puedeRegistrarFichaRepetidora = (user) => permitido(user, [ADMIN, ...TECNICOS], "escritura");

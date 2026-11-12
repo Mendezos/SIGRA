@@ -18,6 +18,8 @@ export const ESTADOS_EQUIPO = [
     "Dado de baja",
 ];
 
+// Un equipo que es del cliente solo puede entrar a revisión o darse de baja: no se alquila ni queda disponible.
+export const ESTADOS_EQUIPO_DE_CLIENTE = ["En mantenimiento", "En reparación", "Dado de baja"];
 export const TIPOS_ENTRADA = ["Compra", "Devolución de cliente", "Equipo reparado"];
 
 export function listarCategorias() {

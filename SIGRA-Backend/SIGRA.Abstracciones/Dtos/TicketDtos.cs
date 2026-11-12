@@ -166,6 +166,10 @@ public class FiltroTicketsDto
     public DateOnly? Hasta { get; set; }
     public bool IncluirInactivos { get; set; }
     public bool SinRecepcionFisica { get; set; }
+    /// <summary>Boletas que nadie ha tomado todavía (las que un técnico puede tomar).</summary>
+    public bool Disponibles { get; set; }
+    /// <summary>Lo completa el sistema: limita las disponibles a las especialidades de ese técnico.</summary>
+    public int? ParaTecnico { get; set; }
     public int Pagina { get; set; } = 1;
     public int TamanoPagina { get; set; } = 10;
 }
@@ -201,6 +205,8 @@ public class ConfiguracionTicketsDto
 {
     public int CargaMaxima { get; set; } = 5;
     public int DiasHabilesEstimados { get; set; } = 5;
+    /// <summary>false = los técnicos toman las boletas disponibles; true = el sistema asigna por especialidad y carga.</summary>
+    public bool AsignacionAutomatica { get; set; }
 }
 
 public class EspecialidadesTecnicoDto

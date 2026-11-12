@@ -7,6 +7,6 @@ BEGIN
     FROM Equipo e
     INNER JOIN ModeloEquipo m ON m.IdModelo = e.IdModelo
     INNER JOIN CategoriaEquipo c ON c.IdCategoria = m.IdCategoria
-    WHERE e.Estado = 'Disponible' AND c.ManejaCantidad = 0
+    WHERE e.Estado = 'Disponible' AND c.ManejaCantidad = 0 AND e.Propietario = 'Radifax'
     ORDER BY c.Nombre, m.Marca, m.Modelo, e.NumeroSerie;
 END

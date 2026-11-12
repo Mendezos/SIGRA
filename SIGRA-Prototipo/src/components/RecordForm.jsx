@@ -341,6 +341,166 @@ function MultiSelectField({ options, value, onChange }) {
     );
 }
 
+function EquipmentSummaryField({
+    value,
+    onChange,
+    onValidityChange,
+}) {
+    const tipos = [
+        "Radio portátil",
+        "Repetidora",
+    ];
+    const text = String(value ?? "").trim();
+    const initialLines = text === "—" || !text
+        ? []
+        : text.split(";").flatMap((part) =>
+            part.split(",").map((fragment) => {
+                const match = fragment.trim().match(/^(\d+)\s+(.+)$/);
+                const tipoTexto = match?.[2] ?? "";
+
+                return {
+                    cantidad: match?.[1] ?? "",
+                    tipo: /repetidora/i.test(tipoTexto)
+                        ? "Repetidora"
+                        : "Radio portátil",
+                };
+            })
+        );
+        const [lines, setLines] = useState(initialLines);
+
+    function serialize(nextLines) {
+        return nextLines.length > 0
+            ? nextLines
+                .filter((line) => line.cantidad && line.tipo)
+                .map((line) => `${line.cantidad} ${line.tipo}`)
+                .join("; ")
+            : "—";
+    }
+
+    function updateLines(nextLines) {
+        setLines(nextLines);
+        const incomplete = nextLines.some(
+            (line) =>
+                !line.tipo ||
+                !line.cantidad ||
+                Number(line.cantidad) <= 0
+        );
+        const duplicate = new Set(
+            nextLines.map((line) => line.tipo).filter(Boolean)
+        ).size !== nextLines.filter((line) => line.tipo).length;
+
+        const nextError = incomplete
+            ? "Cada equipo agregado debe tener una cantidad mayor a 0 y un tipo."
+            : duplicate
+                ? "No podés agregar el mismo tipo de equipo más de una vez."
+                : "";
+
+        onValidityChange(nextError);
+        onChange(serialize(nextLines));
+    }
+
+    function addLine() {
+        if (lines.length >= tipos.length) return;
+        const nextLines = [...lines, { cantidad: "", tipo: "" }];
+        setLines(nextLines);
+        onChange(serialize(nextLines));
+    }
+
+    function removeLine(index) {
+        updateLines(lines.filter((_, lineIndex) => lineIndex !== index));
+    }
+
+    function updateLine(index, patch) {
+        updateLines(
+            lines.map((line, lineIndex) =>
+                lineIndex === index
+                    ? { ...line, ...patch }
+                    : line
+            )
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            {lines.map((line, index) => {
+                const selectedTypes = lines
+                    .filter((_, lineIndex) => lineIndex !== index)
+                    .map((otherLine) => otherLine.tipo);
+
+                return (
+                    <div
+                        key={index}
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] gap-3 items-center"
+                    >
+                        <input
+                            type="number"
+                            min="1"
+                            value={line.cantidad}
+                            onChange={(event) =>
+                                updateLine(index, {
+                                    cantidad: event.target.value,
+                                })
+                            }
+                            placeholder="Cantidad"
+                            className={inputClass()}
+                            style={estiloCampo}
+                        />
+                        <select
+                            value={line.tipo}
+                            onChange={(event) =>
+                                updateLine(index, {
+                                    tipo: event.target.value,
+                                })
+                            }
+                            className={inputClass()}
+                            style={estiloCampo}
+                        >
+                            <option value="">Seleccionar tipo...</option>
+                            {tipos
+                                .filter(
+                                    (opcion) =>
+                                        !selectedTypes.includes(opcion) ||
+                                        opcion === line.tipo
+                                )
+                                .map((opcion) => (
+                                    <option key={opcion} value={opcion}>
+                                        {opcion}
+                                    </option>
+                                ))}
+                        </select>
+                        <button
+                            type="button"
+                            onClick={() => removeLine(index)}
+                            className="px-3 py-2 rounded-lg text-sm"
+                            style={{
+                                color: COLORS.red,
+                                border: `1px solid ${COLORS.border}`,
+                            }}
+                        >
+                            Quitar
+                        </button>
+                    </div>
+                );
+            })}
+
+            {lines.length < tipos.length && (
+                <button
+                    type="button"
+                    onClick={addLine}
+                    className="px-3.5 py-2 rounded-lg text-sm"
+                    style={{
+                        color: COLORS.greenDark,
+                        border: `1px solid ${COLORS.green}`,
+                    }}
+                >
+                    + Añadir equipo
+                </button>
+            )}
+
+        </div>
+    );
+}
+
 export default function RecordForm({
     fields,
     initialValues = {},
@@ -358,6 +518,7 @@ export default function RecordForm({
 
         return base;
     });
+    const [customErrors, setCustomErrors] = useState({});
 
     function update(key, val) {
         setValues((v) => ({ ...v, [key]: val }));
@@ -366,6 +527,7 @@ export default function RecordForm({
     function handleSubmit(e) {
         e.preventDefault();
         if (disabled) return;
+        if (Object.values(customErrors).some(Boolean)) return;
         onSubmit(values);
     }
 
@@ -375,9 +537,9 @@ export default function RecordForm({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 mb-6">
                     {fields.map((f, indice) => {
                         const Icono = iconoDeCampo(f);
-                        const ancho = f.type === "textarea" || f.type === "equipment" || f.type === "multiselect";
+                        const ancho = f.type === "textarea" || f.type === "equipment" || f.type === "equipmentSummary" || f.type === "multiselect";
                         const nuevaSeccion = f.section && f.section !== fields[indice - 1]?.section;
-                        const conIcono = Icono && !["equipment", "multiselect"].includes(f.type);
+                        const conIcono = Icono && !["equipment", "equipmentSummary", "multiselect"].includes(f.type);
 
                         return (
                             <Fragment key={f.key}>
@@ -448,6 +610,17 @@ export default function RecordForm({
                                             value={values[f.key]}
                                             onChange={(v) => update(f.key, v)}
                                         />
+                                    ) : f.type === "equipmentSummary" ? (
+                                        <EquipmentSummaryField
+                                            value={values[f.key]}
+                                            onChange={(v) => update(f.key, v)}
+                                            onValidityChange={(message) =>
+                                                setCustomErrors((current) => ({
+                                                    ...current,
+                                                    [f.key]: message,
+                                                }))
+                                            }
+                                        />
                                     ) : f.type === "multiselect" ? (
                                         <MultiSelectField
                                             options={f.options}
@@ -467,6 +640,11 @@ export default function RecordForm({
                                             className={inputClass()}
                                             style={conIcono ? { ...estiloCampo, paddingLeft: 38 } : estiloCampo}
                                         />
+                                    )}
+                                    {customErrors[f.key] && (
+                                        <p className="text-xs mt-1" style={{ color: COLORS.red }}>
+                                            {customErrors[f.key]}
+                                        </p>
                                     )}
                                     </span>
                                 </label>

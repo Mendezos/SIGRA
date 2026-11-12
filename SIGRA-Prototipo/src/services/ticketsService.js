@@ -19,6 +19,10 @@ export const registrar = (body) => apiRequest("/tickets", { method: "POST", body
 export const editar = (id, body) => apiRequest(`/tickets/${id}`, { method: "PUT", body });
 export const operar = (id, operacion, body) => apiRequest(`/tickets/${id}/${operacion}`, { method: "POST", body });
 export const guardarTrabajo = (id, body) => apiRequest(`/tickets/${id}/trabajo`, { method: "PUT", body });
+export const repuestosDisponibles = () => apiRequest("/tickets/repuestos");
+export const repuestosUsados = (id) => apiRequest(`/tickets/${id}/repuestos`);
+export const usarRepuesto = (id, body) => apiRequest(`/tickets/${id}/repuestos`, { method: "POST", body });
+export const devolverRepuesto = (id, idTicketRepuesto) => apiRequest(`/tickets/${id}/repuestos/${idTicketRepuesto}`, { method: "DELETE" });
 export const seguimiento = (codigo) => apiRequest(`/tickets/seguimiento/${encodeURIComponent(codigo.trim())}`);
 export const seguimientoCliente = (empresa) => apiRequest(`/tickets/seguimiento-cliente${query({ empresa })}`);
 export const historial = (filtro) => apiRequest(`/tickets/historial${query(filtro)}`);

@@ -1,7 +1,5 @@
 // Datos y esquemas de los módulos funcionales del Sistema Integral de Gestión Radifax.
 
-// Los datos son de ejemplo ("quemados"), tal y como se acordó con el docente: este curso
-// cubre análisis y modelado de requerimientos, no la implementación final con backend real.
 // Cada módulo referencia las historias de usuario del documento AN01 (código entre paréntesis).
 
 
@@ -287,6 +285,8 @@ export const MODULES = [
         metricsRoles: ["Administrador del sistema", "Gerente", "Vendedor / Ejecutivo de cuenta"],
 
         tabs: [
+            // Pestañas reales (GCFS): se dibujan con componentes propios en ModuleView; Facturas y Notas de crédito siguen de ejemplo hasta que se desarrollen.
+            { key: "contratos", label: "Contratos", columns: [], fields: [], seed: [] },
             {
                 key: "facturas",
                 label: "Facturas",
@@ -353,6 +353,13 @@ export const MODULES = [
                     { id: "Plantilla estándar - Repetidoras", tipo: "Repetidoras", actualizada: "2026-02-18", estado: "Activo" },
                     { id: "Plantilla corporativa mixta", tipo: "Mixto", actualizada: "2025-11-05", estado: "Inactivo" },
                 ],
+            },
+            {
+                key: "encuestas",
+                label: "Encuestas",
+                columns: [],
+                fields: [],
+                seed: [],
             },
         ],
     },
@@ -446,19 +453,10 @@ export const MODULES = [
             { key: "contacto", label: "Contacto principal", type: "text" },
             { key: "correo", label: "Correo", type: "email" },
             { key: "telefono", label: "Teléfono", type: "tel" },
-            { key: "equiposActivos", label: "Equipos activos", type: "text" },
+            { key: "equiposActivos", label: "Equipos activos", type: "equipmentSummary" },
             { key: "estado", label: "Estado", type: "select", options: ["Activo", "Inactivo"] },
         ],
-        seed: [
-            { id: "Hotel Los Sueños", contacto: "Laura Jiménez", correo: "compras@losSuenosResort.com", telefono: "2630-4000", equiposActivos: "12 radios", estado: "Activo" },
-            { id: "ICT", contacto: "Esteban Rojas", correo: "logistica@ict.go.cr", telefono: "2299-5800", equiposActivos: "8 radios", estado: "Activo" },
-            { id: "Bomberos de Costa Rica", contacto: "Cap. Luis Salazar", correo: "operaciones@bomberos.go.cr", telefono: "2210-3232", equiposActivos: "3 repetidoras", estado: "Activo" },
-            { id: "Marina Pez Vela", contacto: "Andrea Solís", correo: "info@marinapezvela.com", telefono: "2777-0000", equiposActivos: "6 radios, 1 repetidora", estado: "Activo" },
-            { id: "Refinadora Costarricense", contacto: "Mario Chacón", correo: "compras@recope.go.cr", telefono: "2545-9200", equiposActivos: "20 radios", estado: "Activo" },
-            { id: "Autobuses San José", contacto: "Vinicio Araya", correo: "flota@autobusessj.cr", telefono: "2222-1010", equiposActivos: "5 radios", estado: "Activo" },
-            { id: "Condominios Trejos Montealegre", contacto: "Silvia Ureña", correo: "administracion@trejosmontealegre.cr", telefono: "2289-1122", equiposActivos: "2 radios", estado: "Inactivo" },
-            { id: "Cooperativa de Taxis Alajuela", contacto: "Franklin Mora", correo: "coopetaxis@alajuela.cr", telefono: "2441-3030", equiposActivos: "—", estado: "Inactivo" },
-        ],
+        seed: [],
     },
     {
 
@@ -470,9 +468,9 @@ export const MODULES = [
 
 export const STATUS_STYLES = {
 
-    positive: ["Activo", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Otorgada", "Renovada", "Atendida", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
+    positive: ["Activo", "Activa", "Cerrada", "Disponible", "Cobrada", "Resuelto", "Vigente", "Otorgada", "Renovada", "Atendida", "Convertido", "Generado", "Compartido", "Completado", "Aplicada", "Asignado", "Renovado", "Buena"],
     warning: ["Por vencer", "En proceso", "Asignada", "En trámite", "En solicitud", "Por renovar", "En renovación", "Pendiente", "Recibida", "Programada", "Cotización enviada", "En negociación", "Nuevo", "En espera de repuesto", "En mantenimiento", "En reparación", "En garantía", "En espera", "Por vencer (90 días)", "Por vencer (30 días)", "Próxima a vencer"],
-    negative: ["Vencido", "Vencida", "Cancelado", "Cancelada", "Inactivo", "Escalado", "Anulada", "Descartado", "Dado de baja"],
+    negative: ["Vencido", "Vencida", "Inactiva", "Cancelado", "Cancelada", "Inactivo", "Escalado", "Anulada", "Descartado", "Dado de baja"],
 };
 
 export const NOTIFICATIONS_BY_ROLE = {
@@ -502,4 +500,3 @@ export const NOTIFICATIONS_BY_ROLE = {
         "Respaldo automático de base de datos completado.",
     ],
 };
-

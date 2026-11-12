@@ -6,7 +6,9 @@ import RadiosTab from "./RadiosTab";
 import RepetidorasTab from "./RepetidorasTab";
 import {
     puedeAsignarRadio,
+    esAdministrador,
     puedeCancelarContrato,
+    puedeEditarContrato,
     puedeVerAuditoria,
     puedeReasignarContacto,
     puedeRegistrarContacto,
@@ -53,6 +55,8 @@ export default function AlquilerPanel({ user, navTarget }) {
                     canRegister={puedeRegistrarContrato(user)}
                     canAsignarRadio={puedeAsignarRadio(user)}
                     canRenovar={puedeRegistrarContrato(user)}
+                    canEditar={puedeEditarContrato(user)}
+                    esAdmin={esAdministrador(user)}
                     canCancelar={puedeCancelarContrato(user)}
                     canVerAuditoria={puedeVerAuditoria(user)}
                     abrirId={abrirId}

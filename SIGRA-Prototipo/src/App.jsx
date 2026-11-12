@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import RestablecerPassword from "./pages/RestablecerPassword";
+import ResponderEncuesta from "./pages/ResponderEncuesta";
 import { obtenerPerfil, logout as logoutApi } from "./services/authService";
 import { getToken, clearToken, setOnSesionInvalida, TOKEN_KEY } from "./services/apiClient";
 import { buildUser } from "./utils/user";
 
 const ES_RESTABLECER_PASSWORD = window.location.pathname === "/restablecer-password";
+const ES_RESPONDER_ENCUESTA = window.location.pathname.startsWith("/encuestas/responder/");
 const HAY_TOKEN_INICIAL = !ES_RESTABLECER_PASSWORD && !!getToken();
 const CLAVE_AVISO = "sigra_aviso_sesion";
 
@@ -70,6 +72,10 @@ export default function App() {
 
     if (ES_RESTABLECER_PASSWORD) {
         return <RestablecerPassword />;
+    }
+
+    if (ES_RESPONDER_ENCUESTA) {
+        return <ResponderEncuesta />;
     }
 
     if (cargando) {

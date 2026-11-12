@@ -1,4 +1,5 @@
 using SIGRA.Abstracciones.Dtos;
+using SIGRA.Abstracciones.Modelos;
 
 namespace SIGRA.Abstracciones.Interfaces.InterfacesDA;
 
@@ -19,9 +20,12 @@ public interface IAlquilerDA
     // Contratos (CARR-002, CARR-014)
     Task<List<ClienteDto>> ListarClientesAsync();
     Task<List<EquipoDisponibleDto>> ListarEquiposParaContratoAsync();
-    Task<int> InsertarContratoAsync(string empresa, DateTime fechaInicio, DateTime fechaVencimiento, decimal montoMensual,
-        string? condiciones, int? idVendedor, IEnumerable<int> idsEquipo, int idUsuario, IEnumerable<AccesorioContratoItemDto>? accesorios = null, bool cubreReparaciones = false);
-    Task<List<ContratoDto>> ListarContratosAsync(string? texto, string? estado);
+    Task<int> InsertarContratoAsync(DatosContratoModel datos, IEnumerable<int> idsEquipo, IEnumerable<AccesorioContratoItemDto> accesorios, int idUsuario);
+    Task EditarContratoBorradorAsync(int idContrato, DatosContratoModel datos, IEnumerable<int> idsEquipo, IEnumerable<AccesorioContratoItemDto> accesorios);
+    Task ActivarContratoAsync(int idContrato, DateTime fechaFirma, DateTime? fechaInicioReal, string nombreArchivo, byte[] contenido, int idUsuario);
+    Task<List<DocumentoContratoDto>> ListarDocumentosDeContratoAsync(int idContrato);
+    Task<ArchivoContratoDto?> ObtenerDocumentoDeContratoAsync(int idContrato, int idDocumento);
+    Task<List<ContratoDto>> ListarContratosAsync(FiltroContratosDto filtro);
     Task<ContratoDto?> ObtenerContratoAsync(int idContrato);
     Task<List<ContratoEquipoDto>> ListarEquiposDeContratoAsync(int idContrato);
     Task<List<ContratoAccesorioDto>> ListarAccesoriosDeContratoAsync(int idContrato);
@@ -33,10 +37,8 @@ public interface IAlquilerDA
     Task<bool> TieneContratoActivoAsync(int idEquipo);
 
     // Renovación, cancelación, auditoría y alertas de contratos (CARR-003, 004, 005, 015)
-    Task RenovarContratoAsync(int idContrato, DateTime nuevaFecha, decimal? nuevoMonto, IEnumerable<int> idsAgregar,
-        IEnumerable<int> idsRetirar, string? observacion, int idUsuario);
     Task<List<RenovacionDto>> ListarRenovacionesAsync(int idContrato);
-    Task CancelarContratoAsync(int idContrato, string motivo, int idUsuario);
+    Task CancelarContratoAsync(int idContrato, CancelarContratoDto datos, int idUsuario);
     Task<List<AuditoriaContratoDto>> ListarAuditoriaContratoAsync(int idContrato);
     Task<int> MarcarContratosVencidosAsync();
     Task<List<AlertaContratoDto>> ListarAlertasPendientesAsync();

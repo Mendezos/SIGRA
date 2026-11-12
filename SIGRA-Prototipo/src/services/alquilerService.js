@@ -10,6 +10,7 @@ function query(params) {
 }
 
 export const ESTADOS_CONTRATO = [
+    { value: "Borrador", label: "Borrador" },
     { value: "Activo", label: "Activo" },
     { value: "Por vencer (90 días)", label: "Por vencer (90 días)" },
     { value: "Por vencer (30 días)", label: "Por vencer (30 días)" },
@@ -32,14 +33,25 @@ export const reasignarContacto = (id, idVendedor, motivo) =>
 // Contratos
 export const listarClientes = () => apiRequest("/alquiler/clientes");
 export const listarEquiposDisponibles = () => apiRequest("/alquiler/equipos-disponibles");
-export const listarContratos = ({ texto, estado } = {}) => apiRequest(`/alquiler/contratos${query({ texto, estado })}`);
+export const listarContratos = (filtro = {}) => apiRequest(`/alquiler/contratos${query(filtro)}`);
 export const obtenerContrato = (id) => apiRequest(`/alquiler/contratos/${id}`);
 export const registrarContrato = (datos) => apiRequest("/alquiler/contratos", { method: "POST", body: datos });
+export const editarContrato = (id, datos) => apiRequest(`/alquiler/contratos/${id}`, { method: "PUT", body: datos });
+// El contrato se activa con su documento firmado (PDF): va como formulario con archivo.
+export const activarContrato = (id, { archivo, fechaFirma, fechaInicioReal }) => {
+    const form = new FormData();
+    if (archivo) form.append("archivo", archivo);
+    if (fechaFirma) form.append("fechaFirma", fechaFirma);
+    if (fechaInicioReal) form.append("fechaInicioReal", fechaInicioReal);
+    return apiRequest(`/alquiler/contratos/${id}/activar`, { method: "POST", body: form });
+};
+export const descargarDocumentoContrato = (idContrato, idDocumento) =>
+    apiBlob(`/alquiler/contratos/${idContrato}/documentos/${idDocumento}`);
 
 export const guardarAccesoriosContrato = (id, accesorios) =>
     apiRequest(`/alquiler/contratos/${id}/accesorios`, { method: "PUT", body: { accesorios } });
 export const renovarContrato = (id, datos) => apiRequest(`/alquiler/contratos/${id}/renovar`, { method: "POST", body: datos });
-export const cancelarContrato = (id, motivo) => apiRequest(`/alquiler/contratos/${id}/cancelar`, { method: "POST", body: { motivo } });
+export const cancelarContrato = (id, datos) => apiRequest(`/alquiler/contratos/${id}/cancelar`, { method: "POST", body: datos });
 export const listarRenovaciones = (id) => apiRequest(`/alquiler/contratos/${id}/renovaciones`);
 export const listarAuditoriaContrato = (id) => apiRequest(`/alquiler/contratos/${id}/auditoria`);
 

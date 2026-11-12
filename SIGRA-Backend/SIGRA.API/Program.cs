@@ -103,8 +103,14 @@ builder.Services.AddScoped<IRolDA, RolDA>();
 builder.Services.AddScoped<IModuloDA, ModuloDA>();
 builder.Services.AddScoped<IInventarioDA, InventarioDA>();
 builder.Services.AddScoped<IAlquilerDA, AlquilerDA>();
+builder.Services.AddScoped<IPlantillaContratoDA, PlantillaContratoDA>();
+builder.Services.AddScoped<ICotizacionDA, CotizacionDA>();
+builder.Services.AddScoped<IFacturaDA, FacturaDA>();
+builder.Services.AddScoped<INotaCreditoDA, NotaCreditoDA>();
+builder.Services.AddScoped<IEncuestaDA, EncuestaDA>();
 builder.Services.AddScoped<IFrecuenciaDA, FrecuenciaDA>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEncuestaCorreoService, EncuestaCorreoService>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -117,6 +123,11 @@ builder.Services.AddScoped<IRolFlujo, RolFlujo>();
 builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
 builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
 builder.Services.AddScoped<IAlquilerFlujo, AlquilerFlujo>();
+builder.Services.AddScoped<IPlantillaContratoFlujo, PlantillaContratoFlujo>();
+builder.Services.AddScoped<ICotizacionFlujo, CotizacionFlujo>();
+builder.Services.AddScoped<IFacturaFlujo, FacturaFlujo>();
+builder.Services.AddScoped<INotaCreditoFlujo, NotaCreditoFlujo>();
+builder.Services.AddScoped<IEncuestaFlujo, EncuestaFlujo>();
 if (!builder.Configuration.GetValue<bool>("Pruebas:DesactivarServiciosEnSegundoPlano"))
 {
     // Contratos: marca vencidos y envía las alertas por correo (CARR-005).
@@ -133,6 +144,10 @@ builder.Services.AddScoped<IFrecuenciaFlujo, FrecuenciaFlujo>();
 
 // CRM (Sprint 3): catálogos compartidos y los cuatro bloques de historias (módulo 9).
 builder.Services.AddScoped<ICrmCatalogosDA, CrmCatalogosDA>();
+builder.Services.AddScoped<ICrmAuditoriaDA, CrmAuditoriaDA>();
+builder.Services.AddScoped<ICrmAuditoriaFlujo, CrmAuditoriaFlujo>();
+builder.Services.AddScoped<ICrmClientesDA, CrmClientesDA>();
+builder.Services.AddScoped<ICrmClientesFlujo, CrmClientesFlujo>();
 builder.Services.AddScoped<ICrmCatalogosFlujo, CrmCatalogosFlujo>();
 builder.Services.AddScoped<ICrmProspectosDA, CrmProspectosDA>();
 builder.Services.AddScoped<ICrmProspectosFlujo, CrmProspectosFlujo>();

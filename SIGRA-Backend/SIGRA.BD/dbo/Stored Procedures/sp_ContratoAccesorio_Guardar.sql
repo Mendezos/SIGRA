@@ -8,12 +8,7 @@ BEGIN
 
     BEGIN TRANSACTION;
 
-    DELETE FROM ContratoAccesorio WHERE IdContrato = @IdContrato;
-
-    INSERT INTO ContratoAccesorio (IdContrato, IdAccesorioModelo, Cantidad)
-    SELECT @IdContrato, j.IdAccesorioModelo, j.Cantidad
-    FROM OPENJSON(ISNULL(@ItemsJson, '[]'))
-         WITH (IdAccesorioModelo INT '$.idAccesorioModelo', Cantidad INT '$.cantidad') j;
+    EXEC sp_ContratoAccesorio_Aplicar @IdContrato = @IdContrato, @ItemsJson = @ItemsJson;
 
     COMMIT TRANSACTION;
 END

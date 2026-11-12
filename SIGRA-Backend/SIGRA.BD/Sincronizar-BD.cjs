@@ -11,6 +11,8 @@
  *   node Sincronizar-BD.cjs --servidor "localhost\SQLEXPRESS"
  *   node Sincronizar-BD.cjs --servidor "localhost\SQLEXPRESS" --base SIGRA --crear
  *   node Sincronizar-BD.cjs --sin-semillas                   -> no ejecuta Script.PostDeployment.sql
+ *   node Sincronizar-BD.cjs --servidor tuservidor.database.windows.net --base SIGRA --usuario admin --password ***
+ *                                                            -> autenticación de SQL Server (Azure SQL); la base se crea antes en el portal
  *
  * Requiere: Node.js y sqlcmd (los mismos que ya se usan en el proyecto). Autenticación de Windows.
  *
@@ -29,6 +31,9 @@ const valorDe = (nombre, defecto) => {
     return i >= 0 && args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : defecto;
 };
 const SERVIDOR = valorDe("--servidor", "localhost");
+// Autenticación de SQL Server (por ejemplo Azure SQL). Sin estos valores se usa la autenticación de Windows.
+const USUARIO = valorDe("--usuario", process.env.SIGRA_SQL_USUARIO);
+const CLAVE = valorDe("--password", process.env.SIGRA_SQL_PASSWORD);
 const BASE = valorDe("--base", "SIGRA");
 const CREAR = args.includes("--crear");
 const SEMILLAS = !args.includes("--sin-semillas");
@@ -38,7 +43,7 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "sigra-bd-"));
 
 // ---------- utilidades ----------
 function sqlcmd(extra, { base = BASE, tolerante = false } = {}) {
-    const argumentos = ["-S", SERVIDOR, "-d", base, "-E", "-I", "-f", "65001", "-C"];
+    const argumentos = ["-S", SERVIDOR, "-d", base, ...(USUARIO ? ["-U", USUARIO, "-P", CLAVE ?? ""] : ["-E"]), "-I", "-f", "65001", "-C"];
     if (!tolerante) argumentos.push("-b");
     try {
         const salida = execFileSync("sqlcmd", [...argumentos, ...extra], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });

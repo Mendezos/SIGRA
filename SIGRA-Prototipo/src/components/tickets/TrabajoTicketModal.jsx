@@ -5,6 +5,7 @@ import ConfirmModal from "../ConfirmModal";
 import { Button, FieldLabel, Notice } from "../ui";
 import { inputClass, inputStyle } from "../uiTheme";
 import * as api from "../../services/ticketsService";
+import RepuestosUsados from "./RepuestosUsados";
 import { ETAPAS, mensajeError, RESOLUCIONES, trabajoVacio } from "./helpers";
 
 export default function TrabajoTicketModal({ boleta, onClose, onSaved }) {
@@ -40,6 +41,7 @@ export default function TrabajoTicketModal({ boleta, onClose, onSaved }) {
             footer={<><Button variant="ghost" disabled={guardando} onClick={onClose}>Cancelar</Button>{!facturada && <Button disabled={guardando} onClick={() => guardar("borrador")}>Guardar borrador</Button>}<Button variant="primary" disabled={guardando} type="submit" form="trabajo-ticket">{guardando ? "Guardando..." : "Cerrar boleta"}</Button></>}>
             {error && <Notice tone="error">{error}</Notice>}
             {facturada && <Notice>La factura está confirmada. Los datos están protegidos; podés completar el cierre.</Notice>}
+            {boleta.esReparacion && !facturada && <div className="mb-4"><RepuestosUsados boleta={boleta} editable /></div>}
             <form id="trabajo-ticket" onSubmit={pedirCierre} className="space-y-4">
                 <fieldset disabled={guardando || facturada} className="space-y-4">
                     {boleta.esReparacion ? <>

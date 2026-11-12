@@ -38,6 +38,7 @@ function claveDeRol(rol) {
 }
 
 const COLOR_ESTADO_CONTRATO = {
+    Borrador: "#8B8FA3",
     Activo: "#5EB453",
     Renovado: "#3B82A0",
     "Por vencer (90 días)": "#E0C14B",
@@ -196,8 +197,9 @@ function SeccionAlquiler({ onVer }) {
     if (error) return null;
 
     const dona = Object.entries(conteo).map(([name, value]) => ({ name, value }));
-    const vigentes = contratos.filter((c) => ["Activo", "Renovado", "Por vencer (90 días)", "Por vencer (30 días)"].includes(c.estado));
-    const ingreso = vigentes.reduce((n, c) => n + (c.montoMensual ?? 0), 0);
+    const vigentes = contratos.filter((c) => ["Activo", "Por vencer (90 días)", "Por vencer (30 días)"].includes(c.estado));
+    // El ingreso mensual se suma solo en colones: los contratos en dólares no se mezclan con ellos.
+    const ingreso = vigentes.filter((c) => c.moneda !== "USD").reduce((n, c) => n + (c.montoMensual ?? 0), 0);
     const porVencer = (conteo["Por vencer (90 días)"] ?? 0) + (conteo["Por vencer (30 días)"] ?? 0);
     const proximos = contratos
         .filter((c) => c.estado.startsWith("Por vencer"))

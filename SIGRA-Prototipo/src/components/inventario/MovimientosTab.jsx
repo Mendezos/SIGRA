@@ -11,6 +11,7 @@ import { fechaHora } from "./helpers";
 const columnas = [
     { key: "fecha", label: "Fecha" },
     { key: "serie", label: "Equipo" },
+    { key: "categoria", label: "Tipo de artículo" },
     { key: "tipo", label: "Movimiento" },
     { key: "sentido", label: "Sentido" },
     { key: "cambio", label: "Cambio de estado" },
@@ -24,6 +25,8 @@ function MovimientoModal({ modo, equipos, onClose, onSaved }) {
     const tipos = esEntrada ? api.TIPOS_ENTRADA : ["Pérdida"];
 
     const [idEquipo, setIdEquipo] = useState("");
+    const [idCategoria, setIdCategoria] = useState("");
+    const [busqueda, setBusqueda] = useState("");
     const [tipo, setTipo] = useState(esEntrada ? "" : "Pérdida");
     const [cantidad, setCantidad] = useState("1");
     const [observacion, setObservacion] = useState("");
@@ -31,6 +34,19 @@ function MovimientoModal({ modo, equipos, onClose, onSaved }) {
     const [guardando, setGuardando] = useState(false);
 
     const equipo = equipos.find((e) => String(e.idEquipo) === idEquipo);
+
+    // Tipos de artículo que existen en el inventario (radio, repetidora, accesorio, batería, repuesto...)
+    const categorias = useMemo(
+        () => [...new Map(equipos.map((e) => [e.idCategoria, e.categoria])).entries()].sort((a, b) => a[1].localeCompare(b[1])),
+        [equipos]
+    );
+    const opciones = useMemo(() => {
+        const texto = busqueda.trim().toLowerCase();
+        return equipos.filter((e) =>
+            (!idCategoria || String(e.idCategoria) === idCategoria) &&
+            (!texto || `${e.numeroSerie} ${e.marca} ${e.modelo}`.toLowerCase().includes(texto))
+        );
+    }, [equipos, idCategoria, busqueda]);
     const porCantidad = equipo?.manejaCantidad;
     const pedirCantidad = porCantidad && (tipo === "Compra" || !esEntrada);
 
@@ -76,12 +92,29 @@ function MovimientoModal({ modo, equipos, onClose, onSaved }) {
             {error && <Notice tone="error">{error}</Notice>}
 
             <form id="form-movimiento" onSubmit={guardar} className="grid grid-cols-1 gap-4">
-                <FieldLabel label="Equipo *">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FieldLabel label="Tipo de artículo">
+                        <select
+                            value={idCategoria}
+                            onChange={(e) => { setIdCategoria(e.target.value); setIdEquipo(""); }}
+                            className={inputClass}
+                            style={inputStyle}
+                        >
+                            <option value="">Todos los tipos</option>
+                            {categorias.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+                        </select>
+                    </FieldLabel>
+                    <FieldLabel label="Buscar por serie o modelo">
+                        <input value={busqueda} onChange={(e) => { setBusqueda(e.target.value); setIdEquipo(""); }} placeholder="Ej. LT-ANT o Kenwood" className={inputClass} style={inputStyle} />
+                    </FieldLabel>
+                </div>
+
+                <FieldLabel label={`Equipo * (${opciones.length} disponible${opciones.length === 1 ? "" : "s"} en la lista)`}>
                     <select value={idEquipo} onChange={(e) => setIdEquipo(e.target.value)} className={inputClass} style={inputStyle}>
                         <option value="">Seleccionar...</option>
-                        {equipos.map((e) => (
+                        {opciones.map((e) => (
                             <option key={e.idEquipo} value={e.idEquipo}>
-                                {e.numeroSerie} · {e.marca} {e.modelo} ({e.estado})
+                                {e.numeroSerie} · {e.marca} {e.modelo} · {e.categoria} ({e.estado})
                             </option>
                         ))}
                     </select>
@@ -112,6 +145,7 @@ export default function MovimientosTab({ canWrite, onChanged }) {
     const [movimientos, setMovimientos] = useState([]);
     const [equipos, setEquipos] = useState([]);
     const [tipoFiltro, setTipoFiltro] = useState("");
+    const [categoriaFiltro, setCategoriaFiltro] = useState("");
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState("");
     const [mensaje, setMensaje] = useState("");
@@ -156,15 +190,19 @@ export default function MovimientosTab({ canWrite, onChanged }) {
     );
 
     const tipos = useMemo(() => [...new Set(movimientos.map((m) => m.tipoMovimiento))], [movimientos]);
+    const categoriaDe = useMemo(() => Object.fromEntries(equipos.map((e) => [e.numeroSerie, e.categoria])), [equipos]);
+    const categoriasLista = useMemo(() => [...new Set(equipos.map((e) => e.categoria))].sort((a, b) => a.localeCompare(b)), [equipos]);
 
     const filas = useMemo(
         () =>
             movimientos
                 .filter((m) => !tipoFiltro || m.tipoMovimiento === tipoFiltro)
+                .filter((m) => !categoriaFiltro || categoriaDe[m.numeroSerie] === categoriaFiltro)
                 .map((m) => ({
                     id: m.idMovimiento,
                     fecha: fechaHora(m.fecha),
                     serie: `${m.numeroSerie} · ${m.modelo}`,
+                    categoria: categoriaDe[m.numeroSerie] ?? "—",
                     tipo: m.tipoMovimiento,
                     sentido: m.sentido,
                     cambio: m.estadoAnterior && m.estadoAnterior !== m.estadoNuevo ? `${m.estadoAnterior} → ${m.estadoNuevo}` : m.estadoNuevo,
@@ -172,7 +210,7 @@ export default function MovimientosTab({ canWrite, onChanged }) {
                     usuario: m.usuario,
                     observacion: m.observacion,
                 })),
-        [movimientos, tipoFiltro]
+        [movimientos, tipoFiltro, categoriaFiltro, categoriaDe]
     );
 
     function alGuardar(texto) {
@@ -197,6 +235,17 @@ export default function MovimientosTab({ canWrite, onChanged }) {
                 >
                     <option value="">Todos los movimientos</option>
                     {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+
+                <select
+                    value={categoriaFiltro}
+                    onChange={(e) => setCategoriaFiltro(e.target.value)}
+                    aria-label="Filtrar por tipo de artículo"
+                    className="px-3 py-2.5 rounded-lg text-sm bg-white"
+                    style={{ ...inputStyle, color: categoriaFiltro ? COLORS.charcoal : COLORS.muted }}
+                >
+                    <option value="">Todos los tipos de artículo</option>
+                    {categoriasLista.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
 
                 {canWrite && (

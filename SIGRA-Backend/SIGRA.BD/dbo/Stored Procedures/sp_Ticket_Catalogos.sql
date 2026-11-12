@@ -46,7 +46,8 @@ BEGIN
     END
     ELSE IF @Operacion = 'Configuracion'
         SELECT COALESCE((SELECT CargaMaxima FROM ConfiguracionTickets WHERE Id = 1),5) AS CargaMaxima,
-               COALESCE((SELECT DiasHabilesEstimados FROM ConfiguracionTickets WHERE Id = 1),5) AS DiasHabilesEstimados;
+               COALESCE((SELECT DiasHabilesEstimados FROM ConfiguracionTickets WHERE Id = 1),5) AS DiasHabilesEstimados,
+               COALESCE((SELECT AsignacionAutomatica FROM ConfiguracionTickets WHERE Id = 1),0) AS AsignacionAutomatica;
     ELSE IF @Operacion = 'EquiposContratos'
         SELECT e.IdEquipo, e.NumeroSerie, e.Estado, contrato.IdContrato, contrato.IdCliente,
                COALESCE(contrato.CubreReparaciones,0) AS CubreReparaciones
@@ -54,7 +55,7 @@ BEGIN
         OUTER APPLY (
             SELECT TOP (1) c.IdContrato, c.IdCliente,
                 CAST(CASE WHEN c.CubreReparaciones = 1 AND c.Estado IN ('Activo','Renovado')
-                       AND c.FechaInicio <= CONVERT(DATE,DATEADD(HOUR,-6,SYSUTCDATETIME()))
+                       AND (c.FechaInicio<=CONVERT(DATE,DATEADD(HOUR,-6,SYSUTCDATETIME())) OR c.IdContratoOrigen IS NOT NULL)
                        AND c.FechaVencimiento >= CONVERT(DATE,DATEADD(HOUR,-6,SYSUTCDATETIME())) THEN 1 ELSE 0 END AS BIT) AS CubreReparaciones
             FROM ContratoEquipo ce INNER JOIN Contrato c ON c.IdContrato = ce.IdContrato
             WHERE ce.IdEquipo = e.IdEquipo AND ce.FechaDevolucion IS NULL AND c.Estado IN ('Activo','Renovado','Vencido')

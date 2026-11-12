@@ -19,10 +19,25 @@ import RolesPanel from "./RolesPanel";
 import CuentasPanel from "./CuentasPanel";
 import InventarioPanel from "./inventario/InventarioPanel";
 import AlquilerPanel from "./alquiler/AlquilerPanel";
+import ContratosTab from "./alquiler/ContratosTab";
+import PlantillasTab from "./contratos/PlantillasTab";
+import { puedeAdministrarPlantillas } from "./contratos/helpers";
+import {
+    esAdministrador,
+    puedeAsignarRadio,
+    puedeCancelarContrato,
+    puedeEditarContrato,
+    puedeRegistrarContrato,
+    puedeVerAuditoria,
+} from "./alquiler/helpers";
 import TicketsPanel from "./tickets/TicketsPanel";
 import FrecuenciasPanel from "./frecuencias/FrecuenciasPanel";
 import CrmPanel from "./crm/CrmPanel";
+import ClientesTab from "./crm/ClientesTab";
 import FrecuenciasDashboardWidget from "./frecuencias/FrecuenciasDashboardWidget";
+import FacturasPanel from "./contratos/FacturasPanel";
+import NotasCreditoPanel from "./contratos/NotasCreditoPanel";
+import EncuestasPanel from "./contratos/EncuestasPanel";
 import { puedeVerResumenFrecuencias } from "./frecuencias/helpers";
 import { obtenerResumen } from "../services/cuentasService";
 
@@ -812,12 +827,36 @@ export default function ModuleView({
                             user={user}
                             onChanged={() => setResumenVersion((v) => v + 1)}
                         />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "plantillas" ? (
+                        <PlantillasTab canAdministrar={puedeAdministrarPlantillas(user)} />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "contratos" ? (
+                        <ContratosTab
+                            canRegister={puedeRegistrarContrato(user)}
+                            canAsignarRadio={puedeAsignarRadio(user)}
+                            canRenovar={puedeRegistrarContrato(user)}
+                            canEditar={puedeEditarContrato(user)}
+                            canCancelar={puedeCancelarContrato(user)}
+                            canVerAuditoria={puedeVerAuditoria(user)}
+                            esAdmin={esAdministrador(user)}
+                        />
                     ) : module.id === "usuarios" &&
                       currentTab.key === "cuentas" ? (
                         <CuentasPanel
                             user={user}
                             onChanged={() => setResumenVersion((v) => v + 1)}
                         />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "facturas" ? (
+                        <FacturasPanel
+                        />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "notasCredito" ? (
+                        <NotasCreditoPanel />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "encuestas" ? (
+                        <EncuestasPanel />
                     ) : (
                     <EntityPanel
                         key={currentTab.key}
@@ -863,6 +902,8 @@ export default function ModuleView({
                 <FrecuenciasPanel user={user} navTarget={navTarget} />
             ) : module.id === "crm" ? (
                 <CrmPanel user={user} navTarget={navTarget} />
+            ) : module.id === "clientes" ? (
+                <ClientesTab target={navTarget} puedeAsignar={user.role === "Administrador del sistema"} />
             ) : (
                 <EntityPanel
                     idPrefix={idPrefixFor(module.id)}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Ban, Building2, ExternalLink, Pencil, RotateCcw } from "lucide-react";
+import { Ban, Building2, ExternalLink, Pencil, RotateCcw, UserCheck, UserCog } from "lucide-react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
 import { Button, DetailGrid, Notice, Pill } from "../ui";
@@ -45,7 +45,7 @@ function Lista({ items, vacio, render }) {
 
 // CRMGPSC-002 (escenario 3): detalle de solo lectura de un prospecto. Desde aquí se editan, descartan o reactivan.
 // version cambia cuando el padre guardó algo y hay que volver a leer.
-export default function ProspectoDetalleModal({ idProspecto, version = 0, puedeEditar, onClose, onEditar, onDescartar, onReactivar }) {
+export default function ProspectoDetalleModal({ idProspecto, version = 0, puedeEditar, onClose, onEditar, onDescartar, onReactivar, puedeConvertir, esAdmin, idUsuario, onConvertir, onResponsable, onAbrirCliente }) {
     const [cargado, setCargado] = useState(null);
     const [error, setError] = useState("");
     const [pestana, setPestana] = useState("datos");
@@ -96,6 +96,16 @@ export default function ProspectoDetalleModal({ idProspecto, version = 0, puedeE
                         <Button variant="ghost" onClick={onClose}>
                             Cerrar
                         </Button>
+                        {puedeConvertir && activoEditable && (esAdmin || p.idVendedor === idUsuario) && (
+                            <Button variant="primary" className="flex items-center gap-1.5" onClick={() => onConvertir(p)}>
+                                <UserCheck size={14} /> Convertir a cliente
+                            </Button>
+                        )}
+                        {esAdmin && activoEditable && (
+                            <Button className="flex items-center gap-1.5" onClick={() => onResponsable(p)}>
+                                <UserCog size={14} /> {p.idVendedor ? "Reasignar responsable" : "Asignar responsable"}
+                            </Button>
+                        )}
                         {puedeEditar && activoEditable && (
                             <>
                                 <Button className="flex items-center gap-1.5" onClick={() => onEditar(p)}>
@@ -125,9 +135,11 @@ export default function ProspectoDetalleModal({ idProspecto, version = 0, puedeE
                             Este prospecto ya fue convertido en cliente y no se puede editar ni descartar.
                             {p.clienteEmpresa ? ` Cliente vinculado: ${p.clienteEmpresa} (ID ${p.idCliente}).` : ""}
                         </span>
-                        <Button className="flex items-center gap-1.5" disabled title="El perfil del cliente se consulta en el módulo de clientes">
-                            <ExternalLink size={14} /> Abrir cliente
-                        </Button>
+                        {p.idCliente && onAbrirCliente && (
+                            <Button className="flex items-center gap-1.5" onClick={() => { onClose(); onAbrirCliente(p.idCliente); }}>
+                                <ExternalLink size={14} /> Abrir cliente
+                            </Button>
+                        )}
                     </span>
                 </Notice>
             )}

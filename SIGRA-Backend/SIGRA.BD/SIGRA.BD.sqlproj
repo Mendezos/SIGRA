@@ -60,10 +60,7 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\Views\" />
-<<<<<<< HEAD
     <Folder Include="dbo\Triggers\" />
-=======
->>>>>>> Confirmacion
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Usuario.sql" />
@@ -95,7 +92,9 @@
     <Build Include="dbo\Tables\DocumentoTecnico.sql" />
     <Build Include="dbo\Tables\DocumentoFrecuencia.sql" />
     <Build Include="dbo\Tables\Cotizacion.sql" />
+    <Build Include="dbo\Tables\ContratoDocumento.sql" />
     <Build Include="dbo\Tables\ContratoEquipo.sql" />
+    <Build Include="dbo\Tables\ContratoEquipoBorrador.sql" />
     <Build Include="dbo\Tables\Contrato.sql" />
     <Build Include="dbo\Tables\Cliente.sql" />
     <Build Include="dbo\Tables\ChecklistInstalacion.sql" />
@@ -201,8 +200,13 @@
     <Build Include="dbo\Stored Procedures\sp_Contacto_Reasignar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contacto_RecienteDeEmpresa.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contacto_VendedorPrevio.sql" />
+    <Build Include="dbo\Stored Procedures\sp_ContratoAccesorio_Aplicar.sql" />
     <Build Include="dbo\Stored Procedures\sp_ContratoAccesorio_Guardar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_Accesorios.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_Activar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_DocumentoContenido.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_Documentos.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Contrato_EditarBorrador.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_AgregarEquipo.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_AlertaRegistrar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_AlertasPendientes.sql" />
@@ -214,7 +218,6 @@
     <Build Include="dbo\Stored Procedures\sp_Contrato_MarcarVencidos.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_Obtener.sql" />
     <Build Include="dbo\Stored Procedures\sp_Contrato_Renovaciones.sql" />
-    <Build Include="dbo\Stored Procedures\sp_Contrato_Renovar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Equipo_AjustarCantidad.sql" />
     <Build Include="dbo\Stored Procedures\sp_Equipo_Bitacora.sql" />
     <Build Include="dbo\Stored Procedures\sp_Equipo_CambiarEstado.sql" />
@@ -231,10 +234,19 @@
     <Build Include="dbo\Stored Procedures\sp_Proveedor_Listar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Radio_ContratoActivo.sql" />
     <Build Include="dbo\Stored Procedures\sp_Radio_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_CambiarEstado.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Editar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_PlantillaContrato_Obtener.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Editar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Existe.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Insertar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Repuesto_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Catalogo.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Devolver.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_TicketRepuesto_Usar.sql" />
     <Build Include="dbo\Stored Procedures\sp_StockMinimo_Guardar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Stock_PorCategoria.sql" />
     <Build Include="dbo\Stored Procedures\sp_Stock_PorModelo.sql" />
@@ -271,11 +283,15 @@
     <Build Include="dbo\Tables\GarantiaSeguimiento.sql" />
     <Build Include="dbo\Tables\GarantiaTicket.sql" />
     <Build Include="dbo\Tables\Notificacion.sql" />
+    <Build Include="dbo\Tables\PlantillaContrato.sql" />
+    <Build Include="dbo\Tables\PlantillaContratoEstado.sql" />
+    <Build Include="dbo\Tables\PlantillaContratoVersion.sql" />
     <Build Include="dbo\Tables\TicketAsignacion.sql" />
     <Build Include="dbo\Tables\TicketEdicion.sql" />
     <Build Include="dbo\Tables\TicketEsperaRepuesto.sql" />
     <Build Include="dbo\Tables\TicketGestion.sql" />
     <Build Include="dbo\Tables\TicketInventarioEvento.sql" />
+    <Build Include="dbo\Tables\TicketRepuesto.sql" />
     <Build Include="dbo\Tables\UsuarioEspecialidad.sql" />
     <Build Include="dbo\Views\vw_TicketDetalle.sql" />
   </ItemGroup>
@@ -286,5 +302,78 @@
     <Build Include="dbo\Stored Procedures\sp_Notificacion_Consultar.sql" />
     <Build Include="dbo\Stored Procedures\sp_Notificacion_Leer.sql" />
     <Build Include="dbo\Stored Procedures\sp_Ticket_Bloquear.sql" />
+    <Build Include="dbo\Tables\CobroFactura.sql" />
+    <Build Include="dbo\Tables\ContactoEmpresa.sql" />
+    <Build Include="dbo\Tables\CotizacionHistorial.sql" />
+    <Build Include="dbo\Tables\CotizacionLinea.sql" />
+    <Build Include="dbo\Tables\Encuesta.sql" />
+    <Build Include="dbo\Tables\EncuestaRespuesta.sql" />
+    <Build Include="dbo\Tables\Factura.sql" />
+    <Build Include="dbo\Tables\FacturaLinea.sql" />
+    <Build Include="dbo\Tables\NotaCRM.sql" />
+    <Build Include="dbo\Tables\NotaCredito.sql" />
+    <Build Include="dbo\Tables\ProspectoEstadoHistorial.sql" />
+    <Build Include="dbo\Tables\RecordatorioBateria.sql" />
+    <Build Include="dbo\Tables\SeguimientoCRM.sql" />
+    <Build Include="dbo\Tables\SeguimientoHistorial.sql" />
+    <Build Include="dbo\Tables\SerieContactoCRM.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmBateria_Atender.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmBateria_Crear.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmBateria_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmBateria_Modelos.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmBateria_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmBateria_Registrar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmBateria_RegistrarDesdeFactura.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContactoEmpresa_Catalogo.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContacto_Coincidencias.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContacto_Desactivar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContacto_Editar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContacto_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContacto_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContacto_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmContacto_Reactivar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmEmpresa_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmEmpresa_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmHistorial_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmInteraccion_Cotizaciones.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmInteraccion_Registrar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmNota_Registrar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Coincidencias.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Descartar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Detalle.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Editar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Reactivar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmRecordatorio_Procesar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmRecordatorio_Resumen.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSeguimiento_Cancelar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSeguimiento_Completar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSeguimiento_Crear.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSeguimiento_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSeguimiento_MarcarAtrasados.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSeguimiento_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSeguimiento_Reprogramar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSerie_Cancelar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSerie_Crear.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSerie_Extender.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSerie_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmSerie_Obtener.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Notificacion_LeerTodas.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Notificacion_Resumen.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_Insertar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Usuario_Listar.sql" />
+    <Build Include="dbo\Functions\fn_CrmAhora.sql" />
+    <Build Include="dbo\Functions\fn_CrmSerie_Fecha.sql" />
+    <Build Include="dbo\Tables\ClienteVentaInicial.sql" />
+    <Build Include="dbo\Tables\ResponsableComercialHistorial.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmCliente_Listar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmCliente_Perfil.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Convertir.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmResponsable_Asignar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Consultar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Detalle.sql" />
+    <Build Include="dbo\Views\vw_CrmAuditoria.sql" />
   </ItemGroup>
 </Project>

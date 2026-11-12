@@ -8,6 +8,7 @@ import { inputClass, inputStyle } from "../uiTheme";
 import * as api from "../../services/ticketsService";
 import EntradaTicketModal from "./EntradaTicketModal";
 import TrabajoTicketModal from "./TrabajoTicketModal";
+import RepuestosUsados from "./RepuestosUsados";
 import { abierta, fecha, gestion, mensajeError, propio, recepcion, tecnico } from "./helpers";
 
 export default function DetalleTicketModal({ inicial, user, onClose, onChanged, onVerAuditoria }) {
@@ -17,6 +18,8 @@ export default function DetalleTicketModal({ inicial, user, onClose, onChanged, 
     const [motivo, setMotivo] = useState(""); const [correo, setCorreo] = useState(inicial.correo ?? ""); const [correoConfirmado, setCorreoConfirmado] = useState(false);
     useEffect(() => { if (!aviso) return; const t = setTimeout(() => setAviso(""), 3000); return () => clearTimeout(t); }, [aviso]);
     const editable = abierta(boleta) && !boleta.facturaEmitida;
+    // Los accesorios entregados con el equipo quedan retenidos en el taller y se liberan cuando el equipo se repara, se cierra o se cancela la boleta.
+    const accesoriosLiberados = ["Cerrada", "Cancelada"].includes(boleta.estado) || boleta.trabajo?.etapa === "Reparado" || boleta.trabajo?.resolucion === "Reparado";
     function actualizado(actual) { setBoleta(actual); onChanged(actual); setAviso("Los cambios se guardaron correctamente."); }
     async function accion(operacion, datos = {}) {
         setOcupado(true); setError(""); setPendiente(null);
@@ -65,6 +68,7 @@ export default function DetalleTicketModal({ inicial, user, onClose, onChanged, 
             <section className="border-t border-[#E3E3E3] pt-4 space-y-3">
                 <div className="flex flex-wrap gap-2"><Button disabled={ocupado} onClick={() => documento(true)}>Vista previa / imprimir</Button><Button disabled={ocupado} onClick={() => documento()}>Descargar comprobante</Button>{recepcion(user) && <Button disabled={ocupado} onClick={() => { setCorreoConfirmado(false); setModo("correo"); }}>Enviar / reenviar por correo</Button>}</div>
                 {editable && <div className="flex flex-wrap gap-2">
+                    {tecnico(user) && !boleta.idTecnicoAsignado && ["Creada", "En proceso"].includes(boleta.estado) && <Button variant="primary" disabled={ocupado} onClick={() => setPendiente({ operacion: "tomar", mensaje: "La boleta quedará asignada a vos. Tu nombre y la fecha quedarán registrados y ya no estará disponible para otros técnicos." })}>Tomar boleta</Button>}
                     {tecnico(user) && !boleta.fechaRecepcionFisica && <Button variant="primary" disabled={ocupado} onClick={() => setPendiente({ operacion: "recepcion-fisica", mensaje: "Confirmá que estás recibiendo físicamente todos los equipos de esta boleta. Tu nombre y la fecha quedarán registrados." })}>Confirmar recepción física</Button>}
                     {gestion(user) && <Button variant="primary" disabled={ocupado || (!boleta.esReparacion && boleta.estado === "En proceso")} onClick={abrirAsignacion}>{boleta.idTecnicoAsignado ? "Reasignar técnico" : "Asignar técnico"}</Button>}
                     {propio(user, boleta) && boleta.estado === "Asignada" && <Button variant="primary" disabled={ocupado || !boleta.fechaRecepcionFisica} onClick={() => setPendiente({ operacion: "iniciar", mensaje: "Se registrará el inicio del trabajo con tu usuario y la hora actual." })}>Iniciar trabajo</Button>}
@@ -75,8 +79,9 @@ export default function DetalleTicketModal({ inicial, user, onClose, onChanged, 
             </section>
             </>}
             {pestana === "equipos" && (
-            <section className="mb-5"><h3 className="text-xs uppercase text-[#6E6E6E] mb-3">Equipos de esta visita</h3><div className="space-y-3">{boleta.equipos.map((e, i) => <div key={e.idTicketEquipo ?? i} className="border border-[#E3E3E3] rounded-lg p-3"><p className="font-medium text-sm">{e.marca} {e.modelo} · {e.numeroSerie}</p><p className="text-xs text-[#6E6E6E] mt-1">{e.tipo} · Accesorios: {e.accesorios.join(", ") || "Sin accesorios"}</p><p className="text-sm mt-2 whitespace-pre-wrap">{e.problema}</p>{e.cubiertoPorContrato && <p className="text-xs text-[#4CA23D] mt-2">Reparación cubierta por contrato</p>}</div>)}</div></section>
+            <section className="mb-5"><h3 className="text-xs uppercase text-[#6E6E6E] mb-3">Equipos de esta visita</h3><div className="space-y-3">{boleta.equipos.map((e, i) => <div key={e.idTicketEquipo ?? i} className="border border-[#E3E3E3] rounded-lg p-3"><p className="font-medium text-sm">{e.marca} {e.modelo} · {e.numeroSerie}</p><p className="text-xs text-[#6E6E6E] mt-1">{e.tipo} · Accesorios: {e.accesorios.join(", ") || "Sin accesorios"}</p>{e.accesorios.length > 0 && (accesoriosLiberados ? <p className="text-xs text-[#4CA23D] mt-1">Accesorios devueltos al cliente: ya no están retenidos en el taller.</p> : <p className="text-xs text-[#9C7A17] mt-1">Accesorios retenidos en el taller hasta que se repare el equipo.</p>)}<p className="text-sm mt-2 whitespace-pre-wrap">{e.problema}</p>{e.cubiertoPorContrato && <p className="text-xs text-[#4CA23D] mt-2">Reparación cubierta por contrato</p>}</div>)}</div></section>
             )}
+            {pestana === "trabajo" && boleta.esReparacion && <div className="mb-5"><RepuestosUsados key={boleta.version} boleta={boleta} /></div>}
             {pestana === "trabajo" && boleta.trabajo && <DetailGrid title="Trabajo técnico" items={[{ label: "Etapa", value: boleta.esReparacion ? boleta.trabajo.etapa : boleta.trabajo.servicioRealizado }, { label: "Resolución", value: boleta.trabajo.resolucion }, { label: "Hallazgos", value: boleta.trabajo.hallazgos, wide: true }, { label: "Acciones realizadas", value: boleta.trabajo.acciones, wide: true }, { label: "Detalles del trabajo", value: boleta.trabajo.detallesTrabajo, wide: true }, { label: "Observaciones", value: boleta.trabajo.observaciones, wide: true }, { label: "Repuesto pendiente", value: boleta.trabajo.repuesto }, { label: "Factura", value: boleta.trabajo.numeroFactura }, { label: "Monto", value: boleta.trabajo.monto != null ? new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC" }).format(boleta.trabajo.monto) : null }, { label: "Justificación técnica", value: boleta.trabajo.justificacionTecnica, wide: true }, { label: "Proveedor", value: boleta.trabajo.proveedor }, { label: "Caso de garantía", value: boleta.trabajo.casoProveedor }]} />}
             {pestana === "historial" && <>
             <details open className="mb-4"><summary className="cursor-pointer text-sm font-medium">Historial de estados y asignaciones</summary><div className="mt-3 space-y-2">{boleta.estados.map((e, i) => <p key={`estado-${i}`} className="text-sm">{e.estado} · {e.usuario} · {fecha(e.fecha)}</p>)}{boleta.asignaciones.map((a, i) => <div key={`asignacion-${i}`} className="p-3 rounded-lg bg-[#FAFAFA] text-sm"><p>{a.tecnico} · {a.automatica ? "Asignación automática" : `Asignación por ${a.usuario}`} · {fecha(a.fecha)}</p><p className="text-xs text-[#6E6E6E] mt-1">{a.criterio}</p></div>)}</div></details>

@@ -42,7 +42,13 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
             throw new ReglaNegocioException("La paginación indicada no es válida.");
         if (!string.IsNullOrWhiteSpace(filtro.Estado)) filtro.Estado = ReglasTickets.Canonico(filtro.Estado, ReglasTickets.Estados, "estado");
         if (!string.IsNullOrWhiteSpace(filtro.TipoServicio)) filtro.TipoServicio = ReglasTickets.Canonico(filtro.TipoServicio, ReglasTickets.TiposServicio, "tipo de servicio");
-        if (ReglasTickets.Tecnico(actor) && !filtro.SinRecepcionFisica) filtro.IdTecnico = idUsuario;
+        if (ReglasTickets.Tecnico(actor))
+        {
+            // El técnico ve sus boletas; en "disponibles" ve las que puede tomar según sus especialidades.
+            if (filtro.Disponibles) { filtro.IdTecnico = null; filtro.ParaTecnico = idUsuario; }
+            else if (!filtro.SinRecepcionFisica) filtro.IdTecnico = idUsuario;
+        }
+        else filtro.ParaTecnico = null;
         filtro.Texto = ReglasTickets.Limpio(filtro.Texto);
         return await da.ListarAsync(filtro);
     }
@@ -177,6 +183,16 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
             fechaEstimada = dto.FechaEstimada.HasValue ? ReglasTickets.FechaManual(dto.FechaEstimada.Value) : (DateTimeOffset?)null });
     }
 
+    // El técnico toma una boleta disponible (nadie la ha tomado): queda asignada a él y sigue el flujo normal.
+    public async Task<TicketDetalleDto> TomarAsync(int idTicket, VersionTicketDto dto, int idUsuario)
+    {
+        var a = await Actor(idUsuario, "Edicion"); var actual = await Ticket(idTicket); ReglasTickets.Editable(actual);
+        ReglasTickets.Exigir(ReglasTickets.Tecnico(a), "Solo un técnico puede tomar una boleta disponible.");
+        if (actual.IdTecnicoAsignado.HasValue) throw new ReglaNegocioException("Esta boleta ya fue tomada por otro técnico.");
+        if (actual.Estado is not ("Creada" or "En proceso")) throw new ReglaNegocioException("La boleta no está disponible para tomar.");
+        return await Cambiar(actual, dto.Version, idUsuario, "Tomar", new { }, "El técnico tomó la boleta");
+    }
+
     public async Task<TicketDetalleDto> IniciarAsync(int idTicket, VersionTicketDto dto, int idUsuario)
     {
         var a = await Actor(idUsuario, "Edicion"); var actual = await Ticket(idTicket); ReglasTickets.Editable(actual); Responsable(a, actual);
@@ -200,6 +216,36 @@ public class TicketsFlujo(ITicketsDA da, IExportacionService exportacion, INotif
         if (actual.Estado != "En proceso") throw new ReglaNegocioException("Iniciá el trabajo antes de guardar hallazgos o el borrador de cierre.");
         ReglasTickets.ValidarTrabajo(dto.Trabajo, actual.EsReparacion, false, false);
         return await Cambiar(actual, dto.Version, idUsuario, "Borrador", new { dto.Trabajo }, "Campos técnicos actualizados: hallazgos, acciones, etapa y borrador de cierre");
+    }
+
+    // Repuestos usados en la reparación: solo el técnico asignado los registra mientras la boleta está en proceso,
+    // y cada uso sale de las existencias de bodega.
+    public async Task<List<RepuestoTicketDto>> RepuestosUsadosAsync(int idTicket, int idUsuario)
+    { await Actor(idUsuario); await Ticket(idTicket); return await da.RepuestosUsadosAsync(idTicket); }
+
+    public async Task<List<RepuestoDisponibleDto>> RepuestosDisponiblesAsync(int idUsuario)
+    { await Actor(idUsuario); return await da.RepuestosDisponiblesAsync(); }
+
+    private async Task ValidarUsoRepuestosAsync(int idTicket, int idUsuario)
+    {
+        var a = await Actor(idUsuario, "Edicion"); var actual = await Ticket(idTicket); ReglasTickets.Editable(actual); Responsable(a, actual);
+        if (actual.Estado != "En proceso") throw new ReglaNegocioException("Iniciá el trabajo antes de registrar los repuestos usados.");
+    }
+
+    public async Task<List<RepuestoTicketDto>> UsarRepuestoAsync(int idTicket, UsarRepuestoTicketDto dto, int idUsuario)
+    {
+        await ValidarUsoRepuestosAsync(idTicket, idUsuario);
+        if (dto.IdRepuesto < 1) throw new ReglaNegocioException("Seleccioná el repuesto que se usó.");
+        if (dto.Cantidad is < 1 or > 1000) throw new ReglaNegocioException("La cantidad de repuestos debe estar entre 1 y 1000.");
+        await da.UsarRepuestoAsync(idTicket, dto, idUsuario);
+        return await da.RepuestosUsadosAsync(idTicket);
+    }
+
+    public async Task<List<RepuestoTicketDto>> DevolverRepuestoAsync(int idTicket, int idTicketRepuesto, int idUsuario)
+    {
+        await ValidarUsoRepuestosAsync(idTicket, idUsuario);
+        await da.DevolverRepuestoAsync(idTicket, idTicketRepuesto);
+        return await da.RepuestosUsadosAsync(idTicket);
     }
 
     public async Task<TicketDetalleDto> DerivarReparacionAsync(int idTicket, VersionTicketDto dto, int idUsuario)

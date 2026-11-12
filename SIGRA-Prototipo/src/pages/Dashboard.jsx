@@ -78,7 +78,11 @@ function createInitialModuleData() {
                           tab.seed ?? [],
                       ])
                   )
-                : module.seed ?? [],
+                : (module.seed ?? []).map((row) =>
+                    module.id === "clientes"
+                        ? { ...row, activo: row.estado !== "Inactivo" }
+                        : row
+                ),
         ])
     );
 }
@@ -779,6 +783,7 @@ export default function Dashboard({
                     module={currentModule}
                     Icon={ICONS[currentModule.id]}
                     user={user}
+                    allModuleData={moduleData}
                     moduleData={
                         moduleData[currentModule.id]
                     }
