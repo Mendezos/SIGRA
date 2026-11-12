@@ -203,16 +203,28 @@ FROM SeguimientoCRM s
 WHERE NOT EXISTS (SELECT 1 FROM SeguimientoHistorial h WHERE h.IdSeguimiento = s.IdSeguimiento);
 
 -- ===================== 5) Facturación de prueba =====================
-INSERT INTO PlantillaContrato (Nombre, Descripcion, Contenido, Activa, IdUsuarioCrea)
-SELECT v.Nombre, v.Descripcion, v.Contenido, v.Activa, @Admin
+-- Las plantillas guardan sus cláusulas en versiones (PlantillaContratoVersion): la descripción pasa a ser las responsabilidades.
+DECLARE @Plantillas TABLE (Nombre VARCHAR(150), Descripcion VARCHAR(500), Contenido VARCHAR(MAX), Activa BIT);
+INSERT INTO @Plantillas (Nombre, Descripcion, Contenido, Activa)
+SELECT v.Nombre, v.Descripcion, v.Contenido, v.Activa
 FROM (VALUES
     (N'Contrato de alquiler estándar', N'Alquiler mensual de radios portátiles con mantenimiento incluido.',
      N'CONTRATO DE ALQUILER DE EQUIPO DE RADIOCOMUNICACIÓN' + CHAR(13) + CHAR(10) + N'Entre Radifax y {{CLIENTE}} se acuerda el alquiler de los equipos descritos, por un plazo de {{PLAZO}} y un monto mensual de {{MONTO_MENSUAL}}.', 1),
     (N'Contrato de alquiler de repetidora', N'Alquiler de repetidora con instalación y visita preventiva trimestral.',
      N'CONTRATO DE ALQUILER DE REPETIDORA' + CHAR(13) + CHAR(10) + N'Radifax instala y mantiene la repetidora en el sitio {{SITIO}} a favor de {{CLIENTE}}.', 1),
     (N'Contrato anterior (descontinuado)', N'Plantilla en desuso, se conserva por trazabilidad.', N'Texto de la plantilla anterior.', 0)
-) v(Nombre, Descripcion, Contenido, Activa)
-WHERE NOT EXISTS (SELECT 1 FROM PlantillaContrato p WHERE p.Nombre = v.Nombre);
+) v(Nombre, Descripcion, Contenido, Activa);
+
+INSERT INTO PlantillaContrato (Nombre, Activa, VersionActual, IdUsuario)
+SELECT t.Nombre, t.Activa, 1, @Admin
+FROM @Plantillas t
+WHERE NOT EXISTS (SELECT 1 FROM PlantillaContrato p WHERE p.Nombre = t.Nombre);
+
+INSERT INTO PlantillaContratoVersion (IdPlantilla, Version, Clausulas, Responsabilidades, Motivo, IdUsuario)
+SELECT p.IdPlantilla, 1, t.Contenido, t.Descripcion, N'Versión inicial', @Admin
+FROM @Plantillas t
+INNER JOIN PlantillaContrato p ON p.Nombre = t.Nombre
+WHERE NOT EXISTS (SELECT 1 FROM PlantillaContratoVersion x WHERE x.IdPlantilla = p.IdPlantilla);
 
 INSERT INTO Factura (NumeroFactura, Tipo, IdCliente, IdVendedor, Fecha, FechaVencimientoPago, Moneda, Subtotal, Impuesto, Total, Estado, EstadoCobro, IncluyeBaterias, Observaciones, IdUsuarioRegistra)
 SELECT v.Numero, v.Tipo, v.IdCliente, @Kim, DATEADD(DAY, -v.Dias, @Hoy), DATEADD(DAY, 30 - v.Dias, @Hoy), 'CRC', v.Subtotal, ROUND(v.Subtotal * 0.13, 2), ROUND(v.Subtotal * 1.13, 2),

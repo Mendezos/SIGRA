@@ -2,11 +2,14 @@ import { useState } from "react";
 import { SubTabs } from "../ui";
 import AgendaTab from "./AgendaTab";
 import BateriasTab from "./BateriasTab";
+import ClientesTab from "./ClientesTab";
 import ContactosCrmTab from "./ContactosCrmTab";
 import HistorialTab from "./HistorialTab";
 import PeriodicosTab from "./PeriodicosTab";
 import ProspectosTab from "./ProspectosTab";
 import { puedeVerCrm } from "./helpers";
+
+const esAdministrador = (user) => user.role === "Administrador del sistema";
 
 // Módulo CRM y prospectos. Para sumar una pestaña basta agregarla a `tabs` y renderizarla abajo.
 // `navTarget` ({ tab, id, nonce }) lo manda el tablero cuando se abre una notificación de la campana: salta a esa pestaña y
@@ -15,6 +18,7 @@ export default function CrmPanel({ user, navTarget }) {
     const tabs = puedeVerCrm(user)
         ? [
               { key: "prospectos", label: "Prospectos" },
+              { key: "clientes", label: "Clientes" },
               { key: "contactos", label: "Contactos" },
               { key: "agenda", label: "Mi agenda" },
               { key: "periodicos", label: "Contactos periódicos" },
@@ -32,12 +36,19 @@ export default function CrmPanel({ user, navTarget }) {
     }
 
     const target = (key) => (navTarget?.tab === key ? navTarget : null);
+    // Desde un prospecto convertido se salta al perfil de su cliente.
+    const [clienteAbrir, setClienteAbrir] = useState(null);
+    function abrirCliente(id) {
+        setClienteAbrir({ tab: "clientes", id, nonce: Date.now() });
+        setTab("clientes");
+    }
 
     return (
         <div className="mt-6">
             <SubTabs tabs={tabs} active={tab} onSelect={setTab} />
 
-            {tab === "prospectos" && <ProspectosTab user={user} target={target("prospectos")} />}
+            {tab === "prospectos" && <ProspectosTab user={user} target={target("prospectos")} onAbrirCliente={abrirCliente} />}
+            {tab === "clientes" && <ClientesTab key={clienteAbrir?.nonce ?? "clientes"} target={clienteAbrir ?? target("clientes")} puedeAsignar={esAdministrador(user)} />}
             {tab === "contactos" && <ContactosCrmTab user={user} target={target("contactos")} />}
             {tab === "agenda" && <AgendaTab user={user} target={target("agenda")} />}
             {tab === "periodicos" && <PeriodicosTab user={user} target={target("periodicos")} />}

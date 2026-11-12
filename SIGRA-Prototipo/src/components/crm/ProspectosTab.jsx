@@ -7,10 +7,12 @@ import { ApiError } from "../../services/apiClient";
 import * as catalogos from "../../services/crmCatalogosService";
 import * as api from "../../services/crmProspectosService";
 import { fechaLocal, puedeCrearCrm, puedeEditarCrm } from "./helpers";
+import ProspectoConvertirModal from "./ProspectoConvertirModal";
 import ProspectoDescartarModal from "./ProspectoDescartarModal";
 import ProspectoDetalleModal from "./ProspectoDetalleModal";
 import ProspectoFormModal from "./ProspectoFormModal";
 import ProspectoReactivarModal from "./ProspectoReactivarModal";
+import ResponsableModal from "./ResponsableModal";
 
 const FILTROS_VACIOS = { empresa: "", sector: "", fuente: "", estado: "", idVendedor: "", desde: "", hasta: "" };
 const hayCriterios = (f) => Object.values(f).some((v) => String(v).trim() !== "");
@@ -38,7 +40,7 @@ const columnas = [
 ];
 
 // Pestaña «Prospectos» del CRM: CRMGPSC-001 a 004.
-export default function ProspectosTab({ user, target }) {
+export default function ProspectosTab({ user, target, onAbrirCliente }) {
     const puedeCrear = puedeCrearCrm(user);
     const puedeEditar = puedeEditarCrm(user);
     const [prospectos, setProspectos] = useState([]);
@@ -55,6 +57,9 @@ export default function ProspectosTab({ user, target }) {
     const [version, setVersion] = useState(0);
     const [descartando, setDescartando] = useState(null);
     const [reactivando, setReactivando] = useState(null);
+    const [convirtiendo, setConvirtiendo] = useState(null);
+    const [asignando, setAsignando] = useState(null);
+    const esAdmin = user.role === "Administrador del sistema";
 
     // Llegada desde una notificación con el módulo ya abierto: se abre el detalle durante el render.
     if (target && target.nonce !== nonceVisto) {
@@ -124,6 +129,19 @@ export default function ProspectosTab({ user, target }) {
         setFormulario(null);
         setVersion((v) => v + 1);
         avisar(texto);
+    }
+
+    // CRMGPSC-019 y 020
+    function convertido(resultado) {
+        setConvirtiendo(null);
+        setVersion((v) => v + 1);
+        avisar(resultado.mensaje);
+    }
+
+    function responsableCambiado(resultado) {
+        setAsignando(null);
+        setVersion((v) => v + 1);
+        avisar(resultado.mensaje, resultado.cambio ? "success" : "warning");
     }
 
     function accionHecha(resultado) {
@@ -294,6 +312,12 @@ export default function ProspectosTab({ user, target }) {
                     onEditar={(p) => setFormulario({ prospecto: p })}
                     onDescartar={setDescartando}
                     onReactivar={setReactivando}
+                    puedeConvertir={puedeCrearCrm(user)}
+                    esAdmin={esAdmin}
+                    idUsuario={user.idUsuario}
+                    onConvertir={setConvirtiendo}
+                    onResponsable={(p) => setAsignando({ id: p.idProspecto, empresa: p.empresa, idVendedor: p.idVendedor, vendedor: p.vendedor })}
+                    onAbrirCliente={onAbrirCliente}
                 />
             )}
 
@@ -310,6 +334,8 @@ export default function ProspectosTab({ user, target }) {
 
             {descartando && <ProspectoDescartarModal prospecto={descartando} onClose={() => setDescartando(null)} onHecho={accionHecha} />}
             {reactivando && <ProspectoReactivarModal prospecto={reactivando} onClose={() => setReactivando(null)} onHecho={accionHecha} />}
+            {convirtiendo && <ProspectoConvertirModal prospecto={convirtiendo} onClose={() => setConvirtiendo(null)} onHecho={convertido} />}
+            {asignando && <ResponsableModal tipo="prospectos" registro={asignando} onClose={() => setAsignando(null)} onHecho={responsableCambiado} />}
         </div>
     );
 }
