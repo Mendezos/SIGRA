@@ -61,7 +61,7 @@ function Resumen({ todos }) {
 
 const filtrosVacios = { texto: "", estado: "", moneda: "", idCategoria: "", venceDesde: "", venceHasta: "", idVendedor: "" };
 
-export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar, canEditar, canCancelar, canVerAuditoria, esAdmin }) {
+export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar, canEditar, canCancelar, canVerAuditoria, esAdmin, abrirId, onAbierto }) {
     const [contratos, setContratos] = useState([]);
     const [todos, setTodos] = useState([]);
     const [categorias, setCategorias] = useState([]);
@@ -108,6 +108,19 @@ export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar,
     const hayFiltros = Object.values(filtros).some(Boolean);
     const selectClase = "px-3 py-2.5 rounded-lg text-sm bg-white";
     const selectEstilo = (valor) => ({ ...inputStyle, color: valor ? COLORS.charcoal : COLORS.muted });
+
+    // Llegada desde una notificación de la campana: abre el detalle de ese contrato.
+    useEffect(() => {
+        if (!abrirId) return undefined;
+        let activo = true;
+        api.obtenerContrato(abrirId)
+            .then((d) => activo && setDetalle(d))
+            .catch((e) => activo && setError(e instanceof ApiError ? e.message : "No se pudo abrir el contrato."))
+            .finally(() => activo && onAbierto?.());
+        return () => {
+            activo = false;
+        };
+    }, [abrirId, onAbierto]);
 
     const filas = useMemo(
         () =>

@@ -58,7 +58,7 @@ const sqlFiles = (dir) => (fs.existsSync(RAIZ + dir) ? fs.readdirSync(RAIZ + dir
 const nombre = (ruta) => path.basename(ruta, ".sql");
 const titulo = (t) => console.log(`\n== ${t}`);
 
-const resumen = { tablas: 0, columnas: 0, ajustes: 0, vistas: 0, triggers: 0, sp: 0, migraciones: 0, errores: [] };
+const resumen = { tablas: 0, columnas: 0, ajustes: 0, funciones: 0, vistas: 0, triggers: 0, sp: 0, migraciones: 0, errores: [] };
 
 // ---------- 0) base de datos ----------
 titulo(`Servidor ${SERVIDOR}, base ${BASE}`);
@@ -193,7 +193,7 @@ console.log(`columnas agregadas: ${resumen.columnas}, ajustes: ${resumen.ajustes
 
 // ---------- 3) migraciones (scripts idempotentes de cada historia) ----------
 titulo("Migraciones");
-const migraciones = [...sqlFiles("Migraciones"), ...sqlFiles("Migraciones/RCFR")];
+const migraciones = [...sqlFiles("Migraciones"), ...sqlFiles("Migraciones/RCFR"), ...sqlFiles("Migraciones/Sprint3")];
 for (const f of migraciones) {
     const r = sqlcmd(["-i", sinBom(f)], { tolerante: true });
     if (r.ok) resumen.migraciones++;
@@ -212,10 +212,11 @@ function recrear(dir, tipo, codigo, contador) {
         else resumen.errores.push(`${tipo.toLowerCase()} ${nom}: ${r.errores[0] ?? ""}`);
     }
 }
+recrear("dbo/Functions", "FUNCTION", "FN", "funciones"); // antes que los procedimientos: algunos las usan
 recrear("dbo/Views", "VIEW", "V", "vistas");
 recrear("dbo/Triggers", "TRIGGER", "TR", "triggers");
 recrear("dbo/Stored Procedures", "PROCEDURE", "P", "sp");
-console.log(`vistas: ${resumen.vistas}, triggers: ${resumen.triggers}, procedimientos: ${resumen.sp}`);
+console.log(`funciones: ${resumen.funciones}, vistas: ${resumen.vistas}, triggers: ${resumen.triggers}, procedimientos: ${resumen.sp}`);
 
 // ---------- 5) datos iniciales ----------
 if (SEMILLAS) {
@@ -225,6 +226,15 @@ if (SEMILLAS) {
     else {
         console.log("aplicados con avisos");
         r.errores.slice(0, 5).forEach((e) => resumen.errores.push("semillas: " + e));
+    }
+
+    // Datos de prueba del Sprint 3 (CRM, facturación y recordatorios). Idempotente: no duplica nada.
+    titulo("Datos de prueba del Sprint 3 (Datos-Prueba-Sprint3.sql)");
+    const d = sqlcmd(["-i", sinBom(RAIZ + "Datos-Prueba-Sprint3.sql")], { tolerante: true });
+    if (d.ok) console.log("aplicados");
+    else {
+        console.log("aplicados con avisos");
+        d.errores.slice(0, 5).forEach((e) => resumen.errores.push("datos Sprint 3: " + e));
     }
 }
 

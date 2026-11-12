@@ -45,11 +45,15 @@ if (!builder.Configuration.GetValue<bool>("Pruebas:DesactivarServiciosEnSegundoP
     builder.Services.AddHostedService<SIGRA.API.Servicios.CorreosPendientesWorker>();
 
 const string PoliticaCorsReact = "PoliticaCorsReact";
+// Orígenes del frontend: por omisión los de Vite; se pueden cambiar en appsettings.Local.json ("Cors": { "Origenes": [ ... ] }).
+var origenesCors = builder.Configuration.GetSection("Cors:Origenes").Get<string[]>() is { Length: > 0 } configurados
+    ? configurados
+    : new[] { "http://localhost:5173", "http://localhost:5174" };
 builder.Services.AddCors(opciones =>
 {
     opciones.AddPolicy(PoliticaCorsReact, politica =>
     {
-        politica.WithOrigins("http://localhost:5173", "http://localhost:5174")
+        politica.WithOrigins(origenesCors)
                 .AllowAnyHeader()
                 .AllowAnyMethod();
 
@@ -122,9 +126,24 @@ if (!builder.Configuration.GetValue<bool>("Pruebas:DesactivarServiciosEnSegundoP
 
     // Frecuencias: revisa los vencimientos y envía las alertas (RCFR-003).
     builder.Services.AddHostedService<AlertasFrecuenciaHostedService>();
+
+    // CRM: servicio de recordatorios (seguimientos, baterías, contactos periódicos) - T-02.
+    builder.Services.AddHostedService<RecordatoriosCrmHostedService>();
 }
 
 builder.Services.AddScoped<IFrecuenciaFlujo, FrecuenciaFlujo>();
+
+// CRM (Sprint 3): catálogos compartidos y los cuatro bloques de historias (módulo 9).
+builder.Services.AddScoped<ICrmCatalogosDA, CrmCatalogosDA>();
+builder.Services.AddScoped<ICrmCatalogosFlujo, CrmCatalogosFlujo>();
+builder.Services.AddScoped<ICrmProspectosDA, CrmProspectosDA>();
+builder.Services.AddScoped<ICrmProspectosFlujo, CrmProspectosFlujo>();
+builder.Services.AddScoped<ICrmInteraccionesDA, CrmInteraccionesDA>();
+builder.Services.AddScoped<ICrmInteraccionesFlujo, CrmInteraccionesFlujo>();
+builder.Services.AddScoped<ICrmSeguimientosDA, CrmSeguimientosDA>();
+builder.Services.AddScoped<ICrmSeguimientosFlujo, CrmSeguimientosFlujo>();
+builder.Services.AddScoped<ICrmRecordatoriosDA, CrmRecordatoriosDA>();
+builder.Services.AddScoped<ICrmRecordatoriosFlujo, CrmRecordatoriosFlujo>();
 
 var app = builder.Build();
 

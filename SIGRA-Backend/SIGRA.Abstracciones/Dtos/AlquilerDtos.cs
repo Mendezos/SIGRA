@@ -275,6 +275,7 @@ public class AlertaContratoDto
     public DateTime FechaInicio { get; set; }
     public DateTime FechaVencimiento { get; set; }
     public string Tipo { get; set; } = string.Empty;
+    public int? IdVendedor { get; set; }
 }
 
 public class AdministradorDto

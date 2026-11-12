@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
@@ -14,12 +15,13 @@ public class AlquilerFlujoPruebas
     private readonly IAuditoriaDA _auditoriaDA = Substitute.For<IAuditoriaDA>();
     private readonly IEmailService _email = Substitute.For<IEmailService>();
     private readonly IPlantillaContratoDA _plantillaDA = Substitute.For<IPlantillaContratoDA>();
+    private readonly INotificacionesDA _notificaciones = Substitute.For<INotificacionesDA>();
     private readonly AlquilerFlujo _flujo;
 
     public AlquilerFlujoPruebas()
     {
         _plantillaDA.ObtenerAsync(1, null).Returns(new DetallePlantillaContratoDto { Id = 1, Activa = true, VersionActual = 1 });
-        _flujo = new AlquilerFlujo(_alquilerDA, _inventarioDA, _auditoriaDA, _email, _plantillaDA);
+        _flujo = new AlquilerFlujo(_alquilerDA, _inventarioDA, _auditoriaDA, _email, _plantillaDA, _notificaciones, NullLogger<AlquilerFlujo>.Instance);
     }
 
     private static EquipoDetalleDto Equipo(string serie, string estado = "Disponible", bool porCantidad = false) => new()
@@ -481,6 +483,99 @@ public class AlquilerFlujoPruebas
         await _auditoriaDA.Received().RegistrarAsync(1, "Alquiler", "ContactoInicial", 10, "CONTACTO_SIN_VENDEDOR", Arg.Any<string?>());
     }
 
+    // ---------- T-02: aviso al administrador por contacto sin vendedor ----------
+    private void PrepararContactoEnEspera(int idContacto = 10)
+    {
+        _alquilerDA.InsertarContactoAsync(default!, default, default!, default!, default, default, default, default)
+            .ReturnsForAnyArgs(idContacto);
+        _alquilerDA.ListarContactosAsync(null).Returns(new List<ContactoDto>
+        {
+            new()
+            {
+                IdContacto = idContacto, Empresa = "Marina Pez Vela", Contacto = "Daniela Ruiz", MedioContacto = "Correo",
+                DatoContacto = "daniela@pezvela.example", Motivo = "Alquiler de 6 radios", Estado = "En espera", RegistradoPor = "Recepción"
+            }
+        });
+        _alquilerDA.ObtenerHistorialContactoAsync(idContacto).Returns(new List<ContactoHistorialDto>());
+        _alquilerDA.ObtenerSiguienteVendedorCascadaAsync().Returns((VendedorDto?)null);
+    }
+
+    [Fact]
+    public async Task Contacto_sin_vendedor_avisa_a_cada_administrador_activo_una_sola_vez()
+    {
+        PrepararContactoEnEspera();
+        _alquilerDA.ListarAdministradoresAsync().Returns(new List<AdministradorDto>
+        {
+            new() { IdUsuario = 1, Nombre = "Admin", Correo = "admin@radifaxcr.com" },
+            new() { IdUsuario = 20, Nombre = "Otro admin", Correo = "otro@radifaxcr.com" }
+        });
+
+        var resultado = await _flujo.RegistrarContactoAsync(ContactoValido(), 11);
+
+        Assert.NotNull(resultado.Contacto);
+        foreach (var admin in new[] { 1, 20 })
+            await _notificaciones.Received(1).RegistrarAsync(admin, 3, "Contacto sin vendedor: Marina Pez Vela",
+                Arg.Is<string>(m => m.Contains("Marina Pez Vela") && m.Contains("Daniela Ruiz") && m.Contains("Correo")
+                    && m.Contains("daniela@pezvela.example") && m.Contains("Alquiler de 6 radios") && m.Contains("Recepción")
+                    && m.Contains("Alquiler > Contactos iniciales")),
+                "ContactoInicial", 10, "ContactoSinVendedor", "CSV-10", true);
+        await _notificaciones.ReceivedWithAnyArgs(2).RegistrarAsync(default, default, default!, default!, default, default, default!, default, default);
+    }
+
+    [Fact]
+    public async Task Contacto_sin_vendedor_y_sin_administradores_se_registra_sin_avisos()
+    {
+        PrepararContactoEnEspera();
+        _alquilerDA.ListarAdministradoresAsync().Returns(new List<AdministradorDto>());
+
+        var resultado = await _flujo.RegistrarContactoAsync(ContactoValido(), 11);
+
+        Assert.Equal(10, resultado.Contacto!.IdContacto);
+        await _notificaciones.DidNotReceiveWithAnyArgs().RegistrarAsync(default, default, default!, default!, default, default, default!, default, default);
+    }
+
+    [Fact]
+    public async Task Fallo_al_avisar_no_revierte_ni_bloquea_el_registro_del_contacto()
+    {
+        PrepararContactoEnEspera();
+        _alquilerDA.ListarAdministradoresAsync().Returns(new List<AdministradorDto>
+        {
+            new() { IdUsuario = 1, Nombre = "Admin" },
+            new() { IdUsuario = 20, Nombre = "Otro admin" }
+        });
+        _notificaciones.RegistrarAsync(1, default, default!, default!, default, default, default!, default, default)
+            .ReturnsForAnyArgs(Task.FromException<long>(new InvalidOperationException("BD caída")));
+
+        var resultado = await _flujo.RegistrarContactoAsync(ContactoValido(), 11);
+
+        Assert.Equal(10, resultado.Contacto!.IdContacto);
+        Assert.Contains("sin vendedor", resultado.Mensaje);
+        await _notificaciones.ReceivedWithAnyArgs(2).RegistrarAsync(default, default, default!, default!, default, default, default!, default, default);
+    }
+
+    [Fact]
+    public async Task Fallo_al_listar_administradores_no_bloquea_el_registro_del_contacto()
+    {
+        PrepararContactoEnEspera();
+        _alquilerDA.ListarAdministradoresAsync().Returns(Task.FromException<List<AdministradorDto>>(new InvalidOperationException("BD caída")));
+
+        var resultado = await _flujo.RegistrarContactoAsync(ContactoValido(), 11);
+
+        Assert.Equal(10, resultado.Contacto!.IdContacto);
+    }
+
+    [Fact]
+    public async Task Contacto_con_vendedor_no_avisa_a_los_administradores()
+    {
+        PrepararInsertContacto();
+        _alquilerDA.ObtenerSiguienteVendedorCascadaAsync().Returns(new VendedorDto { IdUsuario = 6, Nombre = "Kimberly Sanchez" });
+
+        await _flujo.RegistrarContactoAsync(ContactoValido(), 1);
+
+        await _alquilerDA.DidNotReceive().ListarAdministradoresAsync();
+        await _notificaciones.DidNotReceiveWithAnyArgs().RegistrarAsync(default, default, default!, default!, default, default, default!, default, default);
+    }
+
     [Fact]
     public async Task Contacto_repetido_en_24_horas_pide_confirmacion_y_no_se_guarda()
     {
@@ -536,6 +631,57 @@ public class AlquilerFlujoPruebas
             new() { IdContrato = 3, Empresa = "Hotel", CorreoCliente = "c@hotel.example", Tipo = "30 dias", FechaVencimiento = DateTime.Today.AddDays(20) }
         });
         _alquilerDA.ListarAdministradoresAsync().Returns(new List<AdministradorDto>());
+
+        var resultado = await _flujo.ProcesarVencimientosAsync();
+
+        Assert.Equal(1, resultado.AlertasGeneradas);
+        await _alquilerDA.Received(1).RegistrarAlertaAsync(3, "30 dias");
+    }
+
+    // ---------- T-02: alertas de contratos en la campana ----------
+    [Fact]
+    public async Task Alerta_de_contrato_avisa_en_la_campana_al_vendedor_y_a_los_administradores_sin_correo_extra()
+    {
+        _alquilerDA.MarcarContratosVencidosAsync().Returns(0);
+        _alquilerDA.ListarAlertasPendientesAsync().Returns(new List<AlertaContratoDto>
+        {
+            new() { IdContrato = 3, Empresa = "Hotel", CorreoCliente = "c@hotel.example", Tipo = "90 dias", FechaVencimiento = DateTime.Today.AddDays(80), IdVendedor = 6 }
+        });
+        _alquilerDA.ListarAdministradoresAsync().Returns(new List<AdministradorDto> { new() { IdUsuario = 1, Nombre = "Admin", Correo = "a@x.cr" } });
+
+        await _flujo.ProcesarVencimientosAsync();
+
+        await _notificaciones.Received(1).RegistrarAsync(6, 3, Arg.Any<string>(), Arg.Is<string>(m => m.Contains("Hotel")), "Contrato", 3, "Contrato", "CTA-3-90dias-6", false);
+        await _notificaciones.Received(1).RegistrarAsync(1, 3, Arg.Any<string>(), Arg.Any<string>(), "Contrato", 3, "Contrato", "CTA-3-90dias-1", false);
+    }
+
+    [Fact]
+    public async Task Alerta_de_contrato_cuyo_vendedor_es_administrador_no_se_duplica_y_sin_vendedor_solo_avisa_a_administradores()
+    {
+        _alquilerDA.ListarAlertasPendientesAsync().Returns(new List<AlertaContratoDto>
+        {
+            new() { IdContrato = 3, Empresa = "Hotel", Tipo = "30 dias", FechaVencimiento = DateTime.Today.AddDays(10), IdVendedor = 1 },
+            new() { IdContrato = 4, Empresa = "Marina", Tipo = "3 anios", FechaVencimiento = DateTime.Today.AddDays(200), IdVendedor = null }
+        });
+        _alquilerDA.ListarAdministradoresAsync().Returns(new List<AdministradorDto> { new() { IdUsuario = 1, Nombre = "Admin", Correo = "a@x.cr" } });
+
+        await _flujo.ProcesarVencimientosAsync();
+
+        await _notificaciones.Received(1).RegistrarAsync(1, 3, Arg.Any<string>(), Arg.Any<string>(), "Contrato", 3, "Contrato", "CTA-3-30dias-1", false);
+        await _notificaciones.Received(1).RegistrarAsync(1, 3, Arg.Any<string>(), Arg.Any<string>(), "Contrato", 4, "Contrato", "CTA-4-3anios-1", false);
+        await _notificaciones.ReceivedWithAnyArgs(2).RegistrarAsync(default, default, default!, default!, default, default, default!, default, default);
+    }
+
+    [Fact]
+    public async Task Fallo_del_aviso_de_contrato_no_rompe_el_proceso_de_vencimientos()
+    {
+        _alquilerDA.ListarAlertasPendientesAsync().Returns(new List<AlertaContratoDto>
+        {
+            new() { IdContrato = 3, Empresa = "Hotel", CorreoCliente = "c@hotel.example", Tipo = "30 dias", FechaVencimiento = DateTime.Today.AddDays(10), IdVendedor = 6 }
+        });
+        _alquilerDA.ListarAdministradoresAsync().Returns(new List<AdministradorDto>());
+        _notificaciones.RegistrarAsync(default, default, default!, default!, default, default, default!, default, default)
+            .ReturnsForAnyArgs(Task.FromException<long>(new InvalidOperationException("BD caída")));
 
         var resultado = await _flujo.ProcesarVencimientosAsync();
 

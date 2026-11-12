@@ -11,6 +11,19 @@ public class NotificacionDto
     public DateTimeOffset Fecha { get; set; }
     public DateTimeOffset? FechaLectura { get; set; }
     public string? EstadoCorreo { get; set; }
+    // General, Ticket, Seguimiento, Bateria, ContactoSinVendedor, Contrato, Frecuencia... (la campana elige el ícono y el destino).
+    public string Tipo { get; set; } = "General";
+}
+
+public class ResumenNotificacionesDto
+{
+    public int SinLeer { get; set; }
+    public int Total { get; set; }
+}
+
+public class MarcarTodasLeidasResultadoDto
+{
+    public int Marcadas { get; set; }
 }
 
 public class AdjuntoCorreoDto

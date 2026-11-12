@@ -13,7 +13,8 @@ import { ESTADOS, fecha, gestion, mensajeError, recepcion, tecnico, TIPOS_SERVIC
 const columnas = [{ key: "numeroBoleta", label: "Boleta", render: (b) => `Boleta ${b.numeroBoleta}` }, { key: "empresa", label: "Cliente" }, { key: "tecnicoTexto", label: "Técnico responsable" }, { key: "tipoServicio", label: "Servicio" }, { key: "estado", label: "Estado" }, { key: "etapaTexto", label: "Etapa de reparación" }, { key: "recepcionTexto", label: "Recepción física" }, { key: "fechaTexto", label: "Fecha de ingreso" }];
 const inicialFiltro = { texto: "", idCliente: "", idTecnico: "", tipoServicio: "", estado: "", resolucion: "", desde: "", hasta: "", sinRecepcionFisica: false, disponibles: false, incluirInactivos: false };
 
-export default function TicketsPanel({ user }) {
+// `navTarget` ({ id, nonce }) lo manda el tablero cuando se abre un aviso de boleta en la campana: abre ese ticket.
+export default function TicketsPanel({ user, navTarget }) {
     const [numeroAuditoria, setNumeroAuditoria] = useState(null);
     const [tab, setTab] = useState("boletas"); const [filtro, setFiltro] = useState(inicialFiltro); const [busqueda, setBusqueda] = useState("");
     const [pagina, setPagina] = useState(1); const [tamanoPagina, setTamano] = useState(12); const [datos, setDatos] = useState({ items: [], total: 0 });
@@ -35,6 +36,13 @@ export default function TicketsPanel({ user }) {
         return () => { vivo = false; };
     }, [consulta, pagina, tamanoPagina, recarga]);
     const actualizar = useCallback(() => setRecarga(r => r + 1), []);
+    const idAbrir = navTarget?.id; const nonceAbrir = navTarget?.nonce;
+    useEffect(() => {
+        if (!idAbrir) return undefined;
+        let vivo = true;
+        api.obtener(idAbrir).then(d => vivo && setDetalle(d)).catch(e => vivo && setError(e.message));
+        return () => { vivo = false; };
+    }, [idAbrir, nonceAbrir]);
     function cambiarFiltro(key, value) { setFiltro(f => ({ ...f, [key]: value })); setPagina(1); }
     async function abrir(row) { setError(""); try { setDetalle(await api.obtener(row.idTicket)); } catch (e) { setError(e.message); } }
     function guardado(boleta) { setAviso(`La boleta ${boleta.numeroBoleta} se guardó correctamente.`); actualizar(); }
