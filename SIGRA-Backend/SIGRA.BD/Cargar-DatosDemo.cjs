@@ -9,7 +9,7 @@
  *   node Cargar-DatosDemo.cjs                       (API en http://localhost:5044/api)
  *   node Cargar-DatosDemo.cjs --api http://localhost:5044/api --solo tickets
  *
- * Etapas: inventario, contratos, baterias, repetidoras, contactos, frecuencias, tickets, stock
+ * Etapas: inventario, contratos, baterias, repetidoras, contactos, frecuencias, tickets, stock, demo
  * Usa las cuentas de prueba que documenta LEEME.md.
  */
 
@@ -334,7 +334,9 @@ async function etapaContratos() {
     const idAccesorio = (modelo, nombre) => catalogo.find((a) => a.modelo === modelo && a.nombre === nombre)?.id;
     const plantillas = await llamar("vendedor", "GET", "/contratos/plantillas");
     const idPlantilla = (nombre) => plantillas.find((p) => p.nombre === nombre)?.id;
-    const buscar = async (c) => (await llamar("vendedor", "GET", "/alquiler/contratos")).find((x) => x.empresa === c.empresa && String(x.fechaInicio).startsWith(c.inicio));
+    // Las fechas relativas a hoy (p. ej. «hace 11 meses») se mueven cada día: se acepta una diferencia de hasta 5 días.
+    const cercana = (f, g) => Math.abs(new Date(String(f).slice(0, 10)) - new Date(g)) <= 5 * 86400000;
+    const buscar = async (c) => (await llamar("vendedor", "GET", "/alquiler/contratos")).find((x) => x.empresa === c.empresa && cercana(x.fechaInicio, c.inicio));
     const hoyIso = iso(hoy);
 
     for (const c of CONTRATOS) {
@@ -668,6 +670,41 @@ async function etapaStock() {
     void baja;
 }
 
+
+// ---------- Registros extra para la demostración ----------
+// Lo que la demostración del Sprint 3 necesita y no sale de las demás etapas: una segunda vendedora activa (para reasignar
+// responsables), un prospecto que coincide con un cliente existente (para probar que se vincula en lugar de duplicar)
+// y los archivos de ejemplo (un PDF válido y una imagen que debe rechazarse) en la carpeta Demo.
+async function etapaDemo() {
+    titulo("Demostración: registros extra");
+    const roles = await llamar("admin", "GET", "/roles").catch(() => []);
+    const idVendedor = (Array.isArray(roles) ? roles : roles?.roles ?? []).find((r) => sinTildes(r.nombre ?? r.nombreRol).includes("vendedor"))?.idRol ?? 5;
+    await paso("Vendedora Jessica Vargas (segunda vendedora activa)", async () => {
+        try {
+            await llamar("admin", "POST", "/cuentas", {
+                nombre: "Jessica Vargas Solano", correo: "jessica.vargas@radifaxcr.com", cedula: "112340567", fechaNacimiento: "1994-03-15",
+                telefono: "88776655", direccion: "Heredia, Costa Rica", estadoCivil: "Soltero/a", gradoAcademico: "Bachillerato universitario", salario: 650000,
+                idRol: idVendedor, activo: true, password: "Ventas#2026",
+            });
+        } catch (e) { if (/ya (existe|est)/i.test(e.message)) return "omitido"; throw e; }
+    });
+    await paso("Prospecto Hotel Los Sueños Jacó (coincide con el cliente Hotel Los Sueños)", async () => {
+        const lista = await llamar("vendedor", "GET", "/crm/prospectos");
+        const filas = Array.isArray(lista) ? lista : lista?.items ?? lista?.datos ?? [];
+        if (filas.some((p) => p.empresa === "Hotel Los Sueños Jacó")) return "omitido";
+        await llamar("vendedor", "POST", "/crm/prospectos", {
+            empresa: "Hotel Los Sueños Jacó", sector: "Turismo y hotelería", idVendedor: 5, direccion: "Jacó, Puntarenas", telefono: "26300000", correo: "compras@lossuenos.example",
+            contacto: "Carolina Vega", tamanoFlota: 6, fuente: "Referido", confirmarDuplicado: true, justificacionDuplicado: "Sucursal nueva del mismo grupo hotelero.",
+        });
+    });
+    await paso("Archivos de ejemplo en la carpeta Demo (contrato-firmado.pdf y foto-no-pdf.png)", async () => {
+        const carpeta = require("path").join(__dirname, "Demo");
+        require("fs").mkdirSync(carpeta, { recursive: true });
+        require("fs").writeFileSync(require("path").join(carpeta, "contrato-firmado.pdf"), PDF("Contrato firmado de demostracion - Radifax S.A."));
+        require("fs").writeFileSync(require("path").join(carpeta, "foto-no-pdf.png"), PNG);
+    });
+}
+
 // ---------- Ejecución ----------
 (async () => {
     console.log(`Cargando datos de demostración en ${API}`);
@@ -681,7 +718,7 @@ async function etapaStock() {
 
     const etapas = [
         ["inventario", etapaInventario], ["contratos", etapaContratos], ["baterias", etapaBaterias], ["repetidoras", etapaRepetidoras],
-        ["contactos", etapaContactos], ["frecuencias", etapaFrecuencias], ["tickets", etapaTickets], ["stock", etapaStock],
+        ["contactos", etapaContactos], ["frecuencias", etapaFrecuencias], ["tickets", etapaTickets], ["stock", etapaStock], ["demo", etapaDemo],
     ];
     for (const [nombre, funcion] of etapas) {
         if (!corre(nombre)) continue;

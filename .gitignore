@@ -403,3 +403,6 @@ SIGRA-Backend/SIGRA.API/appsettings.Local.json
 
 # Paquetes comprimidos de migraciones (los scripts van como .sql)
 SIGRA-Backend/SIGRA.BD/Migraciones/*.zip
+
+# Archivos de ejemplo que genera Preparar-Demo.cjs
+SIGRA-Backend/SIGRA.BD/Demo/
