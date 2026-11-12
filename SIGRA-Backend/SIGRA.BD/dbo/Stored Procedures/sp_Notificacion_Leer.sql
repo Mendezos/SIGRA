@@ -1,3 +1,4 @@
+-- Marca como leído un aviso del usuario (si ya estaba leído conserva la fecha original). Un aviso ajeno o inexistente se rechaza.
 CREATE PROCEDURE [dbo].[sp_Notificacion_Leer] @IdNotificacion BIGINT,@IdUsuario INT
 AS
 BEGIN

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { SubTabs } from "../ui";
 import ContactosTab from "./ContactosTab";
 import ContratosTab from "./ContratosTab";
@@ -16,7 +16,9 @@ import {
     puedeVerContratos,
 } from "./helpers";
 
-export default function AlquilerPanel({ user }) {
+// `navTarget` ({ tab, id, nonce }) lo manda el tablero cuando se abre una notificación de la campana: salta a esa pestaña y,
+// si trae `id`, abre ese contacto o contrato.
+export default function AlquilerPanel({ user, navTarget }) {
     // Para sumar una pestaña basta agregarla aquí y renderizarla abajo.
     const tabs = [
         ...(puedeVerContratos(user)
@@ -28,7 +30,19 @@ export default function AlquilerPanel({ user }) {
             : []),
         ...(puedeVerContactos(user) ? [{ key: "contactos", label: "Contactos iniciales" }] : []),
     ];
-    const [tab, setTab] = useState(tabs[0]?.key ?? "contratos");
+    const [tab, setTab] = useState(tabs.some((t) => t.key === navTarget?.tab) ? navTarget.tab : (tabs[0]?.key ?? "contratos"));
+    const [nonceVisto, setNonceVisto] = useState(navTarget?.nonce);
+    const [abrirId, setAbrirId] = useState(tabs.some((t) => t.key === navTarget?.tab) ? (navTarget.id ?? null) : null);
+    const registroAbierto = useCallback(() => setAbrirId(null), []);
+
+    // Una notificación abierta con el módulo ya visible: se cambia de pestaña durante el render (patrón recomendado por React).
+    if (navTarget && navTarget.nonce !== nonceVisto) {
+        setNonceVisto(navTarget.nonce);
+        if (tabs.some((t) => t.key === navTarget.tab)) {
+            setTab(navTarget.tab);
+            setAbrirId(navTarget.id ?? null);
+        }
+    }
 
     return (
         <div className="mt-6">
@@ -41,12 +55,19 @@ export default function AlquilerPanel({ user }) {
                     canRenovar={puedeRegistrarContrato(user)}
                     canCancelar={puedeCancelarContrato(user)}
                     canVerAuditoria={puedeVerAuditoria(user)}
+                    abrirId={abrirId}
+                    onAbierto={registroAbierto}
                 />
             )}
             {tab === "radios" && <RadiosTab canAsignar={puedeAsignarRadio(user)} />}
             {tab === "repetidoras" && <RepetidorasTab canRegistrar={puedeRegistrarFichaRepetidora(user)} />}
             {tab === "contactos" && (
-                <ContactosTab canRegister={puedeRegistrarContacto(user)} canReasignar={puedeReasignarContacto(user)} />
+                <ContactosTab
+                    canRegister={puedeRegistrarContacto(user)}
+                    canReasignar={puedeReasignarContacto(user)}
+                    abrirId={abrirId}
+                    onAbierto={registroAbierto}
+                />
             )}
         </div>
     );

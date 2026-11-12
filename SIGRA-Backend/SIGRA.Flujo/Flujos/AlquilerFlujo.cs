@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
@@ -10,6 +11,9 @@ namespace SIGRA.Flujo.Flujos;
 public class AlquilerFlujo : IAlquilerFlujo
 {
     private const string ModuloAuditoria = "Alquiler";
+    private const int ModuloAlquiler = 3;
+    private const string EntidadContactoInicial = "ContactoInicial";
+    private const string TipoContactoSinVendedor = "ContactoSinVendedor";
     private const string EstadoPorVencer90 = "Por vencer (90 días)";
     private const string EstadoPorVencer30 = "Por vencer (30 días)";
     private const string MensajeEquipoNoDisponible = "El equipo seleccionado no se encuentra disponible en el inventario.";
@@ -24,13 +28,18 @@ public class AlquilerFlujo : IAlquilerFlujo
     private readonly IInventarioDA _inventarioDA;
     private readonly IAuditoriaDA _auditoriaDA;
     private readonly IEmailService _emailService;
+    private readonly INotificacionesDA _notificacionesDA;
+    private readonly ILogger<AlquilerFlujo> _logger;
 
-    public AlquilerFlujo(IAlquilerDA alquilerDA, IInventarioDA inventarioDA, IAuditoriaDA auditoriaDA, IEmailService emailService)
+    public AlquilerFlujo(IAlquilerDA alquilerDA, IInventarioDA inventarioDA, IAuditoriaDA auditoriaDA, IEmailService emailService,
+        INotificacionesDA notificacionesDA, ILogger<AlquilerFlujo> logger)
     {
         _alquilerDA = alquilerDA;
         _inventarioDA = inventarioDA;
         _auditoriaDA = auditoriaDA;
         _emailService = emailService;
+        _notificacionesDA = notificacionesDA;
+        _logger = logger;
     }
 
     // ---------- CARR-001: contacto inicial ----------
@@ -113,6 +122,9 @@ public class AlquilerFlujo : IAlquilerFlujo
         {
             await _auditoriaDA.RegistrarAsync(idUsuario, ModuloAuditoria, "ContactoInicial", idContacto, "CONTACTO_SIN_VENDEDOR",
                 $"{empresa}: no hay vendedores disponibles; queda en espera de asignación manual");
+
+            // El contacto ya está guardado: un fallo al avisar no debe impedir ni revertir el registro.
+            await AvisarAdministradoresContactoSinVendedorAsync(detalle.Contacto);
         }
         else
         {
@@ -127,6 +139,50 @@ public class AlquilerFlujo : IAlquilerFlujo
                 ? "El contacto se registró sin vendedor porque no hay vendedores disponibles. Quedó en espera para que el administrador lo asigne."
                 : $"El contacto se registró y se asignó a {detalle.Contacto.Vendedor}."
         };
+    }
+
+    // Aviso en la campana (y correo encolado) a cada administrador activo; la clave única evita duplicarlo si se repite.
+    private async Task AvisarAdministradoresContactoSinVendedorAsync(ContactoDto contacto)
+    {
+        try
+        {
+            var administradores = await _alquilerDA.ListarAdministradoresAsync();
+            var titulo = $"Contacto sin vendedor: {contacto.Empresa}";
+            var mensaje = ArmarMensajeContactoSinVendedor(contacto);
+
+            foreach (var administrador in administradores)
+            {
+                try
+                {
+                    await _notificacionesDA.RegistrarAsync(administrador.IdUsuario, ModuloAlquiler, titulo, mensaje,
+                        EntidadContactoInicial, contacto.IdContacto, TipoContactoSinVendedor, $"CSV-{contacto.IdContacto}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "No se pudo avisar al administrador {IdUsuario} del contacto sin vendedor {IdContacto}.",
+                        administrador.IdUsuario, contacto.IdContacto);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "No se pudo avisar a los administradores del contacto sin vendedor {IdContacto}.", contacto.IdContacto);
+        }
+    }
+
+    internal static string ArmarMensajeContactoSinVendedor(ContactoDto c)
+    {
+        var lineas = new List<string>
+        {
+            "Se registró un contacto inicial que quedó sin vendedor porque no hay vendedores disponibles.",
+            $"Empresa: {c.Empresa}",
+            $"Contacto: {(string.IsNullOrWhiteSpace(c.Contacto) ? "No indicado" : c.Contacto)}",
+            $"Medio de contacto: {c.MedioContacto} ({c.DatoContacto})",
+            $"Motivo: {(string.IsNullOrWhiteSpace(c.Motivo) ? "No indicado" : c.Motivo)}",
+            $"Registrado por: {c.RegistradoPor}",
+            "Asígnelo a un vendedor en Alquiler > Contactos iniciales."
+        };
+        return string.Join("\n", lineas);
     }
 
     public Task<List<ContactoDto>> ListarContactosAsync(int? idVendedor) => _alquilerDA.ListarContactosAsync(idVendedor);
@@ -467,6 +523,9 @@ public class AlquilerFlujo : IAlquilerFlujo
             var codigo = $"CT-{alerta.IdContrato:0000}";
             var (asunto, mensaje) = ArmarAlerta(alerta, codigo);
 
+            // Aviso en la campana del vendedor responsable y de los administradores (el correo sale por su canal actual).
+            await AvisarAlertaContratoEnCampanaAsync(alerta, codigo, administradores);
+
             var destinatarios = new List<(string Correo, string Nombre)>();
             if (alerta.Tipo != "3 anios" && !string.IsNullOrWhiteSpace(alerta.CorreoCliente))
                 destinatarios.Add((alerta.CorreoCliente!, alerta.Contacto ?? alerta.Empresa));
@@ -496,6 +555,45 @@ public class AlquilerFlujo : IAlquilerFlujo
         }
 
         return resultado;
+    }
+
+    // Es idempotente (clave única por contrato, tipo de alerta y usuario) y nunca interrumpe el proceso de vencimientos.
+    private async Task AvisarAlertaContratoEnCampanaAsync(AlertaContratoDto alerta, string codigo, IEnumerable<AdministradorDto> administradores)
+    {
+        var destinatarios = administradores.Select(a => a.IdUsuario).ToList();
+        if (alerta.IdVendedor is int idVendedor && !destinatarios.Contains(idVendedor))
+            destinatarios.Add(idVendedor);
+
+        var (titulo, mensaje) = ArmarAvisoContrato(alerta, codigo);
+        var tipoClave = alerta.Tipo.Replace(" ", string.Empty);
+
+        foreach (var idUsuario in destinatarios)
+        {
+            try
+            {
+                await _notificacionesDA.RegistrarAsync(idUsuario, ModuloAlquiler, titulo, mensaje, "Contrato", alerta.IdContrato,
+                    "Contrato", $"CTA-{alerta.IdContrato}-{tipoClave}-{idUsuario}", enviarCorreo: false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo registrar en la campana el aviso del contrato {Codigo} ({Tipo}) para el usuario {IdUsuario}.",
+                    codigo, alerta.Tipo, idUsuario);
+            }
+        }
+    }
+
+    internal static (string Titulo, string Mensaje) ArmarAvisoContrato(AlertaContratoDto alerta, string codigo)
+    {
+        var vence = alerta.FechaVencimiento.ToString("dd/MM/yyyy");
+        return alerta.Tipo switch
+        {
+            "3 anios" => ($"Contrato {codigo} cumple 3 años de vigencia",
+                $"El contrato {codigo} de {alerta.Empresa} cumple 3 años de vigencia. Se aproxima una renovación mayor."),
+            "30 dias" => ($"Contrato {codigo} vence en 30 días o menos",
+                $"El contrato {codigo} de {alerta.Empresa} vence el {vence} (faltan 30 días o menos). Coordine su renovación."),
+            _ => ($"Contrato {codigo} vence en 90 días o menos",
+                $"El contrato {codigo} de {alerta.Empresa} vence el {vence} (faltan 90 días o menos). Ya puede coordinar su renovación.")
+        };
     }
 
     // ---------- CARR-009: ficha técnica de repetidoras ----------

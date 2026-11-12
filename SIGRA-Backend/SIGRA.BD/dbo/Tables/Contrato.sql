@@ -10,11 +10,20 @@
     [IdVendedor]       INT             NULL,
     [MotivoCancelacion] VARCHAR (300)  NULL,
     [FechaCancelacion] DATE            NULL,
+    [IdPlantilla]      INT             NULL,
+    [ContenidoContrato] VARCHAR (MAX)  NULL,
+    [Moneda]           CHAR (3)        CONSTRAINT [DF_Contrato_Moneda] DEFAULT ('CRC') NOT NULL,
+    [FechaFirma]       DATE            NULL,
+    [FechaActivacion]  DATETIME2 (0)   NULL,
+    [IdUsuarioActiva]  INT             NULL,
     CONSTRAINT [PK_Contrato] PRIMARY KEY CLUSTERED ([IdContrato] ASC),
     CONSTRAINT [CK_Contrato_Fechas] CHECK ([FechaVencimiento]>[FechaInicio]),
     CONSTRAINT [CK_Contrato_Monto] CHECK ([MontoMensual]>=(0)),
+    CONSTRAINT [CK_Contrato_Moneda] CHECK ([Moneda] IN ('CRC', 'USD')),
     CONSTRAINT [FK_Contrato_Vendedor] FOREIGN KEY ([IdVendedor]) REFERENCES [dbo].[Usuario] ([IdUsuario]),
-    CONSTRAINT [FK_Contrato_Cliente] FOREIGN KEY ([IdCliente]) REFERENCES [dbo].[Cliente] ([IdCliente])
+    CONSTRAINT [FK_Contrato_Cliente] FOREIGN KEY ([IdCliente]) REFERENCES [dbo].[Cliente] ([IdCliente]),
+    CONSTRAINT [FK_Contrato_Plantilla] FOREIGN KEY ([IdPlantilla]) REFERENCES [dbo].[PlantillaContrato] ([IdPlantilla]),
+    CONSTRAINT [FK_Contrato_UsuarioActiva] FOREIGN KEY ([IdUsuarioActiva]) REFERENCES [dbo].[Usuario] ([IdUsuario])
 );
 
 

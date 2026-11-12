@@ -5,7 +5,7 @@ BEGIN
 
     DECLARE @Hoy DATE = CAST(GETDATE() AS DATE);
 
-    SELECT c.IdContrato, cl.Empresa, cl.Contacto, cl.Correo AS CorreoCliente, c.FechaInicio, c.FechaVencimiento, t.Tipo
+    SELECT c.IdContrato, cl.Empresa, cl.Contacto, cl.Correo AS CorreoCliente, c.FechaInicio, c.FechaVencimiento, t.Tipo, c.IdVendedor
     FROM Contrato c
     INNER JOIN Cliente cl ON cl.IdCliente = c.IdCliente
     CROSS APPLY (

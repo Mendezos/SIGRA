@@ -692,6 +692,17 @@ export default function Dashboard({
         useState(false);
     const [perfilModalOpen, setPerfilModalOpen] =
         useState(false);
+    // Destino que pide una notificación de la campana: { moduleId, tab, id, nonce }. El nonce hace que repetir el mismo
+    // destino vuelva a navegar aunque el módulo ya esté abierto.
+    const [navTarget, setNavTarget] = useState(null);
+
+    function handleNavigate(target) {
+        if (!target?.moduleId) return;
+        setActive(target.moduleId);
+        setNavTarget({ ...target, nonce: Date.now() });
+        setMobileMenuOpen(false);
+        setNotice("");
+    }
 
     const currentModule =
         MODULES.find(
@@ -777,6 +788,7 @@ export default function Dashboard({
                             updater
                         )
                     }
+                    navTarget={navTarget?.moduleId === currentModule.id ? navTarget : null}
                 />
             ) : (
                 <Welcome
@@ -798,7 +810,7 @@ export default function Dashboard({
                 />
             )}
 
-            <NotificationsBell role={user.role} />
+            <NotificationsBell role={user.role} onNavigate={handleNavigate} />
             <IAChatPanel />
 
             <DesbloquearCuentaModal

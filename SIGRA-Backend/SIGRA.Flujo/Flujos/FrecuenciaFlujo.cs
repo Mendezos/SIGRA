@@ -2,6 +2,7 @@ using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
 using SIGRA.Abstracciones.Servicios;
 using SIGRA.Flujo.Utilidades;
@@ -21,6 +22,7 @@ public class FrecuenciaFlujo : IFrecuenciaFlujo
     private const string EstadoCancelada = "Cancelada";
     private const string MensajeRenovarCancelada = "No es posible renovar una frecuencia cancelada";
     private const int MaximoIntentosEnvio = 5;
+    private const int ModuloFrecuencias = 11;
 
     private static readonly string[] Bandas = { "VHF", "UHF", "700 MHz", "800 MHz", "900 MHz" };
     private static readonly string[] TiposDocumento = { "Formulario presentado", "Acuse de recibo", "Otro" };
@@ -31,13 +33,18 @@ public class FrecuenciaFlujo : IFrecuenciaFlujo
     private readonly IFrecuenciaDA _frecuenciaDA;
     private readonly IAuditoriaDA _auditoriaDA;
     private readonly IEmailService _email;
+    private readonly INotificacionesDA _notificacionesDA;
+    private readonly ILogger<FrecuenciaFlujo> _logger;
     private readonly string _frontendBaseUrl;
 
-    public FrecuenciaFlujo(IFrecuenciaDA frecuenciaDA, IAuditoriaDA auditoriaDA, IEmailService email, IConfiguration configuracion)
+    public FrecuenciaFlujo(IFrecuenciaDA frecuenciaDA, IAuditoriaDA auditoriaDA, IEmailService email, IConfiguration configuracion,
+        INotificacionesDA notificacionesDA, ILogger<FrecuenciaFlujo> logger)
     {
         _frecuenciaDA = frecuenciaDA;
         _auditoriaDA = auditoriaDA;
         _email = email;
+        _notificacionesDA = notificacionesDA;
+        _logger = logger;
         _frontendBaseUrl = (configuracion["Frontend:BaseUrl"] ?? "http://localhost:5173").TrimEnd('/');
     }
 
@@ -341,12 +348,17 @@ public class FrecuenciaFlujo : IFrecuenciaFlujo
                     $"SF-{idSolicitud:0000}: {s.Empresa}, {s.Frecuencia} venció el {s.FechaVencimiento:dd/MM/yyyy} sin renovarse. Estado -> Vencida");
             }
 
+            List<AdministradorDto>? administradores = null;
             foreach (var idAlerta in idsAlertas)
             {
                 var a = (await _frecuenciaDA.ListarAlertasAsync(idAlerta, null, null)).FirstOrDefault();
                 if (a is null) continue;
                 await _auditoriaDA.RegistrarAsync(null, ModuloAuditoria, "SolicitudFrecuencia", a.IdSolicitud, "ALERTA_VENCIMIENTO_GENERADA",
                     $"SF-{a.IdSolicitud:0000}: alerta {DescripcionTipo(a.Tipo)} para {a.Vendedor} ({a.Empresa}, {a.Frecuencia}, vence {a.FechaVencimiento:dd/MM/yyyy}, {a.DiasRestantes} días)");
+
+                // Aviso en la campana del vendedor responsable y de los administradores (el correo sale por su canal actual).
+                administradores ??= await ListarAdministradoresParaAvisoAsync();
+                await AvisarAlertaEnCampanaAsync(a, administradores);
             }
 
             int enviados = 0, fallidos = 0;
@@ -382,6 +394,49 @@ public class FrecuenciaFlujo : IFrecuenciaFlujo
         {
             VerificacionEnCurso.Release();
         }
+    }
+
+    private async Task<List<AdministradorDto>> ListarAdministradoresParaAvisoAsync()
+    {
+        try { return await _notificacionesDA.ListarAdministradoresAsync(); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "No se pudo obtener la lista de administradores para avisar de las alertas de frecuencias.");
+            return new List<AdministradorDto>();
+        }
+    }
+
+    // Idempotente (clave única por alerta y usuario) y nunca interrumpe la verificación de vencimientos.
+    private async Task AvisarAlertaEnCampanaAsync(AlertaFrecuenciaDto a, IEnumerable<AdministradorDto> administradores)
+    {
+        var destinatarios = administradores.Select(x => x.IdUsuario).ToList();
+        if (a.IdVendedor > 0 && !destinatarios.Contains(a.IdVendedor)) destinatarios.Add(a.IdVendedor);
+
+        var (titulo, mensaje) = ArmarAvisoAlerta(a);
+        foreach (var idUsuario in destinatarios)
+        {
+            try
+            {
+                await _notificacionesDA.RegistrarAsync(idUsuario, ModuloFrecuencias, titulo, mensaje, "SolicitudFrecuencia", a.IdSolicitud,
+                    "Frecuencia", $"FRQ-{a.IdAlerta}", enviarCorreo: false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo registrar en la campana la alerta de frecuencia {IdAlerta} para el usuario {IdUsuario}.", a.IdAlerta, idUsuario);
+            }
+        }
+    }
+
+    internal static (string Titulo, string Mensaje) ArmarAvisoAlerta(AlertaFrecuenciaDto a)
+    {
+        var plazo = a.Tipo switch { "Primera" => "6 meses", "Segunda" => "3 meses", _ => "30 días" };
+        var titulo = a.Tipo == "Final"
+            ? $"URGENTE: la frecuencia de {a.Empresa} vence en {plazo}"
+            : $"La frecuencia de {a.Empresa} vence en {plazo}";
+        var mensaje = $"Frecuencia {(string.IsNullOrWhiteSpace(a.Frecuencia) ? "sin dato" : a.Frecuencia)} de {a.Empresa} (repetidora {a.NumeroSerie}), solicitud SF-{a.IdSolicitud:0000}. " +
+                      $"Vence el {a.FechaVencimiento:dd/MM/yyyy} (alerta de {plazo}). Vendedor responsable: {a.Vendedor}. " +
+                      "Inicie la renovación en Frecuencias de radio y marque la alerta como atendida.";
+        return (titulo, mensaje);
     }
 
     private static string DescripcionTipo(string tipo) => tipo switch

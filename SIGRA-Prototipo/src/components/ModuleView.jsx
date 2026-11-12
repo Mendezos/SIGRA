@@ -21,6 +21,7 @@ import InventarioPanel from "./inventario/InventarioPanel";
 import AlquilerPanel from "./alquiler/AlquilerPanel";
 import TicketsPanel from "./tickets/TicketsPanel";
 import FrecuenciasPanel from "./frecuencias/FrecuenciasPanel";
+import CrmPanel from "./crm/CrmPanel";
 import FrecuenciasDashboardWidget from "./frecuencias/FrecuenciasDashboardWidget";
 import { puedeVerResumenFrecuencias } from "./frecuencias/helpers";
 import { obtenerResumen } from "../services/cuentasService";
@@ -307,6 +308,7 @@ export default function ModuleView({
     user,
     moduleData,
     onModuleDataChange,
+    navTarget,
 }) {
     const hasTabs =
         Array.isArray(module.tabs) &&
@@ -434,6 +436,7 @@ export default function ModuleView({
         module.id !== "inventario" &&
         module.id !== "alquiler" &&
         module.id !== "frecuencias" &&
+        module.id !== "crm" &&
         (module.id !== "usuarios" || !!resumenUsuarios) &&
         (!module.metricsRoles ||
             module.metricsRoles.includes(user.role));
@@ -794,7 +797,7 @@ export default function ModuleView({
                     )}
                 />
             ) : module.id === "tickets" ? (
-                <TicketsPanel user={user} />
+                <TicketsPanel user={user} navTarget={navTarget} />
             ) : hasTabs ? (
                 <>
                     <TabSwitcher
@@ -855,9 +858,11 @@ export default function ModuleView({
             ) : module.id === "inventario" ? (
                 <InventarioPanel user={user} />
             ) : module.id === "alquiler" ? (
-                <AlquilerPanel user={user} />
+                <AlquilerPanel user={user} navTarget={navTarget} />
             ) : module.id === "frecuencias" ? (
-                <FrecuenciasPanel user={user} />
+                <FrecuenciasPanel user={user} navTarget={navTarget} />
+            ) : module.id === "crm" ? (
+                <CrmPanel user={user} navTarget={navTarget} />
             ) : (
                 <EntityPanel
                     idPrefix={idPrefixFor(module.id)}

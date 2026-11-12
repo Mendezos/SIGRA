@@ -283,7 +283,7 @@ function ContactoDetalleModal({ detalle, canReasignar, onClose, onChanged }) {
     );
 }
 
-export default function ContactosTab({ canRegister, canReasignar }) {
+export default function ContactosTab({ canRegister, canReasignar, abrirId, onAbierto }) {
     const [contactos, setContactos] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState("");
@@ -309,6 +309,19 @@ export default function ContactosTab({ canRegister, canReasignar }) {
             activo = false;
         };
     }, [cargar]);
+
+    // Llegada desde una notificación de la campana: abre el detalle de ese contacto.
+    useEffect(() => {
+        if (!abrirId) return undefined;
+        let activo = true;
+        api.obtenerContacto(abrirId)
+            .then((d) => activo && setDetalle(d))
+            .catch((e) => activo && setError(e instanceof ApiError ? e.message : "No se pudo abrir el contacto."))
+            .finally(() => activo && onAbierto?.());
+        return () => {
+            activo = false;
+        };
+    }, [abrirId, onAbierto]);
 
     const filas = useMemo(
         () =>

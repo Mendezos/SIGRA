@@ -57,7 +57,7 @@ function Resumen({ todos }) {
     );
 }
 
-export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar, canCancelar, canVerAuditoria }) {
+export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar, canCancelar, canVerAuditoria, abrirId, onAbierto }) {
     const [contratos, setContratos] = useState([]);
     const [todos, setTodos] = useState([]);
     const [texto, setTexto] = useState("");
@@ -93,6 +93,19 @@ export default function ContratosTab({ canRegister, canAsignarRadio, canRenovar,
             clearTimeout(espera);
         };
     }, [cargar]);
+
+    // Llegada desde una notificación de la campana: abre el detalle de ese contrato.
+    useEffect(() => {
+        if (!abrirId) return undefined;
+        let activo = true;
+        api.obtenerContrato(abrirId)
+            .then((d) => activo && setDetalle(d))
+            .catch((e) => activo && setError(e instanceof ApiError ? e.message : "No se pudo abrir el contrato."))
+            .finally(() => activo && onAbierto?.());
+        return () => {
+            activo = false;
+        };
+    }, [abrirId, onAbierto]);
 
     const filas = useMemo(
         () =>
