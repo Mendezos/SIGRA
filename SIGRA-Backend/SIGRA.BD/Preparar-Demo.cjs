@@ -36,6 +36,12 @@ const PID_ARCHIVO = path.join(CARPETA_API, "api.pid");
 const TOKEN_ENCUESTA = "demo-encuesta-factura-0002";
 
 const sqlcmd = (consulta) => execFileSync("sqlcmd", ["-S", SERVIDOR, "-E", "-b", "-Q", consulta], { encoding: "utf8" });
+// Para sentencias con acentos y símbolos: se escribe un archivo UTF-8 con BOM y se ejecuta con la página de códigos 65001.
+const sqlArchivo = (consulta) => {
+    const ruta = path.join(os.tmpdir(), `sigra_demo_${process.pid}.sql`);
+    fs.writeFileSync(ruta, "﻿" + consulta, "utf8");
+    try { execFileSync("sqlcmd", ["-S", SERVIDOR, "-E", "-b", "-f", "65001", "-i", ruta], { encoding: "utf8" }); } finally { fs.rmSync(ruta, { force: true }); }
+};
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const quienEscucha = () => {
     const salida = execFileSync("netstat", ["-ano"], { encoding: "utf8" });
@@ -98,6 +104,24 @@ const detenerApi = () => {
     if (!soloIniciar) {
         // Sin la clave de SendGrid el enlace de la encuesta nunca se ve: se deja la encuesta de la factura FA-2026-0002 con un enlace conocido.
         sqlcmd(`USE [${BASE}]; UPDATE e SET TokenHash = HASHBYTES('SHA2_256', '${TOKEN_ENCUESTA}'), Estado = 'Enviada', FechaExpiracion = DATEADD(DAY, 15, SYSUTCDATETIME()) FROM Encuesta e JOIN Factura f ON f.IdFactura = e.IdFactura WHERE f.NumeroFactura = 'FA-2026-0002'`);
+    }
+
+    if (!soloIniciar) {
+        // Movimientos de ejemplo para el historial de cambios del CRM (CRMGPSC-026): el administrador los ve desde el primer momento.
+        sqlArchivo(`USE [${BASE}];
+            INSERT INTO Auditoria (IdUsuario, Modulo, Entidad, IdEntidad, Accion, Fecha, Detalle)
+            SELECT v.Autor, 'CRM', v.Entidad, v.IdEntidad, v.Accion, DATEADD(DAY, -v.Dias, GETUTCDATE()), v.Detalle
+            FROM (VALUES
+                (5, 'Prospecto', 1, 'PROSPECTO_REGISTRADO', 10, N'Se registró el prospecto Transportes Alajuelenses S.A.'),
+                (5, 'Seguimiento', 1, 'SEGUIMIENTO_CREADO', 9, N'Seguimiento de tipo Llamada programado para confirmar la cotización.'),
+                (5, 'Prospecto', 2, 'PROSPECTO_EDITADO', 6, N'Teléfono: 2654-0022 → 2654-0099'),
+                (5, 'Prospecto', 3, 'PROSPECTO_EDITADO', 5, N'Sector: Industria → Construcción. Tamaño de flota: 8 → 12'),
+                (5, 'Prospecto', 5, 'PROSPECTO_DESCARTADO', 4, N'Motivo: el cliente eligió otro proveedor.'),
+                (1, 'Cliente', 1, 'CLIENTE_EDITADO', 3, N'Sector: Hotelería → Turismo y hotelería'),
+                (1, 'Cliente', 1, 'RESPONSABLE_REASIGNADO', 3, N'Responsable: Henry Ortiz → Kimberly Sánchez. Motivo: Henry Ortiz fue desactivado.'),
+                (5, 'Prospecto', 5, 'PROSPECTO_REACTIVADO', 2, N'Se reactivó por una nueva solicitud del cliente.'),
+                (5, 'ContactoEmpresa', 6, 'CONTACTO_EDITADO', 1, N'Preferencia de contacto: Correo → Teléfono')
+            ) v(Autor, Entidad, IdEntidad, Accion, Dias, Detalle)`);
     }
 
     console.log(`\nListo. La API de la demostración corre en http://localhost:${PUERTO} sobre la base ${BASE}.`);

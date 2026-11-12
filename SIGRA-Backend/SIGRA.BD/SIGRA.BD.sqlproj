@@ -372,5 +372,8 @@
     <Build Include="dbo\Stored Procedures\sp_CrmCliente_Perfil.sql" />
     <Build Include="dbo\Stored Procedures\sp_CrmProspecto_Convertir.sql" />
     <Build Include="dbo\Stored Procedures\sp_CrmResponsable_Asignar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Consultar.sql" />
+    <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Detalle.sql" />
+    <Build Include="dbo\Views\vw_CrmAuditoria.sql" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SubTabs } from "../ui";
 import AgendaTab from "./AgendaTab";
 import BateriasTab from "./BateriasTab";
+import AuditoriaCrmTab from "./AuditoriaCrmTab";
 import ClientesTab from "./ClientesTab";
 import CotizacionesPanel from "./CotizacionesPanel";
 import ContactosCrmTab from "./ContactosCrmTab";
@@ -26,6 +27,7 @@ export default function CrmPanel({ user, navTarget }) {
               { key: "periodicos", label: "Contactos periódicos" },
               { key: "historial", label: "Historial comercial" },
               { key: "baterias", label: "Recordatorios de baterías" },
+              ...(esAdministrador(user) ? [{ key: "auditoria", label: "Historial de cambios" }] : []),
           ]
         : [];
     const [tab, setTab] = useState(tabs.some((t) => t.key === navTarget?.tab) ? navTarget.tab : (tabs[0]?.key ?? "prospectos"));
@@ -57,6 +59,7 @@ export default function CrmPanel({ user, navTarget }) {
             {tab === "periodicos" && <PeriodicosTab user={user} target={target("periodicos")} />}
             {tab === "historial" && <HistorialTab user={user} target={target("historial")} />}
             {tab === "baterias" && <BateriasTab user={user} target={target("baterias")} />}
+            {tab === "auditoria" && esAdministrador(user) && <AuditoriaCrmTab />}
         </div>
     );
 }
