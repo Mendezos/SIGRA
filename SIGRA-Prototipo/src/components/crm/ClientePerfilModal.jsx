@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Building2, UserCog } from "lucide-react";
+import { Building2, Edit3, Power, RotateCcw, UserCog } from "lucide-react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
 import { Button, DetailGrid, Notice } from "../ui";
 import { COLORS } from "../uiTheme";
 import { ApiError } from "../../services/apiClient";
 import * as api from "../../services/crmClientesService";
+import { obtenerHistorialCliente } from "../../services/encuestasService";
 import { fechaCorta, fechaHora } from "../inventario/helpers";
 import { fechaHoraLocal, fechaLocal } from "./helpers";
 
@@ -15,6 +16,7 @@ const PESTANAS = [
     { key: "alquiler", label: "Alquiler" },
     { key: "servicio", label: "Servicio técnico" },
     { key: "facturacion", label: "Facturación" },
+    { key: "historial", label: "Historial financiero" },
     { key: "comercial", label: "Seguimiento comercial" },
 ];
 
@@ -44,21 +46,101 @@ function Seccion({ titulo, seccion, render }) {
 const Sub = ({ children }) => <span className="block text-xs" style={{ color: COLORS.muted }}>{children}</span>;
 
 // CRMGPSC-021: el cliente completo en una pantalla.
-export default function ClientePerfilModal({ idCliente, version = 0, puedeAsignar, onClose, onAsignar }) {
+export default function ClientePerfilModal({ idCliente, version = 0, puedeAsignar, puedeEditar, onClose, onAsignar }) {
     const [cargado, setCargado] = useState(null);
     const [error, setError] = useState("");
     const [pestana, setPestana] = useState("resumen");
+    const [modoOperacion, setModoOperacion] = useState(null);
+    const [operando, setOperando] = useState(false);
+    const [operacionError, setOperacionError] = useState("");
+    const [recarga, setRecarga] = useState(0);
+    const [formulario, setFormulario] = useState({});
+    const [motivo, setMotivo] = useState("");
+    const [historialFinanciero, setHistorialFinanciero] = useState(null);
+    const [historialClienteId, setHistorialClienteId] = useState(null);
+    const [historialError, setHistorialError] = useState("");
 
     useEffect(() => {
         let activo = true;
         api.obtenerPerfil(idCliente)
-            .then((p) => activo && (setCargado({ idCliente, version, perfil: p }), setError("")))
+            .then((p) => activo && (setCargado({ idCliente, version: `${version}-${recarga}`, perfil: p }), setError("")))
             .catch((e) => activo && setError(e instanceof ApiError ? e.message : "No se pudo cargar el perfil del cliente."));
         return () => { activo = false; };
-    }, [idCliente, version]);
+    }, [idCliente, version, recarga]);
+
+    useEffect(() => {
+        if (pestana !== "historial") return undefined;
+        let activo = true;
+        obtenerHistorialCliente(idCliente)
+            .then((datos) => {
+                if (!activo) return;
+                setHistorialFinanciero(datos);
+                setHistorialClienteId(idCliente);
+                setHistorialError("");
+            })
+            .catch((e) => activo && setHistorialError(e instanceof ApiError ? e.message : "No se pudo cargar el historial financiero."));
+        return () => { activo = false; };
+    }, [idCliente, pestana]);
 
     const perfil = cargado?.idCliente === idCliente ? cargado.perfil : null;
     const c = perfil?.cliente;
+
+    function abrirEdicion() {
+        setFormulario({
+            empresa: c?.empresa ?? "",
+            contacto: c?.contacto ?? "",
+            correo: c?.correo ?? "",
+            telefono: c?.telefono ?? "",
+            sector: c?.sector ?? "",
+            direccion: c?.direccion ?? "",
+            tamanoFlota: c?.tamanoFlota ?? "",
+        });
+        setOperacionError("");
+        setModoOperacion("editar");
+    }
+
+    async function guardarEdicion(evento) {
+        evento.preventDefault();
+        setOperando(true);
+        setOperacionError("");
+        try {
+            await api.editarCliente(idCliente, {
+                empresa: formulario.empresa,
+                contacto: formulario.contacto || null,
+                correo: formulario.correo || null,
+                telefono: formulario.telefono || null,
+                sector: formulario.sector || null,
+                direccion: formulario.direccion || null,
+                tamanoFlota: formulario.tamanoFlota === "" ? null : Number(formulario.tamanoFlota),
+            });
+            setModoOperacion(null);
+            setRecarga((n) => n + 1);
+        } catch (e) {
+            setOperacionError(e instanceof ApiError ? e.message : "No se pudieron guardar los datos.");
+        } finally {
+            setOperando(false);
+        }
+    }
+
+    async function guardarEstado(evento) {
+        evento.preventDefault();
+        setOperando(true);
+        setOperacionError("");
+        try {
+            const resultado = await api.cambiarEstadoCliente(idCliente, { activo: !c.activo, motivo: motivo || null });
+            if (resultado.obligaciones?.length) {
+                setOperacionError(resultado.mensaje);
+                return;
+            }
+            setModoOperacion(null);
+            setMotivo("");
+            setRecarga((n) => n + 1);
+        } catch (e) {
+            setOperacionError(e instanceof ApiError ? e.message : "No se pudo cambiar el estado del cliente.");
+        } finally {
+            setOperando(false);
+        }
+    }
 
     return (
         <Modal
@@ -75,6 +157,17 @@ export default function ClientePerfilModal({ idCliente, version = 0, puedeAsigna
             footer={
                 c && (
                     <div className="flex justify-end gap-3">
+                        {puedeEditar && <Button variant="secondary" className="flex items-center gap-1.5" onClick={abrirEdicion}><Edit3 size={14} /> Editar datos</Button>}
+                        {puedeEditar && c.activo && (
+                            <Button variant="danger" className="flex items-center gap-1.5" onClick={() => { setOperacionError(""); setMotivo(""); setModoOperacion("estado"); }}>
+                                <Power size={14} /> Desactivar
+                            </Button>
+                        )}
+                        {puedeEditar && !c.activo && (
+                            <Button variant="primary" className="flex items-center gap-1.5" onClick={() => { setOperacionError(""); setMotivo(""); setModoOperacion("estado"); }}>
+                                <RotateCcw size={14} /> Reactivar
+                            </Button>
+                        )}
                         {puedeAsignar && (
                             <Button className="flex items-center gap-1.5" onClick={() => onAsignar(c)}><UserCog size={14} /> {c.idVendedor ? "Reasignar responsable" : "Asignar responsable"}</Button>
                         )}
@@ -86,7 +179,54 @@ export default function ClientePerfilModal({ idCliente, version = 0, puedeAsigna
             {error && <Notice tone="error">{error}</Notice>}
             {!perfil && !error && <p className="text-sm py-6 text-center" style={{ color: COLORS.muted }}>Cargando perfil...</p>}
 
-            {perfil && pestana === "resumen" && (
+            {perfil && modoOperacion === "editar" && (
+                <form onSubmit={guardarEdicion} className="space-y-4">
+                    <h3 className="font-semibold">Editar datos comerciales</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {[
+                            ["empresa", "Empresa", true],
+                            ["contacto", "Contacto principal", false],
+                            ["correo", "Correo", false],
+                            ["telefono", "Teléfono", false],
+                            ["sector", "Sector", false],
+                            ["tamanoFlota", "Tamaño de flota", false],
+                        ].map(([campo, etiqueta, requerido]) => (
+                            <label key={campo} className="text-sm">
+                                <span className="block mb-1">{etiqueta}{requerido ? " *" : ""}</span>
+                                <input
+                                    required={requerido}
+                                    type={campo === "tamanoFlota" ? "number" : campo === "correo" ? "email" : "text"}
+                                    min={campo === "tamanoFlota" ? "0" : undefined}
+                                    value={formulario[campo] ?? ""}
+                                    onChange={(e) => setFormulario({ ...formulario, [campo]: e.target.value })}
+                                    className="w-full rounded-lg px-3 py-2"
+                                    style={{ border: `1px solid ${COLORS.border}` }}
+                                />
+                            </label>
+                        ))}
+                    </div>
+                    <label className="text-sm block">
+                        <span className="block mb-1">Dirección</span>
+                        <textarea value={formulario.direccion ?? ""} onChange={(e) => setFormulario({ ...formulario, direccion: e.target.value })} className="w-full rounded-lg px-3 py-2" style={{ border: `1px solid ${COLORS.border}` }} rows={2} />
+                    </label>
+                    {operacionError && <Notice tone="error">{operacionError}</Notice>}
+                    <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setModoOperacion(null)}>Cancelar</Button><Button type="submit" variant="primary" disabled={operando}>{operando ? "Guardando..." : "Guardar cambios"}</Button></div>
+                </form>
+            )}
+
+            {perfil && modoOperacion === "estado" && (
+                <form onSubmit={guardarEstado} className="space-y-4">
+                    <h3 className="font-semibold">{c.activo ? "Desactivar cliente" : "Reactivar cliente"}</h3>
+                    <p className="text-sm" style={{ color: COLORS.muted }}>
+                        {c.activo ? "Se comprobarán contratos activos y facturas con cobro pendiente antes de desactivar." : "La reactivación conserva el historial comercial."}
+                    </p>
+                    {c.activo && <label className="text-sm block"><span className="block mb-1">Motivo *</span><textarea required value={motivo} onChange={(e) => setMotivo(e.target.value)} className="w-full rounded-lg px-3 py-2" style={{ border: `1px solid ${COLORS.border}` }} rows={3} /></label>}
+                    {operacionError && <Notice tone="error">{operacionError}</Notice>}
+                    <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setModoOperacion(null)}>Cancelar</Button><Button type="submit" variant={c.activo ? "dangerSolid" : "primary"} disabled={operando}>{operando ? "Procesando..." : c.activo ? "Desactivar cliente" : "Reactivar cliente"}</Button></div>
+                </form>
+            )}
+
+            {perfil && !modoOperacion && pestana === "resumen" && (
                 <>
                     <DetailGrid
                         title="Datos de la empresa"
@@ -110,13 +250,13 @@ export default function ClientePerfilModal({ idCliente, version = 0, puedeAsigna
                 </>
             )}
 
-            {perfil && pestana === "contactos" && (
+            {perfil && !modoOperacion && pestana === "contactos" && (
                 <Seccion titulo="Contactos" seccion={perfil.contactos} render={(k) => (<>
                     <strong>{k.nombre}</strong>{k.esPrincipal ? " · principal" : ""}{!k.activo ? " · inactivo" : ""}
                     <Sub>{[k.cargo, k.telefono, k.correo].filter(Boolean).join(" · ")}</Sub></>)} />
             )}
 
-            {perfil && pestana === "alquiler" && (
+            {perfil && !modoOperacion && pestana === "alquiler" && (
                 <>
                     <Seccion titulo="Equipos en alquiler" seccion={perfil.equipos} render={(e) => (<>
                         <strong>{e.numeroSerie}</strong> · {e.marca} {e.modelo}<Sub>{e.categoria} · {e.estado} · contrato CT-{String(e.idContrato).padStart(4, "0")} desde {fechaCorta(e.fechaAsignacion)}</Sub></>)} />
@@ -126,7 +266,7 @@ export default function ClientePerfilModal({ idCliente, version = 0, puedeAsigna
                 </>
             )}
 
-            {perfil && pestana === "servicio" && (
+            {perfil && !modoOperacion && pestana === "servicio" && (
                 <>
                     <Seccion titulo="Boletas de servicio técnico" seccion={perfil.tickets} render={(t) => (<>
                         <strong>Boleta {t.numeroBoleta}</strong> · {t.tipoServicio} <StatusBadge value={t.estado} /><Sub>Recibida el {fechaHora(t.fechaRecepcion)}</Sub></>)} />
@@ -136,7 +276,7 @@ export default function ClientePerfilModal({ idCliente, version = 0, puedeAsigna
                 </>
             )}
 
-            {perfil && pestana === "facturacion" && (
+            {perfil && !modoOperacion && pestana === "facturacion" && (
                 <>
                     <Seccion titulo="Facturas" seccion={perfil.facturas} render={(f) => (<>
                         <strong>{f.numeroFactura}</strong> · {f.tipo} · {dinero(f.total, f.moneda)} <StatusBadge value={f.estadoCobro} /><Sub>{fechaCorta(f.fecha)} · {f.estado}</Sub></>)} />
@@ -145,7 +285,30 @@ export default function ClientePerfilModal({ idCliente, version = 0, puedeAsigna
                 </>
             )}
 
-            {perfil && pestana === "comercial" && (
+            {perfil && !modoOperacion && pestana === "historial" && (
+                <div className="space-y-6">
+                    {historialError && <Notice tone="error">{historialError}</Notice>}
+                    {historialClienteId !== idCliente && !historialError && <p className="text-sm" style={{ color: COLORS.muted }}>Cargando historial financiero...</p>}
+                    {historialFinanciero && historialClienteId === idCliente && (
+                        <>
+                            <Seccion titulo="Contratos" seccion={{ visible: true, items: historialFinanciero.contratos, mensaje: "No hay contratos registrados." }} render={(contrato) => (<>
+                                <strong>CT-{String(contrato.idContrato).padStart(4, "0")}</strong> · <StatusBadge value={contrato.estado} /> · {dinero(contrato.montoMensual, contrato.moneda)}
+                                <Sub>{fechaCorta(contrato.fechaInicio)} a {fechaCorta(contrato.fechaVencimiento)}</Sub>
+                            </>)} />
+                            <Seccion titulo="Facturas" seccion={{ visible: true, items: historialFinanciero.facturas, mensaje: "No hay facturas registradas." }} render={(factura) => (<>
+                                <strong>{factura.numeroFactura}</strong> · {factura.tipo} · {dinero(factura.total, factura.moneda)} <StatusBadge value={factura.estadoCobro} />
+                                <Sub>{fechaCorta(factura.fecha)}</Sub>
+                            </>)} />
+                            <Seccion titulo="Encuestas de satisfacción" seccion={{ visible: true, items: historialFinanciero.encuestas, mensaje: "No hay encuestas registradas." }} render={(encuesta) => (<>
+                                <strong>{encuesta.numeroFactura}</strong> · <StatusBadge value={encuesta.estado} /> · {encuesta.calificacion ? `${encuesta.calificacion}/5` : "Sin respuesta"}
+                                <Sub>{fechaCorta(encuesta.fechaEnvio)}{encuesta.comentario ? ` · ${encuesta.comentario}` : ""}</Sub>
+                            </>)} />
+                        </>
+                    )}
+                </div>
+            )}
+
+            {perfil && !modoOperacion && pestana === "comercial" && (
                 <>
                     <Seccion titulo="Seguimientos" seccion={perfil.seguimientos} render={(s) => (<>
                         <strong>{s.tipo}</strong> · {s.motivo} <StatusBadge value={s.estado} /><Sub>{fechaHoraLocal(s.fechaHora)} · {s.responsable} · prioridad {s.prioridad.toLowerCase()}</Sub></>)} />

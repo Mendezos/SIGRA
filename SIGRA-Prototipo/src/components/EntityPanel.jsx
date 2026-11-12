@@ -4,6 +4,7 @@ import DataTable from "./DataTable";
 import Modal from "./Modal";
 import RecordForm from "./RecordForm";
 import DetailPanel from "./DetailPanel";
+import { Notice } from "./ui";
 
 const COLORS = {
     green: "#5EB453",
@@ -48,6 +49,8 @@ export default function EntityPanel({
     onRowClick,
     extraContent,
     rowFilter,
+    validateEdit,
+    validateToggleActive,
 }) {
     const isControlled = Array.isArray(controlledRows);
     const [internalRows, setInternalRows] = useState(seed ?? []);
@@ -61,6 +64,7 @@ export default function EntityPanel({
 
     const [selected, setSelected] = useState(null);
     const [formMode, setFormMode] = useState(null);
+    const [validationError, setValidationError] = useState("");
 
     const selectedCanEdit =
         typeof allowEdit === "function"
@@ -87,6 +91,12 @@ export default function EntityPanel({
 
     function handleEdit(values) {
         if (!selected || !selectedCanEdit) return;
+
+        const error = validateEdit?.(values, selected, rows);
+        if (error) {
+            setValidationError(error);
+            return;
+        }
 
         const transformed = transformEdit
             ? transformEdit(values, selected)
@@ -115,29 +125,50 @@ export default function EntityPanel({
         );
 
         setFormMode(null);
+        setValidationError("");
     }
 
     function handleToggleActive() {
         if (!selected || !allowDeactivate) return;
 
         const nextActive = selected.activo === false;
+        const error = validateToggleActive?.(selected, nextActive, rows);
+        if (error) {
+            setValidationError(error);
+            return;
+        }
 
         setRows((currentRows) =>
             currentRows.map((row) =>
                 row.id === selected.id
-                    ? { ...row, activo: nextActive }
+                    ? {
+                          ...row,
+                          activo: nextActive,
+                          ...(row.estado
+                              ? { estado: nextActive ? "Activo" : "Inactivo" }
+                              : {}),
+                      }
                     : row
             )
         );
 
         setSelected((current) =>
             current
-                ? { ...current, activo: nextActive }
+                ? {
+                      ...current,
+                      activo: nextActive,
+                      ...(current.estado
+                          ? { estado: nextActive ? "Activo" : "Inactivo" }
+                          : {}),
+                  }
                 : current
         );
+        setValidationError("");
     }
 
     function handleRowClick(row) {
+        setValidationError("");
+
         if (onRowClick) {
             onRowClick(row);
             return;
@@ -183,8 +214,15 @@ export default function EntityPanel({
                 record={selected}
                 fields={fields}
                 idLabel={columns[0]?.label}
-                onClose={() => setSelected(null)}
-                onEdit={() => setFormMode("edit")}
+                validationError={validationError}
+                onClose={() => {
+                    setSelected(null);
+                    setValidationError("");
+                }}
+                onEdit={() => {
+                    setValidationError("");
+                    setFormMode("edit");
+                }}
                 onToggleActive={handleToggleActive}
                 allowEdit={!!selectedCanEdit}
                 allowDeactivate={allowDeactivate}
@@ -217,6 +255,7 @@ export default function EntityPanel({
                 subtitle="Los cambios solo se guardan durante esta sesión."
                 width="max-w-2xl"
             >
+                {validationError && <Notice tone="error">{validationError}</Notice>}
                 {selected && selectedCanEdit && (
                     <RecordForm
                         fields={editFields}

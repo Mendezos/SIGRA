@@ -175,3 +175,27 @@ public class AsignarResponsableResultadoDto
     public int? IdVendedorAnterior { get; set; }
     public int SeguimientosMovidos { get; set; }
 }
+
+public class EditarClienteDto
+{
+    public string Empresa { get; set; } = string.Empty;
+    public string? Contacto { get; set; }
+    public string? Correo { get; set; }
+    public string? Telefono { get; set; }
+    public string? Sector { get; set; }
+    public string? Direccion { get; set; }
+    public int? TamanoFlota { get; set; }
+}
+
+public class CambiarEstadoClienteDto
+{
+    public bool Activo { get; set; }
+    public string? Motivo { get; set; }
+}
+
+public class EstadoClienteResultadoDto
+{
+    public ClienteCrmDto Cliente { get; set; } = new();
+    public string Mensaje { get; set; } = string.Empty;
+    public List<string> Obligaciones { get; set; } = new();
+}

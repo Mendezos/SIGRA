@@ -187,6 +187,7 @@ export const ROLE_CAPABILITIES = {
             clientes: {
                 create: true,
                 edit: true,
+                deactivate: true,
             },
             frecuencias: {
                 create: true,

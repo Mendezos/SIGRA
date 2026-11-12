@@ -104,8 +104,13 @@ builder.Services.AddScoped<IModuloDA, ModuloDA>();
 builder.Services.AddScoped<IInventarioDA, InventarioDA>();
 builder.Services.AddScoped<IAlquilerDA, AlquilerDA>();
 builder.Services.AddScoped<IPlantillaContratoDA, PlantillaContratoDA>();
+builder.Services.AddScoped<ICotizacionDA, CotizacionDA>();
+builder.Services.AddScoped<IFacturaDA, FacturaDA>();
+builder.Services.AddScoped<INotaCreditoDA, NotaCreditoDA>();
+builder.Services.AddScoped<IEncuestaDA, EncuestaDA>();
 builder.Services.AddScoped<IFrecuenciaDA, FrecuenciaDA>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEncuestaCorreoService, EncuestaCorreoService>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -119,6 +124,10 @@ builder.Services.AddScoped<IModuloFlujo, ModuloFlujo>();
 builder.Services.AddScoped<IInventarioFlujo, InventarioFlujo>();
 builder.Services.AddScoped<IAlquilerFlujo, AlquilerFlujo>();
 builder.Services.AddScoped<IPlantillaContratoFlujo, PlantillaContratoFlujo>();
+builder.Services.AddScoped<ICotizacionFlujo, CotizacionFlujo>();
+builder.Services.AddScoped<IFacturaFlujo, FacturaFlujo>();
+builder.Services.AddScoped<INotaCreditoFlujo, NotaCreditoFlujo>();
+builder.Services.AddScoped<IEncuestaFlujo, EncuestaFlujo>();
 if (!builder.Configuration.GetValue<bool>("Pruebas:DesactivarServiciosEnSegundoPlano"))
 {
     // Contratos: marca vencidos y envía las alertas por correo (CARR-005).

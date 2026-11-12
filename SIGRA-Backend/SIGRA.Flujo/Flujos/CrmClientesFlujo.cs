@@ -2,6 +2,7 @@ using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.Abstracciones.Interfaces.InterfacesDA;
+using System.Text.RegularExpressions;
 
 namespace SIGRA.Flujo.Flujos;
 
@@ -45,6 +46,77 @@ public class CrmClientesFlujo(ICrmClientesDA da, ICrmProspectosDA prospectos, IC
         if (estado is not null && estado is not ("Activo" or "Inactivo"))
             throw new ReglaNegocioException("El estado indicado no es válido.");
         return da.ListarClientesAsync(Normalizar(texto), idVendedor, estado);
+    }
+
+    public async Task EditarAsync(int idCliente, EditarClienteDto dto, int idUsuario)
+    {
+        var usuario = await UsuarioAsync(idUsuario);
+        var perfil = await da.ObtenerPerfilAsync(idCliente, idUsuario) ?? throw new ReglaNegocioException("El cliente indicado no existe.");
+        if (!usuario.EsAdministrador && perfil.Cliente.IdVendedor != idUsuario)
+            throw new AccesoDenegadoException("Solo el responsable del cliente o un administrador puede editar sus datos.");
+
+        var empresa = Normalizar(dto.Empresa);
+        var correo = Normalizar(dto.Correo);
+        var contacto = Normalizar(dto.Contacto);
+        var telefono = Normalizar(dto.Telefono);
+        if (empresa is null) throw new ValidacionException("La empresa es obligatoria.", new List<string> { "Empresa" });
+        if (empresa.Length > 150) throw new ReglaNegocioException("La empresa no puede superar 150 caracteres.");
+        if (contacto?.Length > 150) throw new ReglaNegocioException("El contacto no puede superar 150 caracteres.");
+        if (correo is not null && (correo.Length > 150 || !Regex.IsMatch(correo, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")))
+            throw new ValidacionException("El correo no tiene un formato válido.", new List<string> { "Correo" });
+        if (telefono is not null && (telefono.Length > 20 || !Regex.IsMatch(telefono, @"^[0-9+() -]{7,20}$")))
+            throw new ValidacionException("El contacto telefónico no tiene un formato válido.", new List<string> { "Teléfono" });
+        if (dto.TamanoFlota is < 0) throw new ReglaNegocioException("El tamaño de la flota no puede ser negativo.");
+
+        await da.EditarAsync(idCliente, new EditarClienteDto
+        {
+            Empresa = empresa,
+            Contacto = contacto,
+            Correo = correo,
+            Telefono = telefono,
+            Sector = Normalizar(dto.Sector),
+            Direccion = Normalizar(dto.Direccion),
+            TamanoFlota = dto.TamanoFlota
+        });
+        await auditoria.RegistrarAsync(idUsuario, ModuloAuditoria, "Cliente", idCliente, "CLIENTE_EDITADO",
+            $"Se actualizaron los datos comerciales de {empresa}.");
+    }
+
+    public async Task<EstadoClienteResultadoDto> CambiarEstadoAsync(int idCliente, CambiarEstadoClienteDto dto, int idUsuario)
+    {
+        var usuario = await UsuarioAsync(idUsuario);
+        var perfil = await da.ObtenerPerfilAsync(idCliente, idUsuario) ?? throw new ReglaNegocioException("El cliente indicado no existe.");
+        if (!usuario.EsAdministrador && perfil.Cliente.IdVendedor != idUsuario)
+            throw new AccesoDenegadoException("Solo el responsable del cliente o un administrador puede cambiar su estado.");
+
+        var motivo = Normalizar(dto.Motivo);
+        var resultado = await da.CambiarEstadoAsync(idCliente, dto.Activo, motivo, idUsuario);
+        var cliente = (await da.ListarClientesAsync(null, null, null)).Single(c => c.IdCliente == idCliente);
+        if (resultado.Obligaciones.Count > 0)
+        {
+            return new EstadoClienteResultadoDto
+            {
+                Cliente = cliente,
+                Mensaje = $"No se puede desactivar el cliente: {string.Join(" y ", resultado.Obligaciones)}.",
+                Obligaciones = resultado.Obligaciones
+            };
+        }
+
+        if (resultado.Cambio)
+        {
+            await auditoria.RegistrarAsync(idUsuario, ModuloAuditoria, "Cliente", idCliente,
+                dto.Activo ? "CLIENTE_REACTIVADO" : "CLIENTE_DESACTIVADO",
+                dto.Activo ? "Se reactivó el cliente conservando su historial." : $"Se desactivó el cliente. Motivo: {motivo}");
+        }
+
+        return new EstadoClienteResultadoDto
+        {
+            Cliente = cliente,
+            Mensaje = resultado.Cambio
+                ? (dto.Activo ? "Cliente reactivado correctamente." : "Cliente desactivado correctamente.")
+                : $"El cliente ya estaba {(dto.Activo ? "activo" : "inactivo")}.",
+            Obligaciones = resultado.Obligaciones
+        };
     }
 
     // CRMGPSC-021: todo el cliente en una pantalla. Las secciones sensibles se ocultan según el permiso del rol en su módulo.

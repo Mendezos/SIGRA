@@ -33,7 +33,11 @@ import {
 import TicketsPanel from "./tickets/TicketsPanel";
 import FrecuenciasPanel from "./frecuencias/FrecuenciasPanel";
 import CrmPanel from "./crm/CrmPanel";
+import ClientesTab from "./crm/ClientesTab";
 import FrecuenciasDashboardWidget from "./frecuencias/FrecuenciasDashboardWidget";
+import FacturasPanel from "./contratos/FacturasPanel";
+import NotasCreditoPanel from "./contratos/NotasCreditoPanel";
+import EncuestasPanel from "./contratos/EncuestasPanel";
 import { puedeVerResumenFrecuencias } from "./frecuencias/helpers";
 import { obtenerResumen } from "../services/cuentasService";
 
@@ -843,6 +847,16 @@ export default function ModuleView({
                             user={user}
                             onChanged={() => setResumenVersion((v) => v + 1)}
                         />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "facturas" ? (
+                        <FacturasPanel
+                        />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "notasCredito" ? (
+                        <NotasCreditoPanel />
+                    ) : module.id === "contratos" &&
+                      currentTab.key === "encuestas" ? (
+                        <EncuestasPanel />
                     ) : (
                     <EntityPanel
                         key={currentTab.key}
@@ -888,6 +902,8 @@ export default function ModuleView({
                 <FrecuenciasPanel user={user} navTarget={navTarget} />
             ) : module.id === "crm" ? (
                 <CrmPanel user={user} navTarget={navTarget} />
+            ) : module.id === "clientes" ? (
+                <ClientesTab target={navTarget} puedeAsignar={user.role === "Administrador del sistema"} />
             ) : (
                 <EntityPanel
                     idPrefix={idPrefixFor(module.id)}

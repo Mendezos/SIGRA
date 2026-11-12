@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Modal from "./Modal";
 import StatusBadge from "./StatusBadge";
+import { Notice } from "./ui";
 
 const COLORS = {
     charcoal: "#323232",
@@ -125,6 +126,7 @@ export default function DetailPanel({
     onClose,
     onEdit,
     onToggleActive,
+    validationError = "",
     allowEdit = true,
     allowDeactivate = true,
 }) {
@@ -150,6 +152,10 @@ export default function DetailPanel({
                     Este registro está inactivo. Podés consultarlo,
                     pero no aparece por defecto en el listado.
                 </div>
+            )}
+
+            {validationError && (
+                <Notice tone="error">{validationError}</Notice>
             )}
 
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
