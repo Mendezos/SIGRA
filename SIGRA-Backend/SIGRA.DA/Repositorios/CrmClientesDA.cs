@@ -46,6 +46,94 @@ public class CrmClientesDA(IConexionFactory factory) : ICrmClientesDA
         };
     }
 
+    public async Task EditarAsync(int idCliente, EditarClienteDto dto)
+    {
+        using var c = factory.CrearConexion();
+        c.Open();
+        using var transaction = c.BeginTransaction();
+        var existe = await c.ExecuteScalarAsync<int?>(
+            "SELECT IdCliente FROM dbo.Cliente WHERE IdCliente = @idCliente",
+            new { idCliente }, transaction);
+        if (existe is null) throw new ReglaNegocioException("El cliente indicado no existe.");
+
+        var duplicado = await c.ExecuteScalarAsync<int?>(
+            """
+            SELECT TOP 1 IdCliente
+            FROM dbo.Cliente
+            WHERE IdCliente <> @idCliente
+              AND (Empresa = @Empresa OR (@Correo IS NOT NULL AND Correo = @Correo))
+            """,
+            new { idCliente, dto.Empresa, dto.Correo }, transaction);
+        if (duplicado is not null)
+            throw new ReglaNegocioException("Ya existe otro cliente con la misma empresa o correo.");
+
+        await c.ExecuteAsync(
+            """
+            UPDATE dbo.Cliente
+            SET Empresa = @Empresa, Contacto = @Contacto, Correo = @Correo,
+                Telefono = @Telefono, Sector = @Sector, Direccion = @Direccion,
+                TamanoFlota = @TamanoFlota
+            WHERE IdCliente = @idCliente
+            """, new
+            {
+                idCliente,
+                dto.Empresa,
+                dto.Contacto,
+                dto.Correo,
+                dto.Telefono,
+                dto.Sector,
+                dto.Direccion,
+                dto.TamanoFlota
+            }, transaction);
+        transaction.Commit();
+    }
+
+    public async Task<(bool Cambio, List<string> Obligaciones)> CambiarEstadoAsync(
+        int idCliente, bool activo, string? motivo, int idUsuario)
+    {
+        using var c = factory.CrearConexion();
+        c.Open();
+        using var transaction = c.BeginTransaction();
+        var estado = await c.QuerySingleOrDefaultAsync<(bool Activo, string? Motivo)>(
+            "SELECT Activo, MotivoInactivacion AS Motivo FROM dbo.Cliente WHERE IdCliente = @idCliente",
+            new { idCliente }, transaction);
+        if (estado == default) throw new ReglaNegocioException("El cliente indicado no existe.");
+        if (estado.Activo == activo) return (false, new List<string>());
+
+        var obligaciones = new List<string>();
+        if (!activo)
+        {
+            var contratos = await c.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM dbo.Contrato WHERE IdCliente = @idCliente AND Estado = 'Activo'",
+                new { idCliente }, transaction);
+            if (contratos > 0) obligaciones.Add($"{contratos} contrato(s) activo(s)");
+
+            var facturas = await c.ExecuteScalarAsync<int>(
+                """
+                SELECT COUNT(1) FROM dbo.Factura
+                WHERE IdCliente = @idCliente AND EstadoCobro IN ('Pendiente', 'Parcial', 'Vencida')
+                """, new { idCliente }, transaction);
+            if (facturas > 0) obligaciones.Add($"{facturas} factura(s) con cobro pendiente");
+
+            if (obligaciones.Count > 0) return (false, obligaciones);
+            if (string.IsNullOrWhiteSpace(motivo))
+                throw new ReglaNegocioException("Indique el motivo de la desactivación.");
+        }
+
+        await c.ExecuteAsync(
+            """
+            UPDATE dbo.Cliente
+            SET Activo = @activo,
+                MotivoInactivacion = CASE WHEN @activo = 1 THEN NULL ELSE @motivo END,
+                FechaInactivacion = CASE WHEN @activo = 1 THEN NULL ELSE SYSUTCDATETIME() END,
+                IdUsuarioInactiva = CASE WHEN @activo = 1 THEN NULL ELSE @idUsuario END
+            WHERE IdCliente = @idCliente
+            """,
+            new { idCliente, activo, motivo, idUsuario }, transaction);
+        transaction.Commit();
+        return (true, obligaciones);
+    }
+
     public async Task<int> ConvertirProspectoAsync(int idProspecto, int? idClienteExistente, string producto, int cantidad, decimal monto, string moneda, DateTime fecha, int idUsuario)
     {
         using var c = factory.CrearConexion();

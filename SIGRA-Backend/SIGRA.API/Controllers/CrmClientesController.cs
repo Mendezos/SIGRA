@@ -20,6 +20,18 @@ public class CrmClientesController(ICrmClientesFlujo flujo) : ControllerBase
     public async Task<ActionResult<PerfilClienteDto>> Perfil(int idCliente) =>
         Ok(await flujo.ObtenerPerfilAsync(idCliente, User.ObtenerIdUsuario()));
 
+    [HttpPut("clientes/{idCliente:int}")]
+    public async Task<IActionResult> Editar(int idCliente, [FromBody] EditarClienteDto dto)
+    {
+        await flujo.EditarAsync(idCliente, dto, User.ObtenerIdUsuario());
+        return NoContent();
+    }
+
+    [HttpPatch("clientes/{idCliente:int}/estado")]
+    public async Task<ActionResult<EstadoClienteResultadoDto>> CambiarEstado(
+        int idCliente, [FromBody] CambiarEstadoClienteDto dto) =>
+        Ok(await flujo.CambiarEstadoAsync(idCliente, dto, User.ObtenerIdUsuario()));
+
     // Responde 200 siempre: con resultado = RequiereVinculo cuando hay clientes que coinciden y todavía no se eligió uno.
     [HttpPost("prospectos/{idProspecto:int}/convertir")]
     public async Task<ActionResult<ConvertirProspectoResultadoDto>> Convertir(int idProspecto, [FromBody] ConvertirProspectoDto dto) =>

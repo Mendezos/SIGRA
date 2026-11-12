@@ -3,11 +3,12 @@ import { SubTabs } from "../ui";
 import AgendaTab from "./AgendaTab";
 import BateriasTab from "./BateriasTab";
 import ClientesTab from "./ClientesTab";
+import CotizacionesPanel from "./CotizacionesPanel";
 import ContactosCrmTab from "./ContactosCrmTab";
 import HistorialTab from "./HistorialTab";
 import PeriodicosTab from "./PeriodicosTab";
 import ProspectosTab from "./ProspectosTab";
-import { puedeVerCrm } from "./helpers";
+import { puedeEditarCrm, puedeVerCrm } from "./helpers";
 
 const esAdministrador = (user) => user.role === "Administrador del sistema";
 
@@ -19,6 +20,7 @@ export default function CrmPanel({ user, navTarget }) {
         ? [
               { key: "prospectos", label: "Prospectos" },
               { key: "clientes", label: "Clientes" },
+              { key: "cotizaciones", label: "Cotizaciones" },
               { key: "contactos", label: "Contactos" },
               { key: "agenda", label: "Mi agenda" },
               { key: "periodicos", label: "Contactos periódicos" },
@@ -48,7 +50,8 @@ export default function CrmPanel({ user, navTarget }) {
             <SubTabs tabs={tabs} active={tab} onSelect={setTab} />
 
             {tab === "prospectos" && <ProspectosTab user={user} target={target("prospectos")} onAbrirCliente={abrirCliente} />}
-            {tab === "clientes" && <ClientesTab key={clienteAbrir?.nonce ?? "clientes"} target={clienteAbrir ?? target("clientes")} puedeAsignar={esAdministrador(user)} />}
+            {tab === "clientes" && <ClientesTab key={clienteAbrir?.nonce ?? "clientes"} target={clienteAbrir ?? target("clientes")} puedeAsignar={esAdministrador(user)} puedeEditar={puedeEditarCrm(user)} />}
+            {tab === "cotizaciones" && <CotizacionesPanel />}
             {tab === "contactos" && <ContactosCrmTab user={user} target={target("contactos")} />}
             {tab === "agenda" && <AgendaTab user={user} target={target("agenda")} />}
             {tab === "periodicos" && <PeriodicosTab user={user} target={target("periodicos")} />}

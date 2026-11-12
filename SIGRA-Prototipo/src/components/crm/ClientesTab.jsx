@@ -20,7 +20,7 @@ const columnas = [
 ];
 
 // CRMGPSC-021 (lista de clientes) y CRMGPSC-020 (asignar o reasignar al responsable de un cliente).
-export default function ClientesTab({ target, puedeAsignar }) {
+export default function ClientesTab({ target, puedeAsignar, puedeEditar }) {
     const [clientes, setClientes] = useState([]);
     const [vendedores, setVendedores] = useState([]);
     const [texto, setTexto] = useState("");
@@ -115,6 +115,7 @@ export default function ClientesTab({ target, puedeAsignar }) {
                     idCliente={perfilId}
                     version={version}
                     puedeAsignar={puedeAsignar}
+                    puedeEditar={puedeEditar}
                     onClose={() => setPerfilId(null)}
                     onAsignar={(c) => setAsignando({ id: c.idCliente, empresa: c.empresa, idVendedor: c.idVendedor, vendedor: c.vendedor })}
                 />
