@@ -33,6 +33,7 @@ const PUERTO = valor("--puerto", "5044");
 const RAIZ = path.resolve(__dirname, "..");                         // SIGRA-Backend
 const CARPETA_API = path.join(os.tmpdir(), "sigra_demo_api");
 const PID_ARCHIVO = path.join(CARPETA_API, "api.pid");
+const TOKEN_ENCUESTA = "demo-encuesta-factura-0002";
 
 const sqlcmd = (consulta) => execFileSync("sqlcmd", ["-S", SERVIDOR, "-E", "-b", "-Q", consulta], { encoding: "utf8" });
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -94,8 +95,14 @@ const detenerApi = () => {
         catch { console.error("\nEl cargador terminó con errores: revise el detalle de arriba."); process.exit(1); }
     }
 
+    if (!soloIniciar) {
+        // Sin la clave de SendGrid el enlace de la encuesta nunca se ve: se deja la encuesta de la factura FA-2026-0002 con un enlace conocido.
+        sqlcmd(`USE [${BASE}]; UPDATE e SET TokenHash = HASHBYTES('SHA2_256', '${TOKEN_ENCUESTA}'), Estado = 'Enviada', FechaExpiracion = DATEADD(DAY, 15, SYSUTCDATETIME()) FROM Encuesta e JOIN Factura f ON f.IdFactura = e.IdFactura WHERE f.NumeroFactura = 'FA-2026-0002'`);
+    }
+
     console.log(`\nListo. La API de la demostración corre en http://localhost:${PUERTO} sobre la base ${BASE}.`);
     console.log("Falta el frontend: en SIGRA-Prototipo ejecute  npm run dev  y abra http://localhost:5173");
+    console.log(`Enlace de la encuesta de la factura FA-2026-0002: http://localhost:5173/encuestas/responder/${TOKEN_ENCUESTA}`);
     console.log("Archivos para la demo (PDF firmado e imagen que debe rechazarse): SIGRA-Backend/SIGRA.BD/Demo");
     console.log("Para detener la API:  node Preparar-Demo.cjs --detener");
 })();

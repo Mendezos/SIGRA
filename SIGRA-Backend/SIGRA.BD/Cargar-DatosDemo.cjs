@@ -697,6 +697,30 @@ async function etapaDemo() {
             contacto: "Carolina Vega", tamanoFlota: 6, fuente: "Referido", confirmarDuplicado: true, justificacionDuplicado: "Sucursal nueva del mismo grupo hotelero.",
         });
     });
+    // Cotizaciones de ejemplo (de Jared): una enviada y otra en negociación, para ver la lista y los cambios de estado.
+    const modelos = await llamar("vendedor", "GET", "/inventario/modelos").catch(() => []);
+    const modelo = (nombre) => (Array.isArray(modelos) ? modelos : []).find((m) => sinTildes(m.nombre ?? m.modelo ?? "").includes(sinTildes(nombre)));
+    for (const [empresa, estados, lineas] of [
+        ["Hotel Costa Esmeralda", ["Enviada"], [["CP200", 6, 150000], ["TK-3170", 2, 138000]]],
+        ["Constructora Meridiano", ["Enviada", "En negociación"], [["DGM4100", 4, 310000]]],
+    ]) {
+        await paso(`Cotización de ${empresa}`, async () => {
+            const lista = await llamar("vendedor", "GET", "/crm/prospectos");
+            const filas = Array.isArray(lista) ? lista : lista?.items ?? lista?.datos ?? [];
+            const p = filas.find((x) => x.empresa === empresa);
+            if (!p) throw new Error("No existe el prospecto");
+            const existentes = await llamar("vendedor", "GET", "/cotizaciones");
+            if ((Array.isArray(existentes) ? existentes : existentes?.items ?? []).some((c) => c.idProspecto === p.idProspecto)) return "omitido";
+            const productos = lineas.map(([nombre, cantidad, precio]) => {
+                const m = modelo(nombre);
+                if (!m) throw new Error("No se encontró el modelo " + nombre);
+                return { idProducto: m.idModelo, descripcion: `${m.marca ?? ""} ${m.nombre ?? m.modelo ?? nombre}`.trim(), cantidad, precioUnitario: precio };
+            });
+            const c = await llamar("vendedor", "POST", "/cotizaciones", { idProspecto: p.idProspecto, fecha: iso(hoy), lineas: productos });
+            const id = c.idCotizacion ?? c.cotizacion?.idCotizacion;
+            for (const estado of estados) await llamar("vendedor", "PATCH", `/cotizaciones/${id}/estado`, { estado });
+        });
+    }
     await paso("Archivos de ejemplo en la carpeta Demo (contrato-firmado.pdf y foto-no-pdf.png)", async () => {
         const carpeta = require("path").join(__dirname, "Demo");
         require("fs").mkdirSync(carpeta, { recursive: true });
