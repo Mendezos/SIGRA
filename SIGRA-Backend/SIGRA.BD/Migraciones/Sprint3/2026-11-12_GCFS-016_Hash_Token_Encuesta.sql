@@ -12,11 +12,10 @@ IF COL_LENGTH('dbo.Encuesta', 'TokenHash') IS NULL
     ALTER TABLE dbo.Encuesta ADD TokenHash VARBINARY(32) NULL;
 GO
 
+-- Se ejecuta como SQL dinámico: en una base nueva la columna Token ya no existe y, si no, el lote no compilaría.
 IF COL_LENGTH('dbo.Encuesta', 'Token') IS NOT NULL
 BEGIN
-    UPDATE dbo.Encuesta
-    SET TokenHash = HASHBYTES('SHA2_256', CONVERT(varchar(36), Token))
-    WHERE TokenHash IS NULL;
+    EXEC sp_executesql N'UPDATE dbo.Encuesta SET TokenHash = HASHBYTES(''SHA2_256'', CONVERT(varchar(36), Token)) WHERE TokenHash IS NULL;';
 
     IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_Encuesta_Token')
         ALTER TABLE dbo.Encuesta DROP CONSTRAINT UQ_Encuesta_Token;

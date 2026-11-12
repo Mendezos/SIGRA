@@ -259,8 +259,8 @@ INSERT INTO NotaCredito (NumeroNota, IdFactura, Fecha, Monto, Motivo, IdUsuarioR
 SELECT 'NC-2026-0001', f.IdFactura, DATEADD(DAY, -3, @Hoy), 5650, N'Ajuste por una batería devuelta con defecto de fábrica.', @Admin
 FROM Factura f WHERE f.NumeroFactura = 'FA-2026-0001' AND NOT EXISTS (SELECT 1 FROM NotaCredito WHERE NumeroNota = 'NC-2026-0001');
 
-INSERT INTO Encuesta (IdFactura, IdCliente, CorreoDestino, Estado, FechaEnvio, FechaExpiracion, FechaRespuesta, CalificacionGeneral, Comentario)
-SELECT f.IdFactura, f.IdCliente, cl.Correo, v.Estado, DATEADD(DAY, -v.Dias, @Ahora), DATEADD(DAY, 30 - v.Dias, @Ahora),
+INSERT INTO Encuesta (IdFactura, IdCliente, TokenHash, CorreoDestino, Estado, FechaEnvio, FechaExpiracion, FechaRespuesta, CalificacionGeneral, Comentario)
+SELECT f.IdFactura, f.IdCliente, HASHBYTES('SHA2_256', CONVERT(varchar(36), NEWID())), cl.Correo, v.Estado, DATEADD(DAY, -v.Dias, @Ahora), DATEADD(DAY, 30 - v.Dias, @Ahora),
        CASE WHEN v.Estado = 'Respondida' THEN DATEADD(DAY, 1 - v.Dias, @Ahora) END, v.Calificacion, v.Comentario
 FROM (VALUES
     ('FA-2026-0001', 'Respondida', 17, CAST(5 AS TINYINT), CAST(N'Excelente atención, las baterías llegaron rápido.' AS NVARCHAR(1000))),
