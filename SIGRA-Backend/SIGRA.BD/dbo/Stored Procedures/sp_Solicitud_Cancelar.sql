@@ -7,7 +7,7 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    DECLARE @Estado VARCHAR(30), @Origen INT, @Hoy DATE = CAST(GETDATE() AS DATE);
+    DECLARE @Estado VARCHAR(30), @Origen INT, @Hoy DATE = dbo.fn_HoyCR();
 
     BEGIN TRANSACTION;
 

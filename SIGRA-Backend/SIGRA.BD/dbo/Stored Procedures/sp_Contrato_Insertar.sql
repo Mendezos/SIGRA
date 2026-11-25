@@ -22,7 +22,8 @@ CREATE PROCEDURE sp_Contrato_Insertar
     @IdUsuario         INT,
     @AccesoriosJson    NVARCHAR(MAX) = NULL,
     @CubreReparaciones BIT = 0,
-    @IdContratoOrigen  INT = NULL
+    @IdContratoOrigen  INT = NULL,
+    @MontoCobertura    DECIMAL(18, 2) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -48,9 +49,9 @@ BEGIN
         WHERE IdCliente = @IdCliente;
 
     INSERT INTO Contrato (IdCliente, Estado, FechaInicio, FechaVencimiento, MontoMensual, Condiciones, IdVendedor, CubreReparaciones,
-                          IdPlantilla, VersionPlantilla, Moneda, FechaFirma, ClausulasAdicionales, Responsabilidades, Penalizacion, IdContratoOrigen)
+                          IdPlantilla, VersionPlantilla, Moneda, FechaFirma, ClausulasAdicionales, Responsabilidades, Penalizacion, IdContratoOrigen, MontoCobertura)
     VALUES (@IdCliente, 'Borrador', @FechaInicio, @FechaVencimiento, @MontoMensual, @Condiciones, @IdVendedor, @CubreReparaciones,
-            @IdPlantilla, @VersionPlantilla, @Moneda, @FechaFirma, @ClausulasAdicionales, @Responsabilidades, @Penalizacion, @IdContratoOrigen);
+            @IdPlantilla, @VersionPlantilla, @Moneda, @FechaFirma, @ClausulasAdicionales, @Responsabilidades, @Penalizacion, @IdContratoOrigen, CASE WHEN @CubreReparaciones = 1 THEN @MontoCobertura END);
     SET @IdContrato = SCOPE_IDENTITY();
 
     INSERT INTO ContratoEquipoBorrador (IdContrato, IdEquipo) SELECT @IdContrato, IdEquipo FROM @Equipos;

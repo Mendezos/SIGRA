@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Paginacion } from "../ui";
 import {
     AlertCircle,
     Eye,
@@ -58,6 +59,8 @@ function fechaHoy() {
 
 export default function CotizacionesPanel() {
     const [cotizaciones, setCotizaciones] = useState([]);
+    const [pagina, setPagina] = useState(1);
+    const [tamano, setTamano] = useState(10);
     const [prospectos, setProspectos] = useState([]);
     const [productos, setProductos] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -280,6 +283,8 @@ export default function CotizacionesPanel() {
         }
     }
 
+    const paginaSegura = Math.min(pagina, Math.max(1, Math.ceil(cotizacionesVisibles.length / tamano)));
+    const paginaActual = cotizacionesVisibles.slice((paginaSegura - 1) * tamano, paginaSegura * tamano);
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
@@ -512,7 +517,7 @@ export default function CotizacionesPanel() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {cotizacionesVisibles.map((cotizacion) => (
+                                {paginaActual.map((cotizacion) => (
                                     <tr key={cotizacion.idCotizacion} style={{ borderTop: `1px solid ${COLORS.border}` }}>
                                         <td className="px-4 py-3 font-medium">COT-{cotizacion.idCotizacion}</td>
                                         <td className="px-4 py-3">
@@ -564,6 +569,7 @@ export default function CotizacionesPanel() {
                                 ))}
                             </tbody>
                         </table>
+                        {cotizacionesVisibles.length > 0 && <Paginacion total={cotizacionesVisibles.length} page={paginaSegura} pageSize={tamano} onPageChange={setPagina} onPageSizeChange={(n) => { setTamano(n); setPagina(1); }} sizes={[10, 25, 50]} itemLabel="cotizaciones" />}
                     </div>
                 )}
             </section>

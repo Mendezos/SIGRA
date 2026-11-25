@@ -1,3 +1,4 @@
+using SIGRA.Abstracciones.Utilidades;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SIGRA.Abstracciones.Dtos;
@@ -280,6 +281,10 @@ public class AlquilerFlujo : IAlquilerFlujo
         if (dto.MontoMensual <= 0)
             throw new ReglaNegocioException("El precio mensual debe ser un valor numérico mayor a cero.");
 
+        // Si el contrato incluye mantenimiento y reparación, ese servicio se cobra como un monto adicional y debe quedar registrado.
+        if (dto.CubreReparaciones && (dto.MontoCobertura is null || dto.MontoCobertura <= 0))
+            throw new ValidacionException("Indique el monto adicional de la cobertura de mantenimiento y reparación.", new List<string> { "Monto adicional de la cobertura" });
+
         var repetida = seriesIngresadas.GroupBy(s => s, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
         if (repetida is not null)
             throw new ReglaNegocioException($"El equipo {repetida.Key} aparece más de una vez en el contrato.");
@@ -328,7 +333,8 @@ public class AlquilerFlujo : IAlquilerFlujo
             Responsabilidades = Normalizar(dto.Responsabilidades),
             Penalizacion = Normalizar(dto.Penalizacion),
             IdVendedor = idVendedor,
-            CubreReparaciones = dto.CubreReparaciones
+            CubreReparaciones = dto.CubreReparaciones,
+            MontoCobertura = dto.CubreReparaciones ? dto.MontoCobertura : null
         };
         return (datos, idsEquipo, seriesIngresadas, accesorios);
     }
@@ -388,6 +394,7 @@ public class AlquilerFlujo : IAlquilerFlujo
         Comparar("Penalización", contrato.Penalizacion, datos.Penalizacion);
         Comparar("Condiciones", contrato.Condiciones, datos.Condiciones);
         Comparar("Cobertura de reparaciones", contrato.CubreReparaciones, datos.CubreReparaciones);
+        Comparar("Monto adicional de la cobertura", contrato.MontoCobertura, datos.MontoCobertura);
         Comparar("Responsable", contrato.IdVendedor, datos.IdVendedor);
         Comparar("Equipos", string.Join(", ", actual.Equipos.Select(e => e.NumeroSerie).OrderBy(s => s)), string.Join(", ", series.OrderBy(s => s)));
 
@@ -423,10 +430,10 @@ public class AlquilerFlujo : IAlquilerFlujo
 
         if (fechaFirma is null)
             throw new ValidacionException("Debe completar los campos obligatorios.", new List<string> { "Fecha de firma" });
-        if (fechaFirma.Value.Date > DateTime.Today)
+        if (fechaFirma.Value.Date > FechaCostaRica.Hoy)
             throw new ReglaNegocioException("La fecha de firma no puede ser posterior a hoy.");
 
-        if (contrato.FechaInicio.Date < DateTime.Today && fechaInicioReal is null)
+        if (contrato.FechaInicio.Date < FechaCostaRica.Hoy && fechaInicioReal is null)
             throw new ReglaNegocioException("La fecha de inicio del contrato ya pasó. Confirme la fecha real de vigencia antes de activarlo.");
         if (fechaInicioReal is not null && fechaInicioReal.Value.Date >= contrato.FechaVencimiento.Date)
             throw new ReglaNegocioException("La fecha real de inicio debe ser anterior a la fecha de vencimiento.");
@@ -666,6 +673,7 @@ public class AlquilerFlujo : IAlquilerFlujo
             Penalizacion = contrato.Penalizacion,
             IdVendedor = contrato.IdVendedor,
             CubreReparaciones = contrato.CubreReparaciones,
+            MontoCobertura = contrato.MontoCobertura,
             IdContratoOrigen = idContrato
         };
         var accesorios = detalle.Accesorios.Select(a => new AccesorioContratoItemDto { IdAccesorioModelo = a.IdAccesorioModelo, Cantidad = a.Cantidad }).ToList();
@@ -714,7 +722,7 @@ public class AlquilerFlujo : IAlquilerFlujo
         if (motivo.Length > 300)
             throw new ReglaNegocioException("El motivo no puede superar los 300 caracteres.");
 
-        var fecha = (dto.FechaCancelacion ?? DateTime.Today).Date;
+        var fecha = (dto.FechaCancelacion ?? FechaCostaRica.Hoy).Date;
         if (fecha < contrato.FechaInicio.Date)
             throw new ReglaNegocioException($"La fecha de cancelación no puede ser anterior al inicio del contrato ({contrato.FechaInicio:dd/MM/yyyy}).");
         if (fecha > contrato.FechaVencimiento.Date)
@@ -1032,8 +1040,8 @@ public class AlquilerFlujo : IAlquilerFlujo
         if (serieBateria.Length > 50)
             throw new ReglaNegocioException("El número de serie de la batería no puede superar los 50 caracteres.");
 
-        var fecha = dto.FechaCambio?.Date ?? DateTime.Today;
-        if (fecha > DateTime.Today)
+        var fecha = dto.FechaCambio?.Date ?? FechaCostaRica.Hoy;
+        if (fecha > FechaCostaRica.Hoy)
             throw new ReglaNegocioException("La fecha del cambio no puede ser futura.");
 
         var radio = (await _alquilerDA.ListarRadiosAsync(null, null)).FirstOrDefault(r => r.IdEquipo == dto.IdEquipo)

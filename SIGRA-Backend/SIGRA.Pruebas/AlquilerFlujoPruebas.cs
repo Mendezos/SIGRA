@@ -75,6 +75,23 @@ public class AlquilerFlujoPruebas
         Assert.Contains("Fecha de inicio", ex.Errores);
     }
 
+    // Corrección de la profesora (12 de noviembre): la cobertura de mantenimiento y reparación se cobra como un monto adicional.
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task RegistrarContrato_con_cobertura_exige_un_monto_adicional_mayor_a_cero(int? monto)
+    {
+        var dto = ContratoValido();
+        dto.CubreReparaciones = true;
+        dto.MontoCobertura = monto;
+
+        var ex = await Assert.ThrowsAsync<ValidacionException>(() => _flujo.RegistrarContratoAsync(dto, null, 1));
+
+        Assert.Contains("Monto adicional de la cobertura", ex.Errores);
+        await _alquilerDA.DidNotReceiveWithAnyArgs().InsertarContratoAsync(default!, default!, default!, default);
+    }
+
     [Fact]
     public async Task RegistrarContrato_con_vencimiento_igual_al_inicio_se_rechaza()
     {

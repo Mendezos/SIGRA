@@ -5,7 +5,7 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    SET @Hoy = ISNULL(@Hoy, CAST(GETDATE() AS DATE));
+    SET @Hoy = ISNULL(@Hoy, dbo.fn_HoyCR());
 
     DECLARE @Nuevas TABLE (IdAlerta INT);
     DECLARE @Vencidas TABLE (IdSolicitud INT);

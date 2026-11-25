@@ -116,6 +116,7 @@ public class AlquilerDA : IAlquilerDA
         d.Responsabilidades,
         d.Penalizacion,
         d.CubreReparaciones,
+        d.MontoCobertura,
         d.IdVendedor,
         IdsEquipo = string.Join(",", idsEquipo),
         AccesoriosJson = System.Text.Json.JsonSerializer.Serialize(accesorios, JsonCamel)

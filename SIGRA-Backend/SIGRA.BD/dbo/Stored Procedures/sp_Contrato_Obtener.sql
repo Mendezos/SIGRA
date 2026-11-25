@@ -5,13 +5,13 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT c.IdContrato, cl.Empresa, c.Estado AS EstadoRegistrado, CASE
-        WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento < CAST(GETDATE() AS DATE)
+        WHEN c.Estado IN ('Activo', 'Renovado') AND c.FechaVencimiento < dbo.fn_HoyCR()
              AND NOT (c.Estado = 'Renovado' AND EXISTS (SELECT 1 FROM Contrato s WHERE s.IdContratoOrigen = c.IdContrato)) THEN 'Vencido'
-        WHEN c.Estado = 'Activo' AND c.FechaVencimiento <= DATEADD(DAY, 30, CAST(GETDATE() AS DATE)) THEN N'Por vencer (30 días)'
-        WHEN c.Estado = 'Activo' AND c.FechaVencimiento <= DATEADD(DAY, 90, CAST(GETDATE() AS DATE)) THEN N'Por vencer (90 días)'
+        WHEN c.Estado = 'Activo' AND c.FechaVencimiento <= DATEADD(DAY, 30, dbo.fn_HoyCR()) THEN N'Por vencer (30 días)'
+        WHEN c.Estado = 'Activo' AND c.FechaVencimiento <= DATEADD(DAY, 90, dbo.fn_HoyCR()) THEN N'Por vencer (90 días)'
         ELSE c.Estado
     END AS Estado,
-           c.FechaInicio, c.FechaVencimiento, c.MontoMensual, c.Moneda, c.Condiciones, c.CubreReparaciones, c.IdVendedor, v.Nombre AS Vendedor,
+           c.FechaInicio, c.FechaVencimiento, c.MontoMensual, c.Moneda, c.Condiciones, c.CubreReparaciones, c.MontoCobertura, c.IdVendedor, v.Nombre AS Vendedor,
            c.MotivoCancelacion, c.FechaCancelacion, c.IdPlantilla, c.VersionPlantilla, p.Nombre AS PlantillaNombre, c.FechaFirma,
            c.ClausulasAdicionales, c.Responsabilidades, c.Penalizacion, c.IdContratoOrigen,
            (SELECT TOP 1 s.IdContrato FROM Contrato s WHERE s.IdContratoOrigen = c.IdContrato ORDER BY s.IdContrato DESC) AS IdContratoSucesor,

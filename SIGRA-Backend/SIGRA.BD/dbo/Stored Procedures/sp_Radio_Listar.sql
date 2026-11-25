@@ -12,8 +12,8 @@ BEGIN
                ce.IdContrato, cl.Empresa, ce.FechaAsignacion,
                b.FechaCambio AS UltimoCambioBateria, b.NumeroSerieBateria,
                CASE WHEN b.FechaCambio IS NULL THEN N'Sin batería'
-                    WHEN DATEADD(MONTH, 12, b.FechaCambio) <= CAST(GETDATE() AS DATE) THEN 'Vencida'
-                    WHEN DATEADD(MONTH, 11, b.FechaCambio) <= CAST(GETDATE() AS DATE) THEN N'Próxima a vencer'
+                    WHEN DATEADD(MONTH, 12, b.FechaCambio) <= dbo.fn_HoyCR() THEN 'Vencida'
+                    WHEN DATEADD(MONTH, 11, b.FechaCambio) <= dbo.fn_HoyCR() THEN N'Próxima a vencer'
                     ELSE 'Buena' END AS EstadoBateria,
                DATEADD(MONTH, 12, b.FechaCambio) AS FechaVencimientoBateria
         FROM Equipo e

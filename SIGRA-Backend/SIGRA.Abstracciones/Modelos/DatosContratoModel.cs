@@ -21,5 +21,6 @@ public class DatosContratoModel
     public string? Penalizacion { get; set; }
     public int? IdVendedor { get; set; }
     public bool CubreReparaciones { get; set; }
+    public decimal? MontoCobertura { get; set; }
     public int? IdContratoOrigen { get; set; }
 }

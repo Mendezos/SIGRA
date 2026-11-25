@@ -1,3 +1,4 @@
+using SIGRA.Abstracciones.Utilidades;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
@@ -27,7 +28,7 @@ public class CotizacionFlujo(ICotizacionDA da) : ICotizacionFlujo
         if (dto.IdProspecto <= 0)
             errores.Add("Debe seleccionar un prospecto.");
 
-        if (dto.Fecha.HasValue && dto.Fecha.Value < DateOnly.FromDateTime(DateTime.Today))
+        if (dto.Fecha.HasValue && dto.Fecha.Value < FechaCostaRica.HoyFecha)
             errores.Add("La fecha de la cotización no puede ser anterior a hoy.");
 
         if (lineas.Count == 0)
@@ -59,7 +60,7 @@ public class CotizacionFlujo(ICotizacionDA da) : ICotizacionFlujo
         {
             IdUsuario = idUsuario,
             IdProspecto = dto.IdProspecto,
-            Fecha = dto.Fecha ?? DateOnly.FromDateTime(DateTime.Today),
+            Fecha = dto.Fecha ?? FechaCostaRica.HoyFecha,
             Monto = monto,
             Estado = "Borrador",
             Activa = true,
@@ -143,8 +144,8 @@ public class CotizacionFlujo(ICotizacionDA da) : ICotizacionFlujo
         if (dto.IdProspecto <= 0)
             errores.Add("Debe seleccionar un prospecto.");
 
-        var fecha = dto.Fecha ?? existente?.Fecha ?? DateOnly.FromDateTime(DateTime.Today);
-        if (fecha < DateOnly.FromDateTime(DateTime.Today))
+        var fecha = dto.Fecha ?? existente?.Fecha ?? FechaCostaRica.HoyFecha;
+        if (fecha < FechaCostaRica.HoyFecha)
             errores.Add("La fecha de la cotización no puede ser anterior a hoy.");
 
         if (lineas.Count == 0)

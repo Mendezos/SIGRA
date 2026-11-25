@@ -20,7 +20,8 @@ CREATE PROCEDURE sp_Contrato_EditarBorrador
     @IdVendedor        INT = NULL,
     @IdsEquipo         VARCHAR(MAX),
     @AccesoriosJson    NVARCHAR(MAX) = NULL,
-    @CubreReparaciones BIT = 0
+    @CubreReparaciones BIT = 0,
+    @MontoCobertura    DECIMAL(18, 2) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -53,7 +54,7 @@ BEGIN
     UPDATE Contrato
     SET IdCliente = @IdCliente, FechaInicio = @FechaInicio, FechaVencimiento = @FechaVencimiento, FechaFirma = @FechaFirma,
         MontoMensual = @MontoMensual, Moneda = @Moneda, Condiciones = @Condiciones, ClausulasAdicionales = @ClausulasAdicionales,
-        Responsabilidades = @Responsabilidades, Penalizacion = @Penalizacion, IdVendedor = @IdVendedor, CubreReparaciones = @CubreReparaciones,
+        Responsabilidades = @Responsabilidades, Penalizacion = @Penalizacion, IdVendedor = @IdVendedor, CubreReparaciones = @CubreReparaciones, MontoCobertura = CASE WHEN @CubreReparaciones = 1 THEN @MontoCobertura END,
         IdPlantilla = @IdPlantilla, VersionPlantilla = @VersionPlantilla
     WHERE IdContrato = @IdContrato;
 

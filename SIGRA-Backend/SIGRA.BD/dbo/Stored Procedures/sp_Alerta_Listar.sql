@@ -8,7 +8,7 @@ BEGIN
 
     SELECT a.IdAlerta, a.IdSolicitud, a.Tipo, CAST(CASE WHEN a.Tipo = 'Final' THEN 1 ELSE 0 END AS BIT) AS Urgente,
            a.FechaAlerta, a.FechaVencimiento,
-           DATEDIFF(DAY, CAST(GETDATE() AS DATE), a.FechaVencimiento) AS DiasRestantes,
+           DATEDIFF(DAY, dbo.fn_HoyCR(), a.FechaVencimiento) AS DiasRestantes,
            a.CorreoEnviado, a.FechaEnvio, a.ErrorEnvio,
            a.Atendida, a.FechaAtencion, a.NotaAtencion, ua.Nombre AS UsuarioAtencion,
            c.Empresa, e.NumeroSerie, s.Frecuencia, s.Banda, s.Estado AS EstadoSolicitud,

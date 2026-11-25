@@ -1,3 +1,4 @@
+using SIGRA.Abstracciones.Utilidades;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
@@ -80,7 +81,7 @@ public class FrecuenciaFlujo : IFrecuenciaFlujo
         if (dto.FechaPresentacion is null)
             throw new ReglaNegocioException("Debe indicar la fecha de presentación del trámite ante el gobierno");
 
-        if (dto.FechaPresentacion.Value.Date > DateTime.Today)
+        if (dto.FechaPresentacion.Value.Date > FechaCostaRica.Hoy)
             throw new ReglaNegocioException("La fecha de presentación del trámite no puede ser futura.");
 
         if (frecuencia!.Length > 30 || potencia!.Length > 30 || zona!.Length > 200)
@@ -253,7 +254,7 @@ public class FrecuenciaFlujo : IFrecuenciaFlujo
         if (fecha < fechaSolicitud)
             throw new ReglaNegocioException("La fecha de otorgamiento no puede ser anterior a la fecha de solicitud");
 
-        if (fecha > DateTime.Today)
+        if (fecha > FechaCostaRica.Hoy)
             throw new ReglaNegocioException("La fecha de otorgamiento no puede ser futura.");
 
         await _frecuenciaDA.OtorgarSolicitudAsync(idSolicitud, fecha, resolucion);
@@ -338,7 +339,7 @@ public class FrecuenciaFlujo : IFrecuenciaFlujo
         await VerificacionEnCurso.WaitAsync();
         try
         {
-            var (idsAlertas, idsVencidas) = await _frecuenciaDA.EvaluarAlertasAsync(DateTime.Today);
+            var (idsAlertas, idsVencidas) = await _frecuenciaDA.EvaluarAlertasAsync(FechaCostaRica.Hoy);
 
             foreach (var idSolicitud in idsVencidas)
             {

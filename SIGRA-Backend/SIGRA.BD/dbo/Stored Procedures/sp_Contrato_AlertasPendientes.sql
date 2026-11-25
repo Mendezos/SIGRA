@@ -3,7 +3,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @Hoy DATE = CAST(GETDATE() AS DATE);
+    DECLARE @Hoy DATE = dbo.fn_HoyCR();
 
     SELECT c.IdContrato, cl.Empresa, cl.Contacto, cl.Correo AS CorreoCliente, c.FechaInicio, c.FechaVencimiento, t.Tipo, c.IdVendedor
     FROM Contrato c

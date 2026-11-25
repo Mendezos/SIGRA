@@ -13,7 +13,7 @@ BEGIN
            s.Frecuencia, s.Banda, s.Potencia, s.ZonaCobertura, s.FechaPresentacion, s.Estado,
            s.FechaSolicitud AS FechaRegistro, s.FechaOtorgamiento, s.NumeroResolucion, s.FechaVencimiento,
            CASE WHEN s.FechaVencimiento IS NULL THEN NULL
-                ELSE DATEDIFF(DAY, CAST(GETDATE() AS DATE), s.FechaVencimiento) END AS DiasParaVencer,
+                ELSE DATEDIFF(DAY, dbo.fn_HoyCR(), s.FechaVencimiento) END AS DiasParaVencer,
            s.IdSolicitudOrigen, ren.IdSolicitud AS IdSolicitudRenovacion, ren.Estado AS EstadoRenovacion,
            s.FechaCancelacion, s.MotivoCancelacion, uc.Nombre AS UsuarioCancelacion,
            s.IdUsuario AS IdVendedor, v.Nombre AS Vendedor,

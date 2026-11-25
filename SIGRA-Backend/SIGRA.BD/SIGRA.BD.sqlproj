@@ -375,5 +375,6 @@
     <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Consultar.sql" />
     <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Detalle.sql" />
     <Build Include="dbo\Views\vw_CrmAuditoria.sql" />
+    <Build Include="dbo\Functions\fn_HoyCR.sql" />
   </ItemGroup>
 </Project>
