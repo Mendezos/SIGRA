@@ -144,6 +144,8 @@ builder.Services.AddScoped<IFrecuenciaFlujo, FrecuenciaFlujo>();
 
 // CRM (Sprint 3): catálogos compartidos y los cuatro bloques de historias (módulo 9).
 builder.Services.AddScoped<ICrmCatalogosDA, CrmCatalogosDA>();
+builder.Services.AddScoped<IDashboardDA, DashboardDA>();
+builder.Services.AddScoped<IDashboardFlujo, DashboardFlujo>();
 builder.Services.AddScoped<ICrmAuditoriaDA, CrmAuditoriaDA>();
 builder.Services.AddScoped<ICrmAuditoriaFlujo, CrmAuditoriaFlujo>();
 builder.Services.AddScoped<ICrmClientesDA, CrmClientesDA>();

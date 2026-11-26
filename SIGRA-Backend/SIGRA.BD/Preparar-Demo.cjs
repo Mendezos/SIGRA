@@ -124,6 +124,12 @@ const detenerApi = () => {
             ) v(Autor, Entidad, IdEntidad, Accion, Dias, Detalle)`);
     }
 
+    if (!soloIniciar) {
+        // El cargador registra todo hoy: los ingresos a taller y las bajas se reparten en los últimos meses para que la
+        // evolución del dashboard muestre una historia creíble en lugar de un salto el último día.
+        sqlcmd(`USE [${BASE}]; UPDATE MovimientoInventario SET Fecha = DATEADD(DAY, -(20 + (IdEquipo * 37) % 150), Fecha) WHERE EstadoNuevo IN ('En mantenimiento', 'En reparaci' + NCHAR(243) + 'n', 'En garant' + NCHAR(237) + 'a', 'Dado de baja')`);
+    }
+
     console.log(`\nListo. La API de la demostración corre en http://localhost:${PUERTO} sobre la base ${BASE}.`);
     console.log("Falta el frontend: en SIGRA-Prototipo ejecute  npm run dev  y abra http://localhost:5173");
     console.log(`Enlace de la encuesta de la factura FA-2026-0002: http://localhost:5173/encuestas/responder/${TOKEN_ENCUESTA}`);
