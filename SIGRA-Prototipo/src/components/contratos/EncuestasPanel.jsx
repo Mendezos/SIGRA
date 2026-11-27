@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, Eye, Mail } from "lucide-react";
 import Modal from "../Modal";
-import { Button, Notice } from "../ui";
+import { Button, Notice, Paginacion } from "../ui";
 import { COLORS } from "../uiTheme";
 import { listarEncuestas, reenviarEncuesta } from "../../services/encuestasService";
 
@@ -11,8 +11,10 @@ function fecha(valor) {
     return valor ? new Date(valor).toLocaleDateString("es-CR") : "—";
 }
 
-export default function EncuestasPanel() {
+export default function EncuestasPanel({ puedeCrear = false }) {
     const [encuestas, setEncuestas] = useState([]);
+    const [pagina, setPagina] = useState(1);
+    const [tamano, setTamano] = useState(10);
     const [estado, setEstado] = useState("Todos");
     const [busqueda, setBusqueda] = useState("");
     const [detalle, setDetalle] = useState(null);
@@ -47,7 +49,7 @@ export default function EncuestasPanel() {
 
     const visibles = encuestas.filter((encuesta) => {
         const texto = busqueda.trim().toLowerCase();
-        return (estado === "Todos" || encuesta.estado === estado) &&
+return (estado === "Todos" || encuesta.estado === estado) &&
             (!texto ||
                 [encuesta.numeroFactura, encuesta.cliente]
                     .some((valor) => String(valor ?? "").toLowerCase().includes(texto)));
@@ -76,6 +78,8 @@ export default function EncuestasPanel() {
         }
     }
 
+    const paginaSegura = Math.min(pagina, Math.max(1, Math.ceil(visibles.length / tamano)));
+    const paginaActual = visibles.slice((paginaSegura - 1) * tamano, paginaSegura * tamano);
     return (
         <section>
             {mensaje && <Notice tone={mensaje.tone}>{mensaje.text}</Notice>}
@@ -133,7 +137,7 @@ export default function EncuestasPanel() {
                         </tr>
                     </thead>
                     <tbody>
-                        {visibles.map((encuesta) => (
+                        {paginaActual.map((encuesta) => (
                             <tr key={encuesta.idEncuesta} style={{ borderTop: `1px solid ${COLORS.border}` }}>
                                 <td className="p-3">{encuesta.numeroFactura}</td>
                                 <td className="p-3">{encuesta.cliente}</td>
@@ -145,7 +149,7 @@ export default function EncuestasPanel() {
                                         <Button variant="secondary" onClick={() => setDetalle(encuesta)} title="Ver detalle">
                                             <Eye size={15} />
                                         </Button>
-                                        {encuesta.estado !== "Respondida" && (
+                                        {puedeCrear && encuesta.estado !== "Respondida" && (
                                             <Button variant="secondary" onClick={() => reenviar(encuesta)} title="Reenviar encuesta">
                                                 <Mail size={15} />
                                             </Button>
@@ -156,6 +160,7 @@ export default function EncuestasPanel() {
                         ))}
                     </tbody>
                 </table>
+                        {visibles.length > 0 && <Paginacion total={visibles.length} page={paginaSegura} pageSize={tamano} onPageChange={setPagina} onPageSizeChange={(n) => { setTamano(n); setPagina(1); }} sizes={[10, 25, 50]} itemLabel="encuestas" />}
             </div>
 
             {detalle && (

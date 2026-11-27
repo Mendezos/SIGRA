@@ -13,7 +13,7 @@ BEGIN
 
     -- Frecuencias en alerta final (urgentes) que siguen sin renovarse: se resaltan en el dashboard.
     SELECT a.IdAlerta, a.IdSolicitud, c.Empresa, e.NumeroSerie, s.Frecuencia, a.FechaVencimiento,
-           DATEDIFF(DAY, CAST(GETDATE() AS DATE), a.FechaVencimiento) AS DiasRestantes,
+           DATEDIFF(DAY, dbo.fn_HoyCR(), a.FechaVencimiento) AS DiasRestantes,
            v.Nombre AS Vendedor, a.Atendida
     FROM AlertaFrecuencia a
     INNER JOIN SolicitudFrecuencia s ON s.IdSolicitud = a.IdSolicitud

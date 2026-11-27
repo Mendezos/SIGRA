@@ -113,6 +113,7 @@ public class RegistrarContratoDto
     public string? Penalizacion { get; set; }
     public int? IdVendedor { get; set; }
     public bool CubreReparaciones { get; set; }
+    public decimal? MontoCobertura { get; set; }
     public List<string>? Series { get; set; }
     public List<AccesorioContratoItemDto>? Accesorios { get; set; }
 }
@@ -129,6 +130,7 @@ public class ContratoDto
     public string Moneda { get; set; } = "CRC";
     public string? Condiciones { get; set; }
     public bool CubreReparaciones { get; set; }
+    public decimal? MontoCobertura { get; set; }
     public int? IdVendedor { get; set; }
     public string? Vendedor { get; set; }
     public string? MotivoCancelacion { get; set; }

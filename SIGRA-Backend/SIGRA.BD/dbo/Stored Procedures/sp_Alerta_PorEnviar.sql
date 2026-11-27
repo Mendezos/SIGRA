@@ -6,7 +6,7 @@ BEGIN
 
     -- No se envían alertas ya cerradas (atendidas o detenidas por una cancelación) ni de solicitudes canceladas.
     SELECT a.IdAlerta, a.IdSolicitud, a.Tipo, a.FechaVencimiento,
-           DATEDIFF(DAY, CAST(GETDATE() AS DATE), a.FechaVencimiento) AS DiasRestantes,
+           DATEDIFF(DAY, dbo.fn_HoyCR(), a.FechaVencimiento) AS DiasRestantes,
            c.Empresa, e.NumeroSerie, s.Frecuencia, s.Banda,
            v.Nombre AS Vendedor, v.Correo AS CorreoVendedor
     FROM AlertaFrecuencia a

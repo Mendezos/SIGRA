@@ -11,7 +11,7 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    DECLARE @Hoy DATE = ISNULL(@FechaCancelacion, CAST(GETDATE() AS DATE));
+    DECLARE @Hoy DATE = ISNULL(@FechaCancelacion, dbo.fn_HoyCR());
     DECLARE @Etiqueta VARCHAR(20) = 'CT-' + RIGHT('0000' + CAST(@IdContrato AS VARCHAR(10)), 4);
     DECLARE @Equipos TABLE (IdEquipo INT PRIMARY KEY);
 

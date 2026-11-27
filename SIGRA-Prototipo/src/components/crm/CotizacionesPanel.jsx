@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Paginacion } from "../ui";
 import {
     AlertCircle,
     Eye,
@@ -56,8 +57,10 @@ function fechaHoy() {
     return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
 }
 
-export default function CotizacionesPanel() {
+export default function CotizacionesPanel({ puedeCrear = false, puedeEditar = false }) {
     const [cotizaciones, setCotizaciones] = useState([]);
+    const [pagina, setPagina] = useState(1);
+    const [tamano, setTamano] = useState(10);
     const [prospectos, setProspectos] = useState([]);
     const [productos, setProductos] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -280,6 +283,8 @@ export default function CotizacionesPanel() {
         }
     }
 
+    const paginaSegura = Math.min(pagina, Math.max(1, Math.ceil(cotizacionesVisibles.length / tamano)));
+    const paginaActual = cotizacionesVisibles.slice((paginaSegura - 1) * tamano, paginaSegura * tamano);
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
@@ -287,14 +292,14 @@ export default function CotizacionesPanel() {
                     <h2 className="text-lg font-semibold" style={{ color: COLORS.charcoal }}>Cotizaciones registradas</h2>
                     <p className="text-sm" style={{ color: COLORS.muted }}>Registrá y administrá las cotizaciones de tus prospectos.</p>
                 </div>
-                <button
+                {puedeCrear && (<button
                     type="button"
                     onClick={() => setRegistrarAbierto(true)}
                     className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white whitespace-nowrap"
                     style={{ backgroundColor: COLORS.green }}
                 >
                     <Plus size={16} /> Registrar cotización
-                </button>
+                </button>)}
             </div>
             {registrarAbierto && <Modal
                 open
@@ -512,7 +517,7 @@ export default function CotizacionesPanel() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {cotizacionesVisibles.map((cotizacion) => (
+                                {paginaActual.map((cotizacion) => (
                                     <tr key={cotizacion.idCotizacion} style={{ borderTop: `1px solid ${COLORS.border}` }}>
                                         <td className="px-4 py-3 font-medium">COT-{cotizacion.idCotizacion}</td>
                                         <td className="px-4 py-3">
@@ -538,7 +543,7 @@ export default function CotizacionesPanel() {
                                                 >
                                                     <Eye size={16} />
                                                 </button>
-                                                {cotizacion.estado === "Borrador" && cotizacion.activa && (
+                                                {puedeEditar && cotizacion.estado === "Borrador" && cotizacion.activa && (
                                                     <button
                                                         type="button"
                                                         onClick={() => abrirEdicion(cotizacion)}
@@ -564,12 +569,14 @@ export default function CotizacionesPanel() {
                                 ))}
                             </tbody>
                         </table>
+                        {cotizacionesVisibles.length > 0 && <Paginacion total={cotizacionesVisibles.length} page={paginaSegura} pageSize={tamano} onPageChange={setPagina} onPageSizeChange={(n) => { setTamano(n); setPagina(1); }} sizes={[10, 25, 50]} itemLabel="cotizaciones" />}
                     </div>
                 )}
             </section>
 
             {modoModal === "detalle" && (
                 <CotizacionDetalleModal
+                    puedeEditar={puedeEditar}
                     cotizacion={cotizacionSeleccionada}
                     prospecto={
                         prospectos.find(

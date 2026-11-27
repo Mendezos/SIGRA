@@ -55,7 +55,7 @@ function Resumen({ detalle }) {
                     { icon: CalendarClock, label: "Fecha de vencimiento", value: fechaCorta(contrato.fechaVencimiento) },
                     { icon: CalendarPlus, label: "Fecha de firma", value: contrato.fechaFirma ? fechaCorta(contrato.fechaFirma) : "Pendiente" },
                     { icon: Wallet, label: "Precio mensual", value: dinero(contrato.montoMensual, contrato.moneda) },
-                    { icon: ShieldCheck, label: "Cobertura de reparaciones", value: contrato.cubreReparaciones ? "Incluida" : "No incluida" },
+                    { icon: ShieldCheck, label: "Mantenimiento y reparación", value: contrato.cubreReparaciones ? (contrato.montoCobertura ? `Incluido (${dinero(contrato.montoCobertura, contrato.moneda)} adicionales al mes)` : "Incluido") : "No incluido" },
                     { icon: Radio, label: "Equipos asociados", value: String(equipos.length) },
                     { icon: FileText, label: "Cláusulas adicionales", value: contrato.clausulasAdicionales, wide: true },
                     { icon: FileText, label: "Responsabilidades del cliente", value: contrato.responsabilidades, wide: true },
@@ -173,6 +173,7 @@ function Documentos({ detalle, onAbrir }) {
             {error && <Notice tone="error">{error}</Notice>}
             <section className="mb-6">
                 <h3 className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORS.muted, fontWeight: 600 }}>Documentos firmados</h3>
+                <p className="text-xs mb-3 -mt-2" style={{ color: COLORS.muted }}>Solo se guardan archivos PDF de hasta 10 MB; se adjuntan al activar o renovar el contrato.</p>
                 {documentos.length === 0 ? (
                     <p className="text-sm" style={{ color: COLORS.muted }}>
                         {contrato.estadoRegistrado === "Borrador" ? "Todavía no hay documento firmado: se adjunta al activar el contrato." : "Este contrato no tiene documentos guardados."}

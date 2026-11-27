@@ -794,6 +794,7 @@ export default function Dashboard({
                         )
                     }
                     navTarget={navTarget?.moduleId === currentModule.id ? navTarget : null}
+                    onNavigate={handleNavigate}
                 />
             ) : (
                 <Welcome

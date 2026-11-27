@@ -30,13 +30,24 @@ Cuentas de prueba (contraseña entre paréntesis):
 ### Datos de demostración (opcional)
 
 Con la API corriendo, carga datos coherentes de los módulos de Inventario, Alquiler, Frecuencias y Tickets (equipos, contratos en
-todos los estados, baterías, repuestos, repetidoras con ficha y checklist, solicitudes de frecuencia, boletas y garantías), pensados
-para probar todo el Sprint 2 y mostrarlo. Se puede ejecutar varias veces sin duplicar nada.
+todos los estados, baterías, repuestos, repetidoras con ficha y checklist, solicitudes de frecuencia, boletas y garantías) y, con la
+etapa `demo`, registros extra de CRM y facturación (vendedora, prospectos, cotizaciones y una encuesta con enlace conocido).
+Se puede ejecutar varias veces sin duplicar nada.
 
 ```bash
 cd SIGRA-Backend/SIGRA.BD
 node Cargar-DatosDemo.cjs                  # todo
-node Cargar-DatosDemo.cjs --solo tickets   # una etapa: inventario, contratos, baterias, repetidoras, contactos, frecuencias, tickets, stock
+node Cargar-DatosDemo.cjs --solo tickets   # una etapa: inventario, contratos, baterias, repetidoras, contactos, frecuencias, tickets, stock, demo
+```
+
+Para preparar una presentación sin tocar su base de trabajo, `Preparar-Demo.cjs` recrea una base aparte (`SIGRA_demo`), la
+sincroniza, levanta la API en el puerto 5044 y carga todos los datos. Conviene correrlo el día antes, porque varios estados
+(contratos por vencer, seguimientos atrasados, recordatorios) dependen de la fecha de hoy.
+
+```bash
+node Preparar-Demo.cjs              # recrea SIGRA_demo y deja la API corriendo
+node Preparar-Demo.cjs --iniciar    # vuelve a levantar la API sin recrear nada
+node Preparar-Demo.cjs --detener    # detiene la API de la demostración
 ```
 
 Usa las cuentas de prueba de esta guía. Las series de los datos de demostración empiezan con SN-61 (CP200), SN-62 (TK-3170),
@@ -68,7 +79,31 @@ dotnet test SIGRA-Backend/SIGRA.Tests/SIGRA.Tests.csproj
 
 Cada módulo se protege con los permisos que el administrador define en *Usuarios y accesos > Roles y permisos*
 (tabla `RolPermiso`): Lectura para consultar, Escritura para crear, Edición para modificar y Eliminación para borrar.
-Los controladores de Inventario, Alquiler, Frecuencias y Usuarios (cuentas, roles, módulos y política de seguridad) los aplican con
-`[PermisoModulo(idModulo)]` y `[RolesPermitidos(...)]`, que comparan los roles sin importar mayúsculas ni tildes. El módulo de
-Tickets valida el mismo permiso dentro de su flujo. Si el administrador cambia un permiso en *Roles y permisos*, se aplica en la
+Los aplican con `[PermisoModulo(idModulo)]` y `[RolesPermitidos(...)]`, que comparan los roles sin importar mayúsculas ni tildes,
+los controladores de estos módulos:
+
+| Módulo | Id | Controladores |
+|---|---|---|
+| Usuarios y accesos | 1 | Cuentas, Rol, Modulo, PoliticaSeguridad |
+| Alquiler | 3 | Alquiler |
+| Inventario | 4 | Inventario |
+| Dashboard y reportes | 5 | Dashboard |
+| Contratos y facturación | 7 | PlantillasContrato, Encuestas |
+| CRM | 9 | CrmProspectos, CrmClientes, CrmInteracciones, CrmSeguimientos, CrmRecordatorios, CrmCatalogos, CrmAuditoria |
+| Frecuencias | 11 | Frecuencias |
+
+El módulo de Tickets valida el mismo permiso dentro de su flujo. Facturas, notas de crédito y cotizaciones, por ahora, solo exigen
+una sesión iniciada (la política general de la API), sin revisar el permiso del módulo. Si el administrador cambia un permiso en *Roles y permisos*, se aplica en la
 siguiente petición, sin volver a iniciar sesión; los botones de cada pantalla también se ocultan según ese permiso.
+
+## 5. Fechas en hora de Costa Rica
+
+El servidor de Azure trabaja en hora UTC, así que "hoy" puede cambiar de día antes que en Costa Rica. Para comparar con la
+fecha de hoy use `FechaCostaRica` (en `SIGRA.Abstracciones/Utilidades`) en C# y `dbo.fn_HoyCR()` en SQL, nunca
+`DateTime.Today`, `DateTime.Now` ni `GETDATE()` directamente.
+
+## 6. Publicación
+
+El sistema está publicado en Azure (API en App Service, base en Azure SQL y frontend en Static Web Apps, que se vuelve a
+publicar solo con el flujo de GitHub Actions). Los pasos y variables de entorno están en `PUBLICACION-AZURE.md`, en la raíz del
+repositorio.

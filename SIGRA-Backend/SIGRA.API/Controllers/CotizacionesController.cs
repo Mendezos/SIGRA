@@ -2,10 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Flujo;
 using SIGRA.API.Extensions;
+using SIGRA.API.Filters;
 
 namespace SIGRA.API.Controllers;
 
+// Módulo 9 (CRM y prospectos): se exige el permiso del rol (GET lectura, POST escritura, PUT/PATCH edición).
 [ApiController]
+[PermisoModulo(9)]
 [Route("api/cotizaciones")]
 public class CotizacionesController(ICotizacionFlujo flujo) : ControllerBase
 {

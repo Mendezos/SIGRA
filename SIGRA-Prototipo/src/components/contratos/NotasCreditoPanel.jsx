@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, FileMinus2, LoaderCircle, Plus } from "lucide-react";
 import Modal from "../Modal";
 import StatusBadge from "../StatusBadge";
-import { Button, DetailGrid, FieldLabel, Notice } from "../ui";
+import { Button, DetailGrid, FieldLabel, Notice, Paginacion } from "../ui";
 import { COLORS } from "../uiTheme";
 import { formatearFechaCorta, formatearFechaHora } from "../../utils/format";
 import { listarFacturas } from "../../services/facturasService";
@@ -38,8 +38,10 @@ function Dato({ label, value, destacado }) {
     );
 }
 
-export default function NotasCreditoPanel() {
+export default function NotasCreditoPanel({ puedeCrear = false }) {
     const [notas, setNotas] = useState([]);
+    const [pagina, setPagina] = useState(1);
+    const [tamano, setTamano] = useState(10);
     const [facturas, setFacturas] = useState([]);
     const [facturaId, setFacturaId] = useState("");
     const [fecha, setFecha] = useState(fechaLocal());
@@ -124,12 +126,14 @@ export default function NotasCreditoPanel() {
     const inputClass = "w-full rounded-lg bg-white px-3 py-2.5 text-sm";
     const inputStyle = { border: `1px solid ${COLORS.border}`, color: COLORS.charcoal };
 
+    const paginaSegura = Math.min(pagina, Math.max(1, Math.ceil(visibles.length / tamano)));
+    const paginaActual = visibles.slice((paginaSegura - 1) * tamano, paginaSegura * tamano);
     return (
         <section>
             {mensaje && <Notice tone={mensaje.tone}>{mensaje.text}</Notice>}
             <div className="mb-5 flex items-center justify-between gap-3">
                 <div><h2 className="text-lg font-semibold" style={{ color: COLORS.charcoal }}>Notas de crédito registradas</h2><p className="mt-1 text-sm" style={{ color: COLORS.muted }}>Consultá los ajustes aplicados a las facturas.</p></div>
-                <Button variant="primary" onClick={() => setRegistrarAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap"><Plus size={16} /> Registrar nota de crédito</Button>
+                {puedeCrear && (<Button variant="primary" onClick={() => setRegistrarAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap"><Plus size={16} /> Registrar nota de crédito</Button>)}
             </div>
             <div>
                 {registrarAbierto && <Modal open onClose={() => setRegistrarAbierto(false)} title="Registrar nota de crédito" subtitle="Aplicá un ajuste a una factura registrada." icon={FileMinus2} width="max-w-xl">
@@ -163,8 +167,9 @@ export default function NotasCreditoPanel() {
                     </div>
                     <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${COLORS.border}` }}>
                         <table className="w-full text-sm"><thead><tr className="text-left" style={{ backgroundColor: COLORS.greenTint, color: COLORS.charcoal }}><th className="px-4 py-3">Nota</th><th className="px-4 py-3">Factura</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Monto</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">Detalle</th></tr></thead>
-                            <tbody>{visibles.map((nota) => <tr key={nota.idNotaCredito} style={{ borderTop: `1px solid ${COLORS.border}` }}><td className="px-4 py-3 font-medium">{nota.numero}</td><td className="px-4 py-3">{nota.factura}</td><td className="px-4 py-3">{nota.cliente}</td><td className="px-4 py-3">{dinero(nota.monto, nota.facturaMoneda)}</td><td className="px-4 py-3"><StatusBadge value={nota.estado} /></td><td className="px-4 py-3"><Button onClick={() => setDetalle(nota)} className="inline-flex items-center gap-1.5 px-3 py-2"><Eye size={15} /> Ver detalle</Button></td></tr>)}</tbody>
+                            <tbody>{paginaActual.map((nota) => <tr key={nota.idNotaCredito} style={{ borderTop: `1px solid ${COLORS.border}` }}><td className="px-4 py-3 font-medium">{nota.numero}</td><td className="px-4 py-3">{nota.factura}</td><td className="px-4 py-3">{nota.cliente}</td><td className="px-4 py-3">{dinero(nota.monto, nota.facturaMoneda)}</td><td className="px-4 py-3"><StatusBadge value={nota.estado} /></td><td className="px-4 py-3"><Button onClick={() => setDetalle(nota)} className="inline-flex items-center gap-1.5 px-3 py-2"><Eye size={15} /> Ver detalle</Button></td></tr>)}</tbody>
                         </table>
+                        {visibles.length > 0 && <Paginacion total={visibles.length} page={paginaSegura} pageSize={tamano} onPageChange={setPagina} onPageSizeChange={(n) => { setTamano(n); setPagina(1); }} sizes={[10, 25, 50]} itemLabel="notas de crédito" />}
                         {!cargando && visibles.length === 0 && <p className="py-8 text-center text-sm" style={{ color: COLORS.muted }}>No hay notas de crédito registradas.</p>}
                         {cargando && <div className="flex justify-center py-8"><LoaderCircle className="animate-spin" size={20} color={COLORS.green} /></div>}
                     </div>

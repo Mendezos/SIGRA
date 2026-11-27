@@ -80,6 +80,7 @@ export default function ActivarContratoModal({ detalle, onClose, onSaved }) {
             <form id="form-activar" onSubmit={guardar} className="space-y-4" noValidate>
                 <FieldLabel label={`Documento firmado (PDF, máximo ${LIMITE_MB} MB) *`}>
                     <input type="file" accept="application/pdf,.pdf" onChange={elegirArchivo} className={inputClass} style={inputStyle} />
+                    <span className="block text-xs mt-1" style={{ color: "#6E6E6E" }}>Solo se aceptan archivos PDF. Una imagen u otro tipo de archivo no se puede adjuntar.</span>
                 </FieldLabel>
                 <FieldLabel label="Fecha de firma *">
                     <input type="date" value={fechaFirma} max={hoyISO()} onChange={(e) => setFechaFirma(e.target.value)} className={inputClass} style={inputStyle} />

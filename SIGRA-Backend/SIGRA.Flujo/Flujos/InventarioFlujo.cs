@@ -1,3 +1,4 @@
+using SIGRA.Abstracciones.Utilidades;
 using SIGRA.Abstracciones.Dtos;
 using SIGRA.Abstracciones.Excepciones;
 using SIGRA.Abstracciones.Flujo;
@@ -59,7 +60,7 @@ public class InventarioFlujo : IInventarioFlujo
         if (pendientes.Count > 0)
             throw new ValidacionException("Debe completar los campos obligatorios para registrar el equipo.", pendientes);
 
-        if (dto.FechaAdquisicion!.Value.Date > DateTime.Today)
+        if (dto.FechaAdquisicion!.Value.Date > FechaCostaRica.Hoy)
             throw new ReglaNegocioException("La fecha de adquisición no puede ser futura.");
 
         var propietario = string.IsNullOrWhiteSpace(dto.Propietario) ? "Radifax" : dto.Propietario.Trim();

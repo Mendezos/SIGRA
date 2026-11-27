@@ -351,7 +351,7 @@ async function etapaContratos() {
                 empresa: c.empresa, contacto: c.contacto, telefono: c.telefono, correo: c.correo, direccion: c.direccion,
                 responsabilidades: modelo.responsabilidades, penalizacion: modelo.condicionesCancelacion,
                 idPlantilla: idPlantilla(c.plantilla), fechaInicio: c.inicio, fechaVencimiento: c.vence, montoMensual: c.monto,
-                moneda: c.moneda ?? "CRC", condiciones: c.condiciones, cubreReparaciones: c.cubre, series: c.series, accesorios,
+                moneda: c.moneda ?? "CRC", condiciones: c.condiciones, cubreReparaciones: c.cubre, montoCobertura: c.cubre ? Math.round(c.monto * 0.1) : null, series: c.series, accesorios,
             });
             existente = r.contrato;
         });

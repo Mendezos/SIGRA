@@ -1,16 +1,29 @@
-# React + Vite
+# SIGRA – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interfaz web del Sistema Integral de Gestión Radifax, hecha con React 19, Vite, Tailwind CSS y recharts (gráficos).
 
-Currently, two official plugins are available:
+## Correrlo en su computadora
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Necesita Node.js y la API corriendo (vea `SIGRA-Backend/LEEME.md`).
 
-## React Compiler
+```bash
+cd SIGRA-Prototipo
+npm install
+npm run dev      # http://localhost:5173
+npm run lint     # revisión del código
+npm run build    # versión para publicar, en la carpeta dist
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+La dirección de la API se toma de `VITE_API_URL`: `.env` apunta a la API local (`http://localhost:5044/api`) y
+`.env.production` a la API publicada en Azure. Para publicar vea `PUBLICACION-AZURE.md` en la raíz del repositorio.
 
-## Expanding the ESLint configuration
+## Organización
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Carpeta | Contenido |
+|---|---|
+| `src/pages` | Pantallas de entrada: inicio de sesión, panel principal, restablecer contraseña y responder encuesta (pública) |
+| `src/components` | Una carpeta por módulo (`inventario`, `alquiler`, `frecuencias`, `tickets`, `contratos`, `crm`, `dashboard`, `inicio`) y los componentes compartidos (`DataTable`, `Modal`, `RecordForm`, `ui.jsx`) |
+| `src/components/charts` | Piezas de gráficos compartidas (`Tablero.jsx`: tarjeta con vista de tabla, indicador con comparación, evolución, barras apiladas, composición y medidor) y la paleta validada (`paleta.js`) que usan todos los gráficos |
+| `src/services` | Un servicio por recurso de la API, todos sobre `apiClient.js` (agrega el token y maneja los errores) |
+
+Los botones y pestañas se muestran según los permisos del rol que define el administrador en *Roles y permisos*.

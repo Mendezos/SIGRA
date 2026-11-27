@@ -44,6 +44,7 @@ export default function ContratoFormModal({ detalle, esAdmin, onClose, onSaved }
         penalizacion: c?.penalizacion ?? "",
         idVendedor: c?.idVendedor ? String(c.idVendedor) : "",
         cubreReparaciones: c?.cubreReparaciones ?? false,
+        montoCobertura: c?.montoCobertura != null ? String(c.montoCobertura) : "",
     });
     const [accesorios, setAccesorios] = useState(
         (detalle?.accesorios ?? []).map((a) => ({ idAccesorioModelo: String(a.idAccesorioModelo), cantidad: String(a.cantidad) }))
@@ -145,6 +146,7 @@ export default function ContratoFormModal({ detalle, esAdmin, onClose, onSaved }
                 penalizacion: form.penalizacion || null,
                 idVendedor: form.idVendedor ? Number(form.idVendedor) : null,
                 cubreReparaciones: form.cubreReparaciones,
+                montoCobertura: form.cubreReparaciones && form.montoCobertura !== "" ? Number(form.montoCobertura) : null,
                 series,
                 accesorios: aItemsApi(accesorios),
             };
@@ -232,7 +234,15 @@ export default function ContratoFormModal({ detalle, esAdmin, onClose, onSaved }
                 )}
 
                 <div className="sm:col-span-2">
-                    <label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={form.cubreReparaciones} onChange={(e) => setForm((f) => ({ ...f, cubreReparaciones: e.target.checked }))} />Incluye cobertura de reparaciones de los equipos</label>
+                    <label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={form.cubreReparaciones} onChange={(e) => setForm((f) => ({ ...f, cubreReparaciones: e.target.checked }))} />Incluye servicio de mantenimiento y reparación de los equipos (se cobra como un monto adicional)</label>
+                    {form.cubreReparaciones && (
+                        <div className="mb-3 sm:w-1/2">
+                            <FieldLabel label={`Monto adicional por la cobertura (${form.moneda === "USD" ? "dólares" : "colones"}) *`}>
+                                <input type="number" min="0" step="0.01" value={form.montoCobertura} onChange={cambiar("montoCobertura")} className={inputClass} style={inputStyle} placeholder="Ej. 30000" />
+                            </FieldLabel>
+                            <p className="text-xs mt-1" style={{ color: "#6E6E6E" }}>Es lo que el cliente paga por tener mantenimiento y reparaciones incluidos; se suma al precio mensual.</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 gap-4">
                         <FieldLabel label="Cláusulas adicionales"><textarea value={form.clausulasAdicionales} onChange={cambiar("clausulasAdicionales")} rows={2} className={inputClass} style={inputStyle} /></FieldLabel>
                         <FieldLabel label="Responsabilidades del cliente"><textarea value={form.responsabilidades} onChange={cambiar("responsabilidades")} rows={2} className={inputClass} style={inputStyle} /></FieldLabel>

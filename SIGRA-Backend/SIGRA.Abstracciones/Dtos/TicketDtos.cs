@@ -162,6 +162,8 @@ public class FiltroTicketsDto
     public string? TipoServicio { get; set; }
     public string? Estado { get; set; }
     public string? Resolucion { get; set; }
+    /// <summary>Grupo que abre el dashboard: abiertas, mantenimiento, reparacion, espera o sinTecnico.</summary>
+    public string? Grupo { get; set; }
     public DateOnly? Desde { get; set; }
     public DateOnly? Hasta { get; set; }
     public bool IncluirInactivos { get; set; }

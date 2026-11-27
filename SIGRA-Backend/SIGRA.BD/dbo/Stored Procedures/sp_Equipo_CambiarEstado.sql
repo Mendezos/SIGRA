@@ -19,7 +19,7 @@ BEGIN
 
     UPDATE Equipo
     SET Estado = @EstadoNuevo,
-        FechaBaja = CASE WHEN @EstadoNuevo = 'Dado de baja' THEN CAST(GETDATE() AS DATE) ELSE NULL END,
+        FechaBaja = CASE WHEN @EstadoNuevo = 'Dado de baja' THEN dbo.fn_HoyCR() ELSE NULL END,
         MotivoBaja = CASE WHEN @EstadoNuevo = 'Dado de baja' THEN @MotivoBaja ELSE NULL END
     WHERE IdEquipo = @IdEquipo;
 

@@ -375,5 +375,11 @@
     <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Consultar.sql" />
     <Build Include="dbo\Stored Procedures\sp_CrmAuditoria_Detalle.sql" />
     <Build Include="dbo\Views\vw_CrmAuditoria.sql" />
+    <Build Include="dbo\Functions\fn_HoyCR.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Dashboard_Inventario.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Dashboard_Taller.sql" />
+    <Build Include="dbo\Tables\AlertaAtencion.sql" />
+    <Build Include="dbo\Tables\AlertaVistaFavorita.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Alertas_Unificadas.sql" />
   </ItemGroup>
 </Project>
