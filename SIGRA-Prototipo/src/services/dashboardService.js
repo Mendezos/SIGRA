@@ -10,4 +10,5 @@ function query(params) {
 }
 
 // ---------- Dashboard (DAR) ----------
+export const obtenerDashboardTaller = (filtros) => apiRequest(`/dashboard/taller${query(filtros)}`);
 export const obtenerDashboardInventario = (filtros) => apiRequest(`/dashboard/inventario${query(filtros)}`);

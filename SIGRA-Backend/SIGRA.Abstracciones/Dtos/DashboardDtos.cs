@@ -66,3 +66,78 @@ public class DashboardInventarioDto
     public List<BateriaPorCambiarDto> Baterias { get; set; } = new();
     public List<ModeloFiltroDto> Modelos { get; set; } = new();
 }
+
+// DAR: panel de taller y boletas
+public class AbiertasPorTipoDto
+{
+    public string Grupo { get; set; } = "";
+    public int Abiertas { get; set; }
+    public int SemanaAnterior { get; set; }
+}
+
+public class ReparacionAbiertaDto
+{
+    public int IdTicket { get; set; }
+    public long NumeroBoleta { get; set; }
+    public string Empresa { get; set; } = "";
+    public string? Equipo { get; set; }
+    public int? IdTecnico { get; set; }
+    public string? Tecnico { get; set; }
+    public string Etapa { get; set; } = "";
+    public int Dias { get; set; }
+    public bool Atrasada { get; set; }
+}
+
+public class RankingTecnicoDto
+{
+    public int IdTecnico { get; set; }
+    public string Tecnico { get; set; } = "";
+    public int Abiertas { get; set; }
+    public int Limite { get; set; }
+}
+
+public class SolicitudPendienteDto
+{
+    public int IdTicket { get; set; }
+    public long NumeroBoleta { get; set; }
+    public string Empresa { get; set; } = "";
+    public string TipoServicio { get; set; } = "";
+    public DateTime Recibida { get; set; }
+    public int Dias { get; set; }
+}
+
+public class CerradasMesDto
+{
+    public DateTime Mes { get; set; }
+    public int Cerradas { get; set; }
+    public int AnioAnterior { get; set; }
+}
+
+public class BoletaResueltaDto
+{
+    public int IdTicket { get; set; }
+    public long NumeroBoleta { get; set; }
+    public string Empresa { get; set; } = "";
+    public string? Tecnico { get; set; }
+    public string Resolucion { get; set; } = "";
+    public DateTime Cerrada { get; set; }
+}
+
+public class CargaTecnicoDto
+{
+    public int IdTecnico { get; set; }
+    public string Tecnico { get; set; } = "";
+    public int Cerradas { get; set; }
+    public int EnCurso { get; set; }
+}
+
+public class DashboardTallerDto
+{
+    public List<AbiertasPorTipoDto> Abiertas { get; set; } = new();
+    public List<ReparacionAbiertaDto> Reparaciones { get; set; } = new();
+    public List<RankingTecnicoDto> Ranking { get; set; } = new();
+    public List<SolicitudPendienteDto> Solicitudes { get; set; } = new();
+    public List<CerradasMesDto> CerradasPorMes { get; set; } = new();
+    public List<BoletaResueltaDto> Resoluciones { get; set; } = new();
+    public List<CargaTecnicoDto> Carga { get; set; } = new();
+}

@@ -25,4 +25,22 @@ public class DashboardDA(IConexionFactory factory) : IDashboardDA
             Modelos = (await r.ReadAsync<ModeloFiltroDto>()).ToList(),
         };
     }
+
+    public async Task<DashboardTallerDto> ObtenerTallerAsync(int? idTecnico, string? tipoServicio, DateTime? desde, DateTime? hasta)
+    {
+        using var c = factory.CrearConexion();
+        using var r = await c.QueryMultipleAsync("sp_Dashboard_Taller",
+            new { IdTecnico = idTecnico, TipoServicio = tipoServicio, Desde = desde?.Date, Hasta = hasta?.Date },
+            commandType: CommandType.StoredProcedure);
+        return new DashboardTallerDto
+        {
+            Abiertas = (await r.ReadAsync<AbiertasPorTipoDto>()).ToList(),
+            Reparaciones = (await r.ReadAsync<ReparacionAbiertaDto>()).ToList(),
+            Ranking = (await r.ReadAsync<RankingTecnicoDto>()).ToList(),
+            Solicitudes = (await r.ReadAsync<SolicitudPendienteDto>()).ToList(),
+            CerradasPorMes = (await r.ReadAsync<CerradasMesDto>()).ToList(),
+            Resoluciones = (await r.ReadAsync<BoletaResueltaDto>()).ToList(),
+            Carga = (await r.ReadAsync<CargaTecnicoDto>()).ToList(),
+        };
+    }
 }

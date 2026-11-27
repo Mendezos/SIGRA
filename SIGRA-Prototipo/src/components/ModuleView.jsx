@@ -325,6 +325,7 @@ export default function ModuleView({
     moduleData,
     onModuleDataChange,
     navTarget,
+    onNavigate,
 }) {
     const hasTabs =
         Array.isArray(module.tabs) &&
@@ -903,7 +904,7 @@ export default function ModuleView({
             ) : module.id === "frecuencias" ? (
                 <FrecuenciasPanel user={user} navTarget={navTarget} />
             ) : module.id === "dashboard" ? (
-                <DashboardPanel reportes={extraContent} />
+                <DashboardPanel reportes={extraContent} onNavegar={onNavigate} />
             ) : module.id === "crm" ? (
                 <CrmPanel user={user} navTarget={navTarget} />
             ) : module.id === "clientes" ? (

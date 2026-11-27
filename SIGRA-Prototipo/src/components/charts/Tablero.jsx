@@ -206,8 +206,34 @@ export function BarrasApiladas({ datos, categoria, series, alFiltrar }) {
     );
 }
 
+// Columnas por categoría, agrupadas o apiladas, con 2 px de separación entre marcas.
+export function Columnas({ datos, categoria, series, apiladas = false, formatoEje, formatoTitulo, alto = 260 }) {
+    return (
+        <>
+            {series.length > 1 && <Leyenda series={series} />}
+            <div style={{ width: "100%", height: alto }}>
+                <ResponsiveContainer>
+                    <BarChart data={datos} margin={{ top: 18, right: 6, left: -22, bottom: 0 }} barGap={2} barCategoryGap="24%">
+                        <CartesianGrid stroke={CUADRICULA} vertical={false} />
+                        <XAxis dataKey={categoria} tickFormatter={formatoEje} tick={EJE} tickLine={false} axisLine={{ stroke: COLORS.border }} />
+                        <YAxis allowDecimals={false} tick={EJE} tickLine={false} axisLine={false} />
+                        <Tooltip content={<Globo formatoTitulo={formatoTitulo} />} cursor={{ fill: "rgba(63,155,55,0.06)" }} />
+                        {series.map((s, i) => (
+                            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} stackId={apiladas ? "a" : undefined} maxBarSize={24}
+                                stroke={apiladas ? "#FFFFFF" : undefined} strokeWidth={apiladas ? 2 : 0}
+                                radius={!apiladas || i === series.length - 1 ? [4, 4, 0, 0] : 0}>
+                                {series.length === 1 && <LabelList dataKey={s.key} position="top" fontSize={11} fontWeight={700} fill={COLORS.charcoal} formatter={(v) => v || ""} />}
+                            </Bar>
+                        ))}
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </>
+    );
+}
+
 // Un todo dividido en partes: barra alta con el porcentaje dentro de cada bloque (reemplaza a la dona).
-export function Composicion({ partes }) {
+export function Composicion({ partes, alElegir, elegida }) {
     const total = partes.reduce((n, p) => n + p.valor, 0);
     if (!total) return <SinDatos mensaje="No hay equipos para mostrar." />;
     return (
@@ -216,8 +242,9 @@ export function Composicion({ partes }) {
                 {partes.filter((p) => p.valor > 0).map((p) => {
                     const pct = Math.round((p.valor / total) * 100);
                     return (
-                        <div key={p.nombre} title={`${p.nombre}: ${p.valor} (${pct}%)`} className="rounded flex items-center px-2 transition-[flex-grow] duration-500 overflow-hidden"
-                            style={{ flexGrow: p.valor, flexBasis: 0, backgroundColor: p.color, color: "#FFFFFF" }}>
+                        <div key={p.nombre} title={`${p.nombre}: ${p.valor} (${pct}%)`} onClick={alElegir ? () => alElegir(p.nombre) : undefined}
+                            className={`rounded flex items-center px-2 transition-all duration-500 overflow-hidden ${alElegir ? "cursor-pointer hover:brightness-110" : ""}`}
+                            style={{ flexGrow: p.valor, flexBasis: 0, backgroundColor: p.color, color: "#FFFFFF", opacity: elegida && elegida !== p.nombre ? 0.4 : 1 }}>
                             {pct >= 10 && <span className="text-xs whitespace-nowrap" style={{ fontWeight: 700 }}>{pct}%</span>}
                         </div>
                     );
@@ -225,7 +252,7 @@ export function Composicion({ partes }) {
             </div>
             <ul className="flex flex-col gap-2 mt-4">
                 {partes.map((p) => (
-                    <li key={p.nombre} className="flex items-center gap-2 text-xs" style={{ color: COLORS.muted }}>
+                    <li key={p.nombre} onClick={alElegir ? () => alElegir(p.nombre) : undefined} className={`flex items-center gap-2 text-xs ${alElegir ? "cursor-pointer" : ""}`} style={{ color: COLORS.muted }}>
                         <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: p.color }} />
                         {p.nombre}
                         <strong className="ml-auto tabular-nums" style={{ color: COLORS.charcoal }}>{p.valor}</strong>

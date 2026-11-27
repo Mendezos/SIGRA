@@ -377,5 +377,6 @@
     <Build Include="dbo\Views\vw_CrmAuditoria.sql" />
     <Build Include="dbo\Functions\fn_HoyCR.sql" />
     <Build Include="dbo\Stored Procedures\sp_Dashboard_Inventario.sql" />
+    <Build Include="dbo\Stored Procedures\sp_Dashboard_Taller.sql" />
   </ItemGroup>
 </Project>

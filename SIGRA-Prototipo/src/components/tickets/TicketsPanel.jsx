@@ -11,12 +11,14 @@ import TicketsReportes from "./TicketsReportes";
 import { ESTADOS, fecha, gestion, mensajeError, recepcion, tecnico, TIPOS_SERVICIO } from "./helpers";
 
 const columnas = [{ key: "numeroBoleta", label: "Boleta", render: (b) => `Boleta ${b.numeroBoleta}` }, { key: "empresa", label: "Cliente" }, { key: "tecnicoTexto", label: "Técnico responsable" }, { key: "tipoServicio", label: "Servicio" }, { key: "estado", label: "Estado" }, { key: "etapaTexto", label: "Etapa de reparación" }, { key: "recepcionTexto", label: "Recepción física" }, { key: "fechaTexto", label: "Fecha de ingreso" }];
-const inicialFiltro = { texto: "", idCliente: "", idTecnico: "", tipoServicio: "", estado: "", resolucion: "", desde: "", hasta: "", sinRecepcionFisica: false, disponibles: false, incluirInactivos: false };
+const inicialFiltro = { texto: "", idCliente: "", idTecnico: "", tipoServicio: "", estado: "", resolucion: "", desde: "", hasta: "", sinRecepcionFisica: false, disponibles: false, incluirInactivos: false, grupo: "" };
+// Nombre de los grupos con los que el dashboard abre el listado.
+const GRUPOS_DASHBOARD = { abiertas: "Boletas abiertas", mantenimiento: "Mantenimientos abiertos", reparacion: "Reparaciones abiertas", espera: "En espera de repuesto", sinTecnico: "Boletas sin técnico" };
 
 // `navTarget` ({ id, nonce }) lo manda el tablero cuando se abre un aviso de boleta en la campana: abre ese ticket.
 export default function TicketsPanel({ user, navTarget }) {
     const [numeroAuditoria, setNumeroAuditoria] = useState(null);
-    const [tab, setTab] = useState("boletas"); const [filtro, setFiltro] = useState(inicialFiltro); const [busqueda, setBusqueda] = useState("");
+    const [tab, setTab] = useState("boletas"); const [filtro, setFiltro] = useState(() => ({ ...inicialFiltro, ...navTarget?.filtro })); const [busqueda, setBusqueda] = useState("");
     const [pagina, setPagina] = useState(1); const [tamanoPagina, setTamano] = useState(12); const [datos, setDatos] = useState({ items: [], total: 0 });
     const [resumen, setResumen] = useState(null); const [clientes, setClientes] = useState([]); const [tecnicos, setTecnicos] = useState([]);
     const [error, setError] = useState(""); const [aviso, setAviso] = useState(""); const [cargando, setCargando] = useState(false); const [recarga, setRecarga] = useState(0);
@@ -55,6 +57,7 @@ export default function TicketsPanel({ user, navTarget }) {
         <Tabs tabs={tabs} active={tab} onSelect={(clave) => { setTab(clave); setError(""); }} label="Secciones de servicio técnico" />
         {aviso && <Notice>{aviso}</Notice>}{error && <Notice tone="error">{error}</Notice>}
         {tab === "boletas" ? <>
+            {filtro.grupo && <div className="mb-3 flex items-center gap-2 text-sm rounded-lg px-3 py-2" style={{ backgroundColor: "#EAF6E8" }}><span>Mostrando desde el dashboard: <strong>{GRUPOS_DASHBOARD[filtro.grupo] ?? filtro.grupo}</strong></span><button type="button" className="ml-auto text-xs underline" onClick={() => { setFiltro(inicialFiltro); setPagina(1); }}>Quitar filtro</button></div>}
             <div className="flex flex-wrap justify-end gap-3">{recepcion(user) && <Button variant="primary" onClick={() => setCreando(true)}><Plus size={14} className="inline mr-2" />Registrar boleta</Button>}</div>
             <form className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 items-end rounded-lg border border-[#E3E3E3] bg-[#FAFCF9] p-3" onSubmit={e => { e.preventDefault(); actualizar(); }}>
                 <input aria-label="Buscar boletas" placeholder="Buscar boleta, código, cliente, contacto o serie..." className={inputClass + " xl:col-span-2 px-3 py-2 text-xs"} style={inputStyle} value={filtro.texto} onChange={e => cambiarFiltro("texto", e.target.value)} />

@@ -15,4 +15,9 @@ public class DashboardController(IDashboardFlujo flujo) : ControllerBase
     public async Task<ActionResult<DashboardInventarioDto>> Inventario(
         [FromQuery] int? idCategoria, [FromQuery] int? idModelo, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
         Ok(await flujo.ObtenerInventarioAsync(idCategoria, idModelo, desde, hasta));
+
+    [HttpGet("taller")]
+    public async Task<ActionResult<DashboardTallerDto>> Taller(
+        [FromQuery] int? idTecnico, [FromQuery] string? tipoServicio, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await flujo.ObtenerTallerAsync(idTecnico, tipoServicio, desde, hasta));
 }

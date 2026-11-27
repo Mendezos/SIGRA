@@ -14,6 +14,7 @@ BEGIN
         @SinRecepcion BIT = CASE WHEN JSON_VALUE(@Filtro, '$.sinRecepcionFisica') = 'true' THEN 1 ELSE 0 END,
         @Disponibles BIT = CASE WHEN JSON_VALUE(@Filtro, '$.disponibles') = 'true' THEN 1 ELSE 0 END,
         @ParaTecnico INT = TRY_CONVERT(INT, JSON_VALUE(@Filtro, '$.paraTecnico')),
+        @Grupo NVARCHAR(30) = JSON_VALUE(@Filtro, '$.grupo'),
         @Pagina INT = COALESCE(TRY_CONVERT(INT, JSON_VALUE(@Filtro, '$.pagina')), 1),
         @Tamano INT = COALESCE(TRY_CONVERT(INT, JSON_VALUE(@Filtro, '$.tamanoPagina')), 10);
     IF @Pagina < 1 OR @Tamano < 1 OR @Tamano > 100 THROW 50001, 'La paginación indicada no es válida.', 1;
@@ -26,6 +27,13 @@ BEGIN
       AND (NULLIF(@Resolucion, '') IS NULL OR JSON_VALUE(v.TrabajoJson, '$.resolucion') = @Resolucion)
       AND (@Desde IS NULL OR CONVERT(DATE, SWITCHOFFSET(v.FechaRecepcion, '-06:00')) >= @Desde)
       AND (@Hasta IS NULL OR CONVERT(DATE, SWITCHOFFSET(v.FechaRecepcion, '-06:00')) <= @Hasta)
+      -- Grupos que usa el dashboard: abiertas, mantenimiento, reparacion, espera (de repuesto) y sinTecnico.
+      AND (NULLIF(@Grupo, '') IS NULL OR (v.Estado IN ('Creada', 'Asignada', 'En proceso') AND (
+               @Grupo = 'abiertas'
+            OR (@Grupo = 'sinTecnico' AND v.IdTecnicoAsignado IS NULL)
+            OR (@Grupo = 'espera' AND EXISTS (SELECT 1 FROM TicketEsperaRepuesto e WHERE e.IdTicket = v.IdTicket AND e.Fin IS NULL))
+            OR (@Grupo = 'mantenimiento' AND v.TipoServicio LIKE 'Mantenimiento%' AND NOT EXISTS (SELECT 1 FROM TicketEsperaRepuesto e WHERE e.IdTicket = v.IdTicket AND e.Fin IS NULL))
+            OR (@Grupo = 'reparacion' AND v.TipoServicio = N'Reparación' AND NOT EXISTS (SELECT 1 FROM TicketEsperaRepuesto e WHERE e.IdTicket = v.IdTicket AND e.Fin IS NULL)))))
       AND (@SinRecepcion = 0 OR (v.FechaRecepcionFisica IS NULL AND v.Estado IN ('Creada', 'Asignada')))
       -- Boletas disponibles: nadie las ha tomado; para un técnico, solo las de equipos de sus especialidades.
       AND (@Disponibles = 0 OR (v.IdTecnicoAsignado IS NULL AND v.Estado IN ('Creada', 'En proceso')))
