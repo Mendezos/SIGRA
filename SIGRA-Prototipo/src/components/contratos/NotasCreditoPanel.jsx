@@ -38,7 +38,7 @@ function Dato({ label, value, destacado }) {
     );
 }
 
-export default function NotasCreditoPanel() {
+export default function NotasCreditoPanel({ puedeCrear = false }) {
     const [notas, setNotas] = useState([]);
     const [pagina, setPagina] = useState(1);
     const [tamano, setTamano] = useState(10);
@@ -133,7 +133,7 @@ export default function NotasCreditoPanel() {
             {mensaje && <Notice tone={mensaje.tone}>{mensaje.text}</Notice>}
             <div className="mb-5 flex items-center justify-between gap-3">
                 <div><h2 className="text-lg font-semibold" style={{ color: COLORS.charcoal }}>Notas de crédito registradas</h2><p className="mt-1 text-sm" style={{ color: COLORS.muted }}>Consultá los ajustes aplicados a las facturas.</p></div>
-                <Button variant="primary" onClick={() => setRegistrarAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap"><Plus size={16} /> Registrar nota de crédito</Button>
+                {puedeCrear && (<Button variant="primary" onClick={() => setRegistrarAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap"><Plus size={16} /> Registrar nota de crédito</Button>)}
             </div>
             <div>
                 {registrarAbierto && <Modal open onClose={() => setRegistrarAbierto(false)} title="Registrar nota de crédito" subtitle="Aplicá un ajuste a una factura registrada." icon={FileMinus2} width="max-w-xl">

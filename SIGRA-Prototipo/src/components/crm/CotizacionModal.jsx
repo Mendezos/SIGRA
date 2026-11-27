@@ -149,6 +149,7 @@ export function CotizacionDetalleModal({
     onChangeState,
     onDeactivate,
     busy,
+    puedeEditar = false,
 }) {
     if (!cotizacion) return null;
     const siguientesEstados = SIGUIENTES_ESTADOS[cotizacion.estado] ?? [];
@@ -163,7 +164,7 @@ export function CotizacionDetalleModal({
             width="max-w-2xl"
             footer={
                 <div className="flex justify-end gap-2">
-                    {cotizacion.estado === "Borrador" && cotizacion.activa && (
+                    {puedeEditar && cotizacion.estado === "Borrador" && cotizacion.activa && (
                         <button
                             type="button"
                             onClick={onEdit}
@@ -174,7 +175,7 @@ export function CotizacionDetalleModal({
                             Editar borrador
                         </button>
                     )}
-                    {cotizacion.activa && siguientesEstados.map((estado) => (
+                    {puedeEditar && cotizacion.activa && siguientesEstados.map((estado) => (
                         <button
                             key={estado}
                             type="button"
@@ -189,7 +190,7 @@ export function CotizacionDetalleModal({
                             {estado === "Anulada" ? "Anular" : `Cambiar a ${estado}`}
                         </button>
                     ))}
-                    {cotizacion.estado === "Anulada" && cotizacion.activa && (
+                    {puedeEditar && cotizacion.estado === "Anulada" && cotizacion.activa && (
                         <button
                             type="button"
                             onClick={onDeactivate}

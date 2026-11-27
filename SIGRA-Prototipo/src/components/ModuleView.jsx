@@ -852,14 +852,13 @@ export default function ModuleView({
                         />
                     ) : module.id === "contratos" &&
                       currentTab.key === "facturas" ? (
-                        <FacturasPanel
-                        />
+                        <FacturasPanel puedeCrear={permissions.create} puedeEditar={permissions.edit} />
                     ) : module.id === "contratos" &&
                       currentTab.key === "notasCredito" ? (
-                        <NotasCreditoPanel />
+                        <NotasCreditoPanel puedeCrear={permissions.create} />
                     ) : module.id === "contratos" &&
                       currentTab.key === "encuestas" ? (
-                        <EncuestasPanel />
+                        <EncuestasPanel puedeCrear={permissions.create} />
                     ) : (
                     <EntityPanel
                         key={currentTab.key}

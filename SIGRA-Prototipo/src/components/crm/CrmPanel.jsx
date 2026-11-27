@@ -9,7 +9,7 @@ import ContactosCrmTab from "./ContactosCrmTab";
 import HistorialTab from "./HistorialTab";
 import PeriodicosTab from "./PeriodicosTab";
 import ProspectosTab from "./ProspectosTab";
-import { puedeEditarCrm, puedeVerCrm } from "./helpers";
+import { puedeCrearCrm, puedeEditarCrm, puedeVerCrm } from "./helpers";
 
 const esAdministrador = (user) => user.role === "Administrador del sistema";
 
@@ -53,7 +53,7 @@ export default function CrmPanel({ user, navTarget }) {
 
             {tab === "prospectos" && <ProspectosTab user={user} target={target("prospectos")} onAbrirCliente={abrirCliente} />}
             {tab === "clientes" && <ClientesTab key={clienteAbrir?.nonce ?? "clientes"} target={clienteAbrir ?? target("clientes")} puedeAsignar={esAdministrador(user)} puedeEditar={puedeEditarCrm(user)} />}
-            {tab === "cotizaciones" && <CotizacionesPanel />}
+            {tab === "cotizaciones" && <CotizacionesPanel puedeCrear={puedeCrearCrm(user)} puedeEditar={puedeEditarCrm(user)} />}
             {tab === "contactos" && <ContactosCrmTab user={user} target={target("contactos")} />}
             {tab === "agenda" && <AgendaTab user={user} target={target("agenda")} />}
             {tab === "periodicos" && <PeriodicosTab user={user} target={target("periodicos")} />}

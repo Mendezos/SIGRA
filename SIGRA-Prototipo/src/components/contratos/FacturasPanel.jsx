@@ -27,7 +27,7 @@ function dinero(valor) {
     return new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC" }).format(valor);
 }
 
-export default function FacturasPanel() {
+export default function FacturasPanel({ puedeCrear = false, puedeEditar = false }) {
     const [facturas, setFacturas] = useState([]);
     const [pagina, setPagina] = useState(1);
     const [tamano, setTamano] = useState(10);
@@ -199,9 +199,9 @@ export default function FacturasPanel() {
                     <h2 className="text-lg font-semibold" style={{ color: COLORS.charcoal }}>Facturas registradas</h2>
                     <p className="mt-1 text-sm" style={{ color: COLORS.muted }}>Consultá y gestioná los estados de cobro.</p>
                 </div>
-                <Button variant="primary" onClick={() => setRegistrarAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap">
+                {puedeCrear && (<Button variant="primary" onClick={() => setRegistrarAbierto(true)} className="inline-flex items-center gap-2 whitespace-nowrap">
                     <Plus size={16} /> Registrar factura
-                </Button>
+                </Button>)}
             </div>
             <div>
                 {registrarAbierto && <Modal open onClose={() => setRegistrarAbierto(false)} title="Registrar factura" subtitle="Venta, servicio o alquiler" icon={Plus} width="max-w-3xl">
@@ -282,7 +282,7 @@ export default function FacturasPanel() {
                     </div>
                     <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${COLORS.border}` }}>
                         <table className="w-full text-sm"><thead><tr className="text-left" style={{ backgroundColor: COLORS.greenTint, color: COLORS.charcoal }}><th className="px-4 py-3">Factura</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Cobro</th><th className="px-4 py-3 min-w-[190px]">Acción</th></tr></thead>
-                            <tbody>{paginaActual.map((factura) => <tr key={factura.idFactura} style={{ borderTop: `1px solid ${COLORS.border}` }}><td className="px-4 py-3 font-medium">{factura.numero}</td><td className="px-4 py-3">{factura.cliente}</td><td className="px-4 py-3">{factura.tipo}</td><td className="px-4 py-3">{dinero(factura.total)}</td><td className="px-4 py-3"><StatusBadge value={factura.estadoCobro} /></td>                            <td className="px-4 py-3 whitespace-nowrap"><div className="flex items-center gap-2"><Button className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 py-2" onClick={() => setFacturaDetalle(factura)} aria-label={`Ver detalle de ${factura.numero}`} title="Ver detalle"><Eye size={15} /> <span>Detalle</span></Button><Button className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 py-2" onClick={() => abrirGestionCobro(factura)} aria-label={`Gestionar cobro de ${factura.numero}`} title="Gestionar cobro"><MoreHorizontal size={15} /> <span>Gestionar cobro</span></Button></div></td></tr>)}</tbody>
+                            <tbody>{paginaActual.map((factura) => <tr key={factura.idFactura} style={{ borderTop: `1px solid ${COLORS.border}` }}><td className="px-4 py-3 font-medium">{factura.numero}</td><td className="px-4 py-3">{factura.cliente}</td><td className="px-4 py-3">{factura.tipo}</td><td className="px-4 py-3">{dinero(factura.total)}</td><td className="px-4 py-3"><StatusBadge value={factura.estadoCobro} /></td>                            <td className="px-4 py-3 whitespace-nowrap"><div className="flex items-center gap-2"><Button className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 py-2" onClick={() => setFacturaDetalle(factura)} aria-label={`Ver detalle de ${factura.numero}`} title="Ver detalle"><Eye size={15} /> <span>Detalle</span></Button>{puedeEditar && (<Button className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 py-2" onClick={() => abrirGestionCobro(factura)} aria-label={`Gestionar cobro de ${factura.numero}`} title="Gestionar cobro"><MoreHorizontal size={15} /> <span>Gestionar cobro</span></Button>)}</div></td></tr>)}</tbody>
                         </table>
                         {visibles.length > 0 && <Paginacion total={visibles.length} page={paginaSegura} pageSize={tamano} onPageChange={setPagina} onPageSizeChange={(n) => { setTamano(n); setPagina(1); }} sizes={[10, 25, 50]} itemLabel="facturas" />}
                         {!cargando && visibles.length === 0 && <p className="text-sm text-center py-8" style={{ color: COLORS.muted }}>No hay facturas para este filtro.</p>}

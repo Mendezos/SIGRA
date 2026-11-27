@@ -11,7 +11,7 @@ function fecha(valor) {
     return valor ? new Date(valor).toLocaleDateString("es-CR") : "—";
 }
 
-export default function EncuestasPanel() {
+export default function EncuestasPanel({ puedeCrear = false }) {
     const [encuestas, setEncuestas] = useState([]);
     const [pagina, setPagina] = useState(1);
     const [tamano, setTamano] = useState(10);
@@ -149,7 +149,7 @@ return (estado === "Todos" || encuesta.estado === estado) &&
                                         <Button variant="secondary" onClick={() => setDetalle(encuesta)} title="Ver detalle">
                                             <Eye size={15} />
                                         </Button>
-                                        {encuesta.estado !== "Respondida" && (
+                                        {puedeCrear && encuesta.estado !== "Respondida" && (
                                             <Button variant="secondary" onClick={() => reenviar(encuesta)} title="Reenviar encuesta">
                                                 <Mail size={15} />
                                             </Button>
